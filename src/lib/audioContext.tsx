@@ -31,7 +31,7 @@ const SAMPLE_SONGS: Song[] = [
   },
   {
     id: '4',
-    title: 'Don't Start Now',
+    title: "Don't Start Now",
     artist: 'Dua Lipa',
     albumArt: 'https://i.scdn.co/image/ab67616d0000b273bd26ede1ae69327010d49946',
     duration: 183,
