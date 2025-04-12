@@ -1,9 +1,9 @@
 
 import React, { useRef, useEffect } from 'react';
-import { useAudio } from '@/lib/audioContext';
+import { useAudioContext } from '@/lib/audio';
 
 const Waveform: React.FC = () => {
-  const { waveformData, playerState } = useAudio();
+  const { waveformData, playerState } = useAudioContext();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   
   // Draw waveform on canvas

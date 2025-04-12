@@ -1,15 +1,18 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { Slider } from '@/components/ui/slider';
-import { useAudio } from '@/lib/audioContext';
-import { WaveformData, VisSettings } from '@/lib/types';
-import { ZoomIn, ZoomOut, Maximize2, Minimize2, WaveformIcon } from 'lucide-react';
+import { useAudioContext } from '@/lib/audio';
+import { VisSettings } from '@/lib/types';
+import { 
+  ZoomIn, ZoomOut, Maximize2, 
+  Minimize2, Waveform as WaveformIcon 
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 
 const WaveformAnalyzer: React.FC = () => {
-  const { waveformData, playerState, currentSong } = useAudio();
+  const { waveformData, playerState, currentSong } = useAudioContext();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [settings, setSettings] = useState<VisSettings>({
     scale: 1,
@@ -37,7 +40,7 @@ const WaveformAnalyzer: React.FC = () => {
     // If we have a current song, seek to that position
     if (currentSong) {
       const seekTime = currentSong.duration * newPosition;
-      const { seekTo } = useAudio();
+      const { seekTo } = useAudioContext();
       seekTo(seekTime);
     }
   };

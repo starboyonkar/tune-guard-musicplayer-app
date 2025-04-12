@@ -11,7 +11,7 @@ import FileUploader from './FileUploader';
 import ProfileEditor from './ProfileEditor';
 import PlaylistManager from './PlaylistManager';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { WaveformIcon, ListMusic, Settings } from 'lucide-react';
+import { Waveform as WaveformIcon, ListMusic, Settings } from 'lucide-react';
 
 const AudioPlayerUI: React.FC = () => {
   return (
