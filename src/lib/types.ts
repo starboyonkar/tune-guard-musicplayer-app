@@ -7,6 +7,7 @@ export interface UserProfile {
   dob: string;
   gender: 'male' | 'female' | 'non-binary' | 'prefer-not-to-say';
   createdAt: string;
+  updatedAt?: string;
 }
 
 // EQ Settings based on age profile

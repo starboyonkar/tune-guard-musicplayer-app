@@ -6,6 +6,8 @@ import SongInfo from './SongInfo';
 import Waveform from './Waveform';
 import EQSettings from './EQSettings';
 import VoiceCommandPanel from './VoiceCommandPanel';
+import FileUploader from './FileUploader';
+import ProfileEditor from './ProfileEditor';
 
 const AudioPlayerUI: React.FC = () => {
   return (
@@ -13,10 +15,18 @@ const AudioPlayerUI: React.FC = () => {
       <div className="w-full lg:w-3/5">
         {/* Main Player Card */}
         <Card className="glass border-futuristic-border w-full overflow-hidden mb-4">
-          <SongInfo />
+          <div className="flex justify-between items-center">
+            <SongInfo />
+            <div className="p-4">
+              <ProfileEditor />
+            </div>
+          </div>
           <Waveform />
           <PlayerControls />
         </Card>
+        
+        {/* File Uploader */}
+        <FileUploader />
         
         {/* Side panels for smaller screens */}
         <div className="flex flex-col sm:flex-row gap-4 lg:hidden">

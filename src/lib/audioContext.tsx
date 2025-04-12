@@ -1,5 +1,4 @@
-
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { UserProfile, EQSettings, Song, PlayerState, VoiceCommand } from './types';
 import { toast } from '@/components/ui/use-toast';
 
@@ -79,6 +78,7 @@ interface AudioContextType {
   eqSettings: EQSettings;
   setEQSettings: (settings: EQSettings) => void;
   songs: Song[];
+  addSong: (file: File) => void;
   playerState: PlayerState;
   voiceCommand: string;
   setVoiceCommand: (command: string) => void;
@@ -95,6 +95,8 @@ interface AudioContextType {
   waveformData: number[];
   isSignedUp: boolean;
   processingVoice: boolean;
+  updateProfile: (profile: Partial<UserProfile>) => void;
+  isLoading: boolean;
 }
 
 const defaultPlayerState: PlayerState = {
@@ -122,11 +124,69 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [waveformData, setWaveformData] = useState<number[]>(Array(30).fill(0));
   const [isSignedUp, setIsSignedUp] = useState<boolean>(false);
   const [processingVoice, setProcessingVoice] = useState<boolean>(false);
+  const [customSongs, setCustomSongs] = useState<Song[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const songs = SAMPLE_SONGS;
+  // Merge sample songs with user-uploaded songs
+  const songs = [...SAMPLE_SONGS, ...customSongs];
+  
   const currentSong = playerState.currentSongId 
     ? songs.find(song => song.id === playerState.currentSongId) 
     : null;
+
+  // Add song from file
+  const addSong = async (file: File) => {
+    try {
+      setIsLoading(true);
+      
+      // Generate an object URL for the MP3 file
+      const fileUrl = URL.createObjectURL(file);
+      
+      // Create a temporary audio element to get metadata
+      const audio = new Audio(fileUrl);
+      
+      // Wait for metadata to load
+      await new Promise<void>((resolve) => {
+        audio.addEventListener('loadedmetadata', () => resolve());
+      });
+      
+      // Create a new song object
+      const newSong: Song = {
+        id: `local-${Date.now()}`,
+        title: file.name.replace(/\.[^/.]+$/, ""), // Remove extension
+        artist: 'Local File',
+        albumArt: 'https://i.scdn.co/image/ab67616d0000b273c6f7af36eccd256764e0a9f6', // Default artwork
+        duration: Math.round(audio.duration),
+        source: fileUrl
+      };
+      
+      setCustomSongs(prev => [...prev, newSong]);
+      
+      // Automatically play the new song
+      setPlayerState(prev => ({
+        ...prev,
+        currentSongId: newSong.id,
+        currentTime: 0,
+        isPlaying: true
+      }));
+      
+      toast({
+        title: "Song Added",
+        description: `Now playing "${newSong.title}"`,
+      });
+      
+      setIsLoading(false);
+    } catch (error) {
+      console.error("Error adding song:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add song. Please try again.",
+        variant: "destructive"
+      });
+      setIsLoading(false);
+    }
+  };
 
   // Set profile and update EQ settings based on age
   const setProfile = (newProfile: UserProfile) => {
@@ -141,6 +201,36 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     
     // Save profile to localStorage
     localStorage.setItem('audioPersonaProfile', JSON.stringify(newProfile));
+  };
+
+  // Update profile partially
+  const updateProfile = (partialProfile: Partial<UserProfile>) => {
+    if (!profile) return;
+    
+    const updatedProfile = {
+      ...profile,
+      ...partialProfile,
+      updatedAt: new Date().toISOString()
+    };
+    
+    setProfileState(updatedProfile);
+    
+    // Update EQ settings if age or gender changed
+    if (partialProfile.age || partialProfile.gender) {
+      const newEQSettings = getEQSettingsByAge(
+        updatedProfile.age, 
+        updatedProfile.gender
+      );
+      setEQSettings(newEQSettings);
+    }
+    
+    // Save updated profile to localStorage
+    localStorage.setItem('audioPersonaProfile', JSON.stringify(updatedProfile));
+    
+    toast({
+      title: "Profile Updated",
+      description: "Your audio profile has been updated with new settings."
+    });
   };
 
   // Load profile from localStorage on component mount
@@ -176,6 +266,46 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     
     return () => clearInterval(interval);
   }, [playerState.isPlaying, currentSong]);
+
+  const togglePlayPause = () => {
+    setPlayerState(prev => ({ ...prev, isPlaying: !prev.isPlaying }));
+  };
+
+  const nextSong = () => {
+    const currentIndex = songs.findIndex(song => song.id === playerState.currentSongId);
+    const nextIndex = (currentIndex + 1) % songs.length;
+    
+    setPlayerState(prev => ({
+      ...prev,
+      currentSongId: songs[nextIndex].id,
+      currentTime: 0,
+      isPlaying: true
+    }));
+  };
+
+  const prevSong = () => {
+    const currentIndex = songs.findIndex(song => song.id === playerState.currentSongId);
+    const prevIndex = (currentIndex - 1 + songs.length) % songs.length;
+    
+    setPlayerState(prev => ({
+      ...prev,
+      currentSongId: songs[prevIndex].id,
+      currentTime: 0,
+      isPlaying: true
+    }));
+  };
+
+  const seekTo = (time: number) => {
+    setPlayerState(prev => ({ ...prev, currentTime: time }));
+  };
+
+  const setVolume = (volume: number) => {
+    setPlayerState(prev => ({ ...prev, volume, isMuted: false }));
+  };
+
+  const toggleMute = () => {
+    setPlayerState(prev => ({ ...prev, isMuted: !prev.isMuted }));
+  };
 
   const setVoiceCommand = (command: string) => {
     setVoiceCommandText(command);
@@ -292,46 +422,6 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     });
   };
 
-  const togglePlayPause = () => {
-    setPlayerState(prev => ({ ...prev, isPlaying: !prev.isPlaying }));
-  };
-
-  const nextSong = () => {
-    const currentIndex = songs.findIndex(song => song.id === playerState.currentSongId);
-    const nextIndex = (currentIndex + 1) % songs.length;
-    
-    setPlayerState(prev => ({
-      ...prev,
-      currentSongId: songs[nextIndex].id,
-      currentTime: 0,
-      isPlaying: true
-    }));
-  };
-
-  const prevSong = () => {
-    const currentIndex = songs.findIndex(song => song.id === playerState.currentSongId);
-    const prevIndex = (currentIndex - 1 + songs.length) % songs.length;
-    
-    setPlayerState(prev => ({
-      ...prev,
-      currentSongId: songs[prevIndex].id,
-      currentTime: 0,
-      isPlaying: true
-    }));
-  };
-
-  const seekTo = (time: number) => {
-    setPlayerState(prev => ({ ...prev, currentTime: time }));
-  };
-
-  const setVolume = (volume: number) => {
-    setPlayerState(prev => ({ ...prev, volume, isMuted: false }));
-  };
-
-  const toggleMute = () => {
-    setPlayerState(prev => ({ ...prev, isMuted: !prev.isMuted }));
-  };
-
   return (
     <AudioContext.Provider value={{
       profile,
@@ -339,6 +429,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       eqSettings,
       setEQSettings,
       songs,
+      addSong,
       playerState,
       voiceCommand,
       setVoiceCommand,
@@ -354,7 +445,9 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       currentSong,
       waveformData,
       isSignedUp,
-      processingVoice
+      processingVoice,
+      updateProfile,
+      isLoading
     }}>
       {children}
     </AudioContext.Provider>
