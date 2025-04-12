@@ -28,6 +28,15 @@ export interface Song {
   source: string;
 }
 
+// Playlist Type
+export interface Playlist {
+  id: string;
+  name: string;
+  songs: string[]; // Array of song ids
+  createdAt: string;
+  updatedAt?: string;
+}
+
 // Player State
 export interface PlayerState {
   isPlaying: boolean;
@@ -35,6 +44,7 @@ export interface PlayerState {
   volume: number;
   isMuted: boolean;
   currentSongId: string | null;
+  currentPlaylistId?: string | null;
 }
 
 // Voice Command
@@ -42,4 +52,22 @@ export interface VoiceCommand {
   text: string;
   timestamp: string;
   processed: boolean;
+}
+
+// Waveform Data
+export interface WaveformData {
+  original: number[];  // Original audio waveform data
+  processed: number[]; // Processed audio waveform data (after EQ)
+  timeData: number[];  // Time domain data
+  frequencyData: number[]; // Frequency domain data
+}
+
+// Waveform Visualization Settings
+export interface VisSettings {
+  scale: number;
+  timeScale: number;
+  amplitudeScale: number;
+  showProcessed: boolean;
+  showOriginal: boolean;
+  overlay: boolean;
 }

@@ -1,6 +1,14 @@
-
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
-import { UserProfile, EQSettings, Song, PlayerState, VoiceCommand } from './types';
+import { 
+  UserProfile, 
+  EQSettings, 
+  Song, 
+  PlayerState, 
+  VoiceCommand, 
+  Playlist,
+  WaveformData,
+  VisSettings
+} from './types';
 import { toast } from '@/components/ui/use-toast';
 
 // Sample songs data
@@ -11,7 +19,7 @@ const SAMPLE_SONGS: Song[] = [
     artist: 'The Weeknd',
     albumArt: 'https://i.scdn.co/image/ab67616d0000b273aad49f1f5c14ebdbe5b6250a',
     duration: 200,
-    source: 'https://assets.mixkit.co/music/preview/mixkit-tech-house-vibes-130.mp3' // Using free audio
+    source: 'https://assets.mixkit.co/music/preview/mixkit-tech-house-vibes-130.mp3'
   },
   {
     id: '2',
@@ -19,7 +27,7 @@ const SAMPLE_SONGS: Song[] = [
     artist: 'Ed Sheeran',
     albumArt: 'https://i.scdn.co/image/ab67616d0000b273ba5db46f4b838ef6027e6f96',
     duration: 234,
-    source: 'https://assets.mixkit.co/music/preview/mixkit-dance-with-me-3.mp3' // Using free audio
+    source: 'https://assets.mixkit.co/music/preview/mixkit-dance-with-me-3.mp3'
   },
   {
     id: '3',
@@ -27,7 +35,7 @@ const SAMPLE_SONGS: Song[] = [
     artist: 'Tones and I',
     albumArt: 'https://i.scdn.co/image/ab67616d0000b273c6f7af36eccd256764e0a9f6',
     duration: 210,
-    source: 'https://assets.mixkit.co/music/preview/mixkit-uplift-breakbeat-loop-180.mp3' // Using free audio
+    source: 'https://assets.mixkit.co/music/preview/mixkit-uplift-breakbeat-loop-180.mp3'
   },
   {
     id: '4',
@@ -35,7 +43,17 @@ const SAMPLE_SONGS: Song[] = [
     artist: 'Dua Lipa',
     albumArt: 'https://i.scdn.co/image/ab67616d0000b273bd26ede1ae69327010d49946',
     duration: 183,
-    source: 'https://assets.mixkit.co/music/preview/mixkit-serene-view-443.mp3' // Using free audio
+    source: 'https://assets.mixkit.co/music/preview/mixkit-serene-view-443.mp3'
+  }
+];
+
+// Sample playlist data
+const SAMPLE_PLAYLISTS: Playlist[] = [
+  {
+    id: 'playlist1',
+    name: 'Favorites',
+    songs: ['1', '3'],
+    createdAt: new Date().toISOString()
   }
 ];
 
@@ -93,11 +111,19 @@ interface AudioContextType {
   setVolume: (volume: number) => void;
   toggleMute: () => void;
   currentSong: Song | null;
-  waveformData: number[];
+  waveformData: WaveformData;
   isSignedUp: boolean;
   processingVoice: boolean;
   updateProfile: (profile: Partial<UserProfile>) => void;
   isLoading: boolean;
+  playlists: Playlist[];
+  createPlaylist: (name: string) => void;
+  addToPlaylist: (playlistId: string, songId: string) => void;
+  removeFromPlaylist: (playlistId: string, songId: string) => void;
+  deletePlaylist: (playlistId: string) => void;
+  playPlaylist: (playlistId: string) => void;
+  setVisSettings: (settings: Partial<VisSettings>) => void;
+  visSettings: VisSettings;
 }
 
 const defaultPlayerState: PlayerState = {
@@ -105,7 +131,24 @@ const defaultPlayerState: PlayerState = {
   currentTime: 0,
   volume: 70,
   isMuted: false,
-  currentSongId: '1' // Start with the first song
+  currentSongId: '1',
+  currentPlaylistId: null
+};
+
+const defaultWaveformData: WaveformData = {
+  original: Array(30).fill(0),
+  processed: Array(30).fill(0),
+  timeData: Array(30).fill(0),
+  frequencyData: Array(30).fill(0)
+};
+
+const defaultVisSettings: VisSettings = {
+  scale: 1,
+  timeScale: 1,
+  amplitudeScale: 1,
+  showProcessed: true,
+  showOriginal: true,
+  overlay: true
 };
 
 const AudioContext = createContext<AudioContextType | undefined>(undefined);
@@ -122,49 +165,187 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [voiceCommand, setVoiceCommandText] = useState<string>('');
   const [isVoiceListening, setIsVoiceListening] = useState<boolean>(false);
   const [commandHistory, setCommandHistory] = useState<VoiceCommand[]>([]);
-  const [waveformData, setWaveformData] = useState<number[]>(Array(30).fill(0));
+  const [waveformData, setWaveformData] = useState<WaveformData>(defaultWaveformData);
   const [isSignedUp, setIsSignedUp] = useState<boolean>(false);
   const [processingVoice, setProcessingVoice] = useState<boolean>(false);
   const [customSongs, setCustomSongs] = useState<Song[]>([]);
+  const [playlists, setPlaylists] = useState<Playlist[]>(SAMPLE_PLAYLISTS);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [visSettings, setVisSettings] = useState<VisSettings>(defaultVisSettings);
+  
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const sourceNodeRef = useRef<MediaElementAudioSourceNode | null>(null);
+  const analyserNodeRef = useRef<AnalyserNode | null>(null);
+  const gainNodeRef = useRef<GainNode | null>(null);
+  const eqNodesRef = useRef<BiquadFilterNode[]>([]);
 
-  // Merge sample songs with user-uploaded songs
   const songs = [...SAMPLE_SONGS, ...customSongs];
   
   const currentSong = playerState.currentSongId 
     ? songs.find(song => song.id === playerState.currentSongId) 
     : null;
 
-  // Add song from file
+  const initializeAudioNodes = () => {
+    if (!audioContextRef.current) {
+      try {
+        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+        audioContextRef.current = new AudioContextClass();
+        
+        analyserNodeRef.current = audioContextRef.current.createAnalyser();
+        analyserNodeRef.current.fftSize = 2048;
+        analyserNodeRef.current.smoothingTimeConstant = 0.8;
+        
+        gainNodeRef.current = audioContextRef.current.createGain();
+        
+        const bassFilter = audioContextRef.current.createBiquadFilter();
+        bassFilter.type = 'lowshelf';
+        bassFilter.frequency.value = 200;
+        
+        const midFilter = audioContextRef.current.createBiquadFilter();
+        midFilter.type = 'peaking';
+        midFilter.frequency.value = 1000;
+        midFilter.Q.value = 1;
+        
+        const trebleFilter = audioContextRef.current.createBiquadFilter();
+        trebleFilter.type = 'highshelf';
+        trebleFilter.frequency.value = 3000;
+        
+        eqNodesRef.current = [bassFilter, midFilter, trebleFilter];
+      } catch (error) {
+        console.error('Error initializing Web Audio API:', error);
+        toast({
+          title: 'Audio Processing Error',
+          description: 'Failed to initialize audio processing.',
+          variant: 'destructive'
+        });
+      }
+    }
+  };
+
+  const updateEQSettings = () => {
+    if (!eqNodesRef.current.length) return;
+    
+    const [bassFilter, midFilter, trebleFilter] = eqNodesRef.current;
+    
+    bassFilter.gain.value = (eqSettings.bass - 50) / 5;
+    midFilter.gain.value = (eqSettings.mid - 50) / 5;
+    trebleFilter.gain.value = (eqSettings.treble - 50) / 5;
+    
+    if (gainNodeRef.current) {
+      gainNodeRef.current.gain.value = eqSettings.volume / 100;
+    }
+  };
+
+  const createAudioGraph = () => {
+    if (!audioRef.current || !audioContextRef.current) return;
+    
+    try {
+      if (sourceNodeRef.current) {
+        sourceNodeRef.current.disconnect();
+      }
+      
+      sourceNodeRef.current = audioContextRef.current.createMediaElementSource(audioRef.current);
+      
+      const [bassFilter, midFilter, trebleFilter] = eqNodesRef.current;
+      
+      sourceNodeRef.current.connect(bassFilter);
+      bassFilter.connect(midFilter);
+      midFilter.connect(trebleFilter);
+      trebleFilter.connect(gainNodeRef.current!);
+      gainNodeRef.current!.connect(analyserNodeRef.current!);
+      analyserNodeRef.current!.connect(audioContextRef.current.destination);
+      
+      updateEQSettings();
+    } catch (error) {
+      console.error('Error creating audio graph:', error);
+    }
+  };
+
+  const processAudioFrame = () => {
+    if (!analyserNodeRef.current || !audioContextRef.current || !sourceNodeRef.current) return;
+    
+    const bufferLength = analyserNodeRef.current.frequencyBinCount;
+    const timeDataArray = new Uint8Array(bufferLength);
+    const frequencyDataArray = new Uint8Array(bufferLength);
+    
+    analyserNodeRef.current.getByteTimeDomainData(timeDataArray);
+    analyserNodeRef.current.getByteFrequencyData(frequencyDataArray);
+    
+    const downsampleFactor = Math.floor(bufferLength / 30);
+    
+    const original = Array(30).fill(0).map((_, i) => 
+      timeDataArray[i * downsampleFactor] / 256
+    );
+    
+    const processed = Array(30).fill(0).map((_, i) => {
+      const value = timeDataArray[i * downsampleFactor] / 256;
+      
+      const bassBoost = (eqSettings.bass - 50) / 100;
+      const trebleBoost = (eqSettings.treble - 50) / 100;
+      
+      if (i < 10) {
+        return value * (1 + bassBoost);
+      } else if (i >= 20) {
+        return value * (1 + trebleBoost);
+      }
+      return value;
+    });
+    
+    const frequencyData = Array(30).fill(0).map((_, i) => 
+      frequencyDataArray[i * downsampleFactor] / 256
+    );
+    
+    setWaveformData({
+      original,
+      processed,
+      timeData: Array.from(timeDataArray).slice(0, 30).map(v => v / 256),
+      frequencyData: frequencyData
+    });
+  };
+
+  useEffect(() => {
+    let animationFrameId: number;
+    
+    const updateAudioData = () => {
+      if (playerState.isPlaying && audioContextRef.current && analyserNodeRef.current) {
+        processAudioFrame();
+      }
+      animationFrameId = requestAnimationFrame(updateAudioData);
+    };
+    
+    if (playerState.isPlaying) {
+      updateAudioData();
+    }
+    
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, [playerState.isPlaying, eqSettings]);
+
   const addSong = async (file: File) => {
     try {
       setIsLoading(true);
       
-      // Generate an object URL for the MP3 file
       const fileUrl = URL.createObjectURL(file);
       
-      // Create a temporary audio element to get metadata
       const audio = new Audio(fileUrl);
       
-      // Wait for metadata to load
       await new Promise<void>((resolve) => {
         audio.addEventListener('loadedmetadata', () => resolve());
       });
       
-      // Create a new song object
       const newSong: Song = {
         id: `local-${Date.now()}`,
-        title: file.name.replace(/\.[^/.]+$/, ""), // Remove extension
+        title: file.name.replace(/\.[^/.]+$/, ""),
         artist: 'Local File',
-        albumArt: 'https://i.scdn.co/image/ab67616d0000b273c6f7af36eccd256764e0a9f6', // Default artwork
+        albumArt: 'https://i.scdn.co/image/ab67616d0000b273c6f7af36eccd256764e0a9f6',
         duration: Math.round(audio.duration),
         source: fileUrl
       };
       
       setCustomSongs(prev => [...prev, newSong]);
       
-      // Automatically play the new song
       setPlayerState(prev => ({
         ...prev,
         currentSongId: newSong.id,
@@ -189,67 +370,10 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  // Set profile and update EQ settings based on age
-  const setProfile = (newProfile: UserProfile) => {
-    setProfileState(newProfile);
-    
-    // Update EQ settings based on age
-    const newEQSettings = getEQSettingsByAge(newProfile.age, newProfile.gender);
-    setEQSettings(newEQSettings);
-    
-    // Mark user as signed up
-    setIsSignedUp(true);
-    
-    // Save profile to localStorage
-    localStorage.setItem('audioPersonaProfile', JSON.stringify(newProfile));
-  };
-
-  // Update profile partially
-  const updateProfile = (partialProfile: Partial<UserProfile>) => {
-    if (!profile) return;
-    
-    const updatedProfile = {
-      ...profile,
-      ...partialProfile,
-      updatedAt: new Date().toISOString()
-    };
-    
-    setProfileState(updatedProfile);
-    
-    // Update EQ settings if age or gender changed
-    if (partialProfile.age || partialProfile.gender) {
-      const newEQSettings = getEQSettingsByAge(
-        updatedProfile.age, 
-        updatedProfile.gender
-      );
-      setEQSettings(newEQSettings);
-    }
-    
-    // Save updated profile to localStorage
-    localStorage.setItem('audioPersonaProfile', JSON.stringify(updatedProfile));
-    
-    toast({
-      title: "Profile Updated",
-      description: "Your audio profile has been updated with new settings."
-    });
-  };
-
-  // Load profile from localStorage on component mount
-  useEffect(() => {
-    const savedProfile = localStorage.getItem('audioPersonaProfile');
-    if (savedProfile) {
-      const parsedProfile = JSON.parse(savedProfile);
-      setProfileState(parsedProfile);
-      setEQSettings(getEQSettingsByAge(parsedProfile.age, parsedProfile.gender));
-      setIsSignedUp(true);
-    }
-  }, []);
-
-  // Initialize audio element
   useEffect(() => {
     audioRef.current = new Audio();
+    initializeAudioNodes();
     
-    // Event listeners for audio element
     const onEnded = () => {
       nextSong();
     };
@@ -267,7 +391,6 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (audioRef.current) {
         const duration = Math.floor(audioRef.current.duration);
         if (currentSong) {
-          // Update the song's duration with actual duration
           const updatedSongs = songs.map(song => 
             song.id === currentSong.id ? { ...song, duration } : song
           );
@@ -285,30 +408,88 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     audio.addEventListener('timeupdate', onTimeUpdate);
     audio.addEventListener('loadedmetadata', onLoadedMetadata);
     
+    const savedPlaylists = localStorage.getItem('audioPersonaPlaylists');
+    if (savedPlaylists) {
+      try {
+        const parsedPlaylists = JSON.parse(savedPlaylists);
+        if (Array.isArray(parsedPlaylists)) {
+          setPlaylists(parsedPlaylists);
+        }
+      } catch (error) {
+        console.error("Error loading playlists:", error);
+      }
+    }
+    
     return () => {
       audio.removeEventListener('ended', onEnded);
       audio.removeEventListener('timeupdate', onTimeUpdate);
       audio.removeEventListener('loadedmetadata', onLoadedMetadata);
       audio.pause();
       audio.src = '';
+      
+      if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+        audioContextRef.current.close();
+      }
     };
   }, []);
-  
-  // Handle song changes and play/pause
+
+  const setProfile = (newProfile: UserProfile) => {
+    setProfileState(newProfile);
+    
+    const newEQSettings = getEQSettingsByAge(newProfile.age, newProfile.gender);
+    setEQSettings(newEQSettings);
+    
+    setIsSignedUp(true);
+    
+    localStorage.setItem('audioPersonaProfile', JSON.stringify(newProfile));
+  };
+
+  const updateProfile = (partialProfile: Partial<UserProfile>) => {
+    if (!profile) return;
+    
+    const updatedProfile = {
+      ...profile,
+      ...partialProfile,
+      updatedAt: new Date().toISOString()
+    };
+    
+    setProfileState(updatedProfile);
+    
+    if (partialProfile.age !== undefined || partialProfile.gender !== undefined) {
+      const newEQSettings = getEQSettingsByAge(
+        updatedProfile.age, 
+        updatedProfile.gender
+      );
+      setEQSettings(newEQSettings);
+    }
+    
+    localStorage.setItem('audioPersonaProfile', JSON.stringify(updatedProfile));
+    
+    toast({
+      title: "Profile Updated",
+      description: "Your audio profile has been updated with new settings."
+    });
+    
+    updateEQSettings();
+  };
+
   useEffect(() => {
     if (!audioRef.current || !currentSong) return;
     
-    // If current song changes or source changes, load new source
+    if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
+      audioContextRef.current.resume();
+    }
+    
     if (audioRef.current.src !== currentSong.source) {
       audioRef.current.src = currentSong.source;
       audioRef.current.load();
+      
+      createAudioGraph();
     }
     
-    // Handle play/pause
     if (playerState.isPlaying) {
       const playPromise = audioRef.current.play();
       
-      // Handle play promise to avoid DOMException
       if (playPromise !== undefined) {
         playPromise.catch(error => {
           console.error("Audio play error:", error);
@@ -324,38 +505,60 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       audioRef.current.pause();
     }
   }, [currentSong, playerState.isPlaying]);
-  
-  // Handle volume and mute changes
+
   useEffect(() => {
     if (!audioRef.current) return;
     
-    // Apply volume settings
     audioRef.current.volume = playerState.isMuted ? 0 : playerState.volume / 100;
+    
+    if (gainNodeRef.current) {
+      gainNodeRef.current.gain.value = playerState.isMuted ? 0 : playerState.volume / 100;
+    }
   }, [playerState.volume, playerState.isMuted]);
 
-  // Generate waveform data when song is playing
   useEffect(() => {
-    let interval: ReturnType<typeof setInterval>;
-    
-    if (playerState.isPlaying && audioRef.current) {
-      interval = setInterval(() => {
-        // Generate random waveform data that somewhat correlates to volume
-        const baseAmplitude = audioRef.current?.volume || 0.5;
-        const newWaveformData = Array(30).fill(0).map(() => 
-          Math.min(Math.random() * baseAmplitude * 1.5 + 0.2, 1)
-        );
-        setWaveformData(newWaveformData);
-      }, 100);
+    updateEQSettings();
+  }, [eqSettings]);
+
+  useEffect(() => {
+    const savedProfile = localStorage.getItem('audioPersonaProfile');
+    if (savedProfile) {
+      try {
+        const parsedProfile = JSON.parse(savedProfile);
+        setProfileState(parsedProfile);
+        setEQSettings(getEQSettingsByAge(parsedProfile.age, parsedProfile.gender));
+        setIsSignedUp(true);
+      } catch (error) {
+        console.error("Error loading profile:", error);
+      }
     }
-    
-    return () => clearInterval(interval);
-  }, [playerState.isPlaying]);
+  }, []);
 
   const togglePlayPause = () => {
+    if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
+      audioContextRef.current.resume();
+    }
     setPlayerState(prev => ({ ...prev, isPlaying: !prev.isPlaying }));
   };
 
   const nextSong = () => {
+    if (playerState.currentPlaylistId) {
+      const currentPlaylist = playlists.find(p => p.id === playerState.currentPlaylistId);
+      if (currentPlaylist) {
+        const currentSongIndex = currentPlaylist.songs.findIndex(id => id === playerState.currentSongId);
+        const nextIndex = (currentSongIndex + 1) % currentPlaylist.songs.length;
+        const nextSongId = currentPlaylist.songs[nextIndex];
+        
+        setPlayerState(prev => ({
+          ...prev,
+          currentSongId: nextSongId,
+          currentTime: 0,
+          isPlaying: true
+        }));
+        return;
+      }
+    }
+    
     const currentIndex = songs.findIndex(song => song.id === playerState.currentSongId);
     const nextIndex = (currentIndex + 1) % songs.length;
     
@@ -368,6 +571,23 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const prevSong = () => {
+    if (playerState.currentPlaylistId) {
+      const currentPlaylist = playlists.find(p => p.id === playerState.currentPlaylistId);
+      if (currentPlaylist) {
+        const currentSongIndex = currentPlaylist.songs.findIndex(id => id === playerState.currentSongId);
+        const prevIndex = (currentSongIndex - 1 + currentPlaylist.songs.length) % currentPlaylist.songs.length;
+        const prevSongId = currentPlaylist.songs[prevIndex];
+        
+        setPlayerState(prev => ({
+          ...prev,
+          currentSongId: prevSongId,
+          currentTime: 0,
+          isPlaying: true
+        }));
+        return;
+      }
+    }
+    
     const currentIndex = songs.findIndex(song => song.id === playerState.currentSongId);
     const prevIndex = (currentIndex - 1 + songs.length) % songs.length;
     
@@ -394,11 +614,101 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setPlayerState(prev => ({ ...prev, isMuted: !prev.isMuted }));
   };
 
+  const createPlaylist = (name: string) => {
+    const newPlaylist: Playlist = {
+      id: `playlist-${Date.now()}`,
+      name,
+      songs: [],
+      createdAt: new Date().toISOString()
+    };
+    
+    const updatedPlaylists = [...playlists, newPlaylist];
+    setPlaylists(updatedPlaylists);
+    
+    localStorage.setItem('audioPersonaPlaylists', JSON.stringify(updatedPlaylists));
+    
+    toast({
+      title: "Playlist Created",
+      description: `Created new playlist "${name}"`
+    });
+  };
+
+  const addToPlaylist = (playlistId: string, songId: string) => {
+    const updatedPlaylists = playlists.map(playlist => {
+      if (playlist.id === playlistId) {
+        if (!playlist.songs.includes(songId)) {
+          return {
+            ...playlist,
+            songs: [...playlist.songs, songId],
+            updatedAt: new Date().toISOString()
+          };
+        }
+      }
+      return playlist;
+    });
+    
+    setPlaylists(updatedPlaylists);
+    localStorage.setItem('audioPersonaPlaylists', JSON.stringify(updatedPlaylists));
+  };
+
+  const removeFromPlaylist = (playlistId: string, songId: string) => {
+    const updatedPlaylists = playlists.map(playlist => {
+      if (playlist.id === playlistId) {
+        return {
+          ...playlist,
+          songs: playlist.songs.filter(id => id !== songId),
+          updatedAt: new Date().toISOString()
+        };
+      }
+      return playlist;
+    });
+    
+    setPlaylists(updatedPlaylists);
+    localStorage.setItem('audioPersonaPlaylists', JSON.stringify(updatedPlaylists));
+  };
+
+  const deletePlaylist = (playlistId: string) => {
+    const updatedPlaylists = playlists.filter(playlist => playlist.id !== playlistId);
+    setPlaylists(updatedPlaylists);
+    localStorage.setItem('audioPersonaPlaylists', JSON.stringify(updatedPlaylists));
+    
+    if (playerState.currentPlaylistId === playlistId) {
+      setPlayerState(prev => ({
+        ...prev,
+        currentPlaylistId: null
+      }));
+    }
+    
+    toast({
+      title: "Playlist Deleted",
+      description: "The playlist has been removed"
+    });
+  };
+
+  const playPlaylist = (playlistId: string) => {
+    const playlist = playlists.find(p => p.id === playlistId);
+    if (!playlist || playlist.songs.length === 0) return;
+    
+    const firstSongId = playlist.songs[0];
+    
+    setPlayerState(prev => ({
+      ...prev,
+      currentSongId: firstSongId,
+      currentPlaylistId: playlistId,
+      currentTime: 0,
+      isPlaying: true
+    }));
+    
+    toast({
+      title: "Playing Playlist",
+      description: `Now playing "${playlist.name}"`
+    });
+  };
+
   const setVoiceCommand = (command: string) => {
     setVoiceCommandText(command);
     setProcessingVoice(true);
     
-    // Add to command history
     const newCommand: VoiceCommand = {
       text: command,
       timestamp: new Date().toISOString(),
@@ -407,7 +717,6 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     
     setCommandHistory(prev => [newCommand, ...prev].slice(0, 10));
     
-    // Process command after a delay
     setTimeout(() => {
       processVoiceCommand(command);
       setProcessingVoice(false);
@@ -427,9 +736,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const processVoiceCommand = (command: string) => {
     const lowerCommand = command.toLowerCase();
     
-    // Process different voice commands
     if (lowerCommand.includes('play') && !lowerCommand.includes('next') && !lowerCommand.includes('previous')) {
-      // Search for specific song
       if (lowerCommand.includes('play ')) {
         const songName = lowerCommand.replace('play ', '').trim();
         const foundSong = songs.find(
@@ -451,7 +758,6 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           });
         }
       } else {
-        // Just play current song
         setPlayerState(prev => ({ ...prev, isPlaying: true }));
         toast({
           title: "Playback Started",
@@ -477,7 +783,6 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         description: "Playing previous song"
       });
     } else if (lowerCommand.includes('volume')) {
-      // Change volume
       if (lowerCommand.includes('up')) {
         setVolume(Math.min(playerState.volume + 10, 100));
         toast({
@@ -499,7 +804,6 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       });
     }
     
-    // Mark the last command as processed
     setCommandHistory(prev => {
       const updated = [...prev];
       if (updated.length > 0) {
@@ -534,7 +838,15 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       isSignedUp,
       processingVoice,
       updateProfile,
-      isLoading
+      isLoading,
+      playlists,
+      createPlaylist,
+      addToPlaylist,
+      removeFromPlaylist,
+      deletePlaylist,
+      playPlaylist,
+      setVisSettings: (newSettings) => setVisSettings(prev => ({ ...prev, ...newSettings })),
+      visSettings
     }}>
       {children}
     </AudioContext.Provider>
