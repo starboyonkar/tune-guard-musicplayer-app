@@ -1,6 +1,9 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 @layer base {
   :root {
@@ -96,6 +99,39 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-futuristic-bg text-futuristic-text font-['Inter',sans-serif];
+  }
+  
+  /* Glass effect styling */
+  .glass {
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  
+  /* Customized scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: #0A0E17;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: #4CC4FF;
+    border-radius: 10px;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: #6E56CF;
+  }
+  
+  /* Waveform animation bars */
+  .waveform-bar {
+    @apply bg-gradient-to-t from-futuristic-accent1 to-futuristic-accent2 rounded-full mx-[1px];
+    transform-origin: bottom;
   }
 }

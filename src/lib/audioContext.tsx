@@ -1,0 +1,370 @@
+
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { UserProfile, EQSettings, Song, PlayerState, VoiceCommand } from './types';
+import { toast } from '@/components/ui/use-toast';
+
+// Sample songs data
+const SAMPLE_SONGS: Song[] = [
+  {
+    id: '1',
+    title: 'Blinding Lights',
+    artist: 'The Weeknd',
+    albumArt: 'https://i.scdn.co/image/ab67616d0000b273aad49f1f5c14ebdbe5b6250a',
+    duration: 200,
+    source: 'spotify:track:0VjIjW4GlUZAMYd2vXMi3b'
+  },
+  {
+    id: '2',
+    title: 'Shape of You',
+    artist: 'Ed Sheeran',
+    albumArt: 'https://i.scdn.co/image/ab67616d0000b273ba5db46f4b838ef6027e6f96',
+    duration: 234,
+    source: 'spotify:track:7qiZfU4dY1lWllzX7mPBI3'
+  },
+  {
+    id: '3',
+    title: 'Dance Monkey',
+    artist: 'Tones and I',
+    albumArt: 'https://i.scdn.co/image/ab67616d0000b273c6f7af36eccd256764e0a9f6',
+    duration: 210,
+    source: 'spotify:track:2XU0oxnq2qxCpomAAuJY8K'
+  },
+  {
+    id: '4',
+    title: 'Don't Start Now',
+    artist: 'Dua Lipa',
+    albumArt: 'https://i.scdn.co/image/ab67616d0000b273bd26ede1ae69327010d49946',
+    duration: 183,
+    source: 'spotify:track:3PfIrDoz19wz7qK7tYeu62'
+  }
+];
+
+// Get EQ settings based on age
+const getEQSettingsByAge = (age: number, gender: string): EQSettings => {
+  // Different EQ profiles based on age groups
+  if (age < 20) {
+    return {
+      bass: gender === 'male' ? 75 : 70,
+      mid: 65,
+      treble: 80,
+      volume: 70
+    };
+  } else if (age < 40) {
+    return {
+      bass: 70,
+      mid: 70,
+      treble: 75,
+      volume: 65
+    };
+  } else if (age < 60) {
+    return {
+      bass: 75,
+      mid: 75, 
+      treble: 65,
+      volume: 60
+    };
+  } else {
+    return {
+      bass: 80,
+      mid: 70,
+      treble: 55,
+      volume: 75
+    };
+  }
+};
+
+interface AudioContextType {
+  profile: UserProfile | null;
+  setProfile: (profile: UserProfile) => void;
+  eqSettings: EQSettings;
+  setEQSettings: (settings: EQSettings) => void;
+  songs: Song[];
+  playerState: PlayerState;
+  voiceCommand: string;
+  setVoiceCommand: (command: string) => void;
+  isVoiceListening: boolean;
+  toggleVoiceListening: () => void;
+  commandHistory: VoiceCommand[];
+  togglePlayPause: () => void;
+  nextSong: () => void;
+  prevSong: () => void;
+  seekTo: (time: number) => void;
+  setVolume: (volume: number) => void;
+  toggleMute: () => void;
+  currentSong: Song | null;
+  waveformData: number[];
+  isSignedUp: boolean;
+  processingVoice: boolean;
+}
+
+const defaultPlayerState: PlayerState = {
+  isPlaying: false,
+  currentTime: 0,
+  volume: 70,
+  isMuted: false,
+  currentSongId: '1' // Start with the first song
+};
+
+const AudioContext = createContext<AudioContextType | undefined>(undefined);
+
+export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [profile, setProfileState] = useState<UserProfile | null>(null);
+  const [eqSettings, setEQSettings] = useState<EQSettings>({
+    bass: 70,
+    mid: 70,
+    treble: 70,
+    volume: 70
+  });
+  const [playerState, setPlayerState] = useState<PlayerState>(defaultPlayerState);
+  const [voiceCommand, setVoiceCommandText] = useState<string>('');
+  const [isVoiceListening, setIsVoiceListening] = useState<boolean>(false);
+  const [commandHistory, setCommandHistory] = useState<VoiceCommand[]>([]);
+  const [waveformData, setWaveformData] = useState<number[]>(Array(30).fill(0));
+  const [isSignedUp, setIsSignedUp] = useState<boolean>(false);
+  const [processingVoice, setProcessingVoice] = useState<boolean>(false);
+
+  const songs = SAMPLE_SONGS;
+  const currentSong = playerState.currentSongId 
+    ? songs.find(song => song.id === playerState.currentSongId) 
+    : null;
+
+  // Set profile and update EQ settings based on age
+  const setProfile = (newProfile: UserProfile) => {
+    setProfileState(newProfile);
+    
+    // Update EQ settings based on age
+    const newEQSettings = getEQSettingsByAge(newProfile.age, newProfile.gender);
+    setEQSettings(newEQSettings);
+    
+    // Mark user as signed up
+    setIsSignedUp(true);
+    
+    // Save profile to localStorage
+    localStorage.setItem('audioPersonaProfile', JSON.stringify(newProfile));
+  };
+
+  // Load profile from localStorage on component mount
+  useEffect(() => {
+    const savedProfile = localStorage.getItem('audioPersonaProfile');
+    if (savedProfile) {
+      const parsedProfile = JSON.parse(savedProfile);
+      setProfileState(parsedProfile);
+      setEQSettings(getEQSettingsByAge(parsedProfile.age, parsedProfile.gender));
+      setIsSignedUp(true);
+    }
+  }, []);
+
+  // Generate random waveform data when song is playing
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval>;
+    
+    if (playerState.isPlaying) {
+      interval = setInterval(() => {
+        // Simulate audio waveform data with random peaks
+        const newWaveformData = Array(30).fill(0).map(() => 
+          Math.random() * 0.8 + 0.2
+        );
+        setWaveformData(newWaveformData);
+        
+        // Update current time
+        setPlayerState(prev => ({
+          ...prev,
+          currentTime: prev.currentTime + 1 > (currentSong?.duration || 0) ? 0 : prev.currentTime + 1
+        }));
+      }, 1000);
+    }
+    
+    return () => clearInterval(interval);
+  }, [playerState.isPlaying, currentSong]);
+
+  const setVoiceCommand = (command: string) => {
+    setVoiceCommandText(command);
+    setProcessingVoice(true);
+    
+    // Add to command history
+    const newCommand: VoiceCommand = {
+      text: command,
+      timestamp: new Date().toISOString(),
+      processed: false
+    };
+    
+    setCommandHistory(prev => [newCommand, ...prev].slice(0, 10));
+    
+    // Process command after a delay
+    setTimeout(() => {
+      processVoiceCommand(command);
+      setProcessingVoice(false);
+    }, 1500);
+  };
+
+  const toggleVoiceListening = () => {
+    setIsVoiceListening(!isVoiceListening);
+    if (!isVoiceListening) {
+      toast({
+        title: "Voice Assistant Activated",
+        description: "Listening for commands...",
+      });
+    }
+  };
+
+  const processVoiceCommand = (command: string) => {
+    const lowerCommand = command.toLowerCase();
+    
+    // Process different voice commands
+    if (lowerCommand.includes('play') && !lowerCommand.includes('next') && !lowerCommand.includes('previous')) {
+      // Search for specific song
+      if (lowerCommand.includes('play ')) {
+        const songName = lowerCommand.replace('play ', '').trim();
+        const foundSong = songs.find(
+          song => song.title.toLowerCase().includes(songName) || 
+                 song.artist.toLowerCase().includes(songName)
+        );
+        
+        if (foundSong) {
+          setPlayerState(prev => ({ ...prev, currentSongId: foundSong.id, isPlaying: true }));
+          toast({
+            title: "Playing Song",
+            description: `Now playing "${foundSong.title}" by ${foundSong.artist}`,
+          });
+        } else {
+          toast({
+            title: "Song Not Found",
+            description: `Sorry, I couldn't find "${songName}"`,
+            variant: "destructive"
+          });
+        }
+      } else {
+        // Just play current song
+        setPlayerState(prev => ({ ...prev, isPlaying: true }));
+        toast({
+          title: "Playback Started",
+          description: currentSong ? `Playing "${currentSong.title}"` : "Playing music",
+        });
+      }
+    } else if (lowerCommand.includes('pause')) {
+      setPlayerState(prev => ({ ...prev, isPlaying: false }));
+      toast({
+        title: "Playback Paused",
+        description: "Music paused"
+      });
+    } else if (lowerCommand.includes('next')) {
+      nextSong();
+      toast({
+        title: "Next Track",
+        description: "Playing next song"
+      });
+    } else if (lowerCommand.includes('previous') || lowerCommand.includes('last')) {
+      prevSong();
+      toast({
+        title: "Previous Track",
+        description: "Playing previous song"
+      });
+    } else if (lowerCommand.includes('volume')) {
+      // Change volume
+      if (lowerCommand.includes('up')) {
+        setVolume(Math.min(playerState.volume + 10, 100));
+        toast({
+          title: "Volume Increased",
+          description: `Volume set to ${Math.min(playerState.volume + 10, 100)}%`
+        });
+      } else if (lowerCommand.includes('down')) {
+        setVolume(Math.max(playerState.volume - 10, 0));
+        toast({
+          title: "Volume Decreased",
+          description: `Volume set to ${Math.max(playerState.volume - 10, 0)}%`
+        });
+      }
+    } else {
+      toast({
+        title: "Command Not Recognized",
+        description: "I didn't understand that command",
+        variant: "destructive"
+      });
+    }
+    
+    // Mark the last command as processed
+    setCommandHistory(prev => {
+      const updated = [...prev];
+      if (updated.length > 0) {
+        updated[0].processed = true;
+      }
+      return updated;
+    });
+  };
+
+  const togglePlayPause = () => {
+    setPlayerState(prev => ({ ...prev, isPlaying: !prev.isPlaying }));
+  };
+
+  const nextSong = () => {
+    const currentIndex = songs.findIndex(song => song.id === playerState.currentSongId);
+    const nextIndex = (currentIndex + 1) % songs.length;
+    
+    setPlayerState(prev => ({
+      ...prev,
+      currentSongId: songs[nextIndex].id,
+      currentTime: 0,
+      isPlaying: true
+    }));
+  };
+
+  const prevSong = () => {
+    const currentIndex = songs.findIndex(song => song.id === playerState.currentSongId);
+    const prevIndex = (currentIndex - 1 + songs.length) % songs.length;
+    
+    setPlayerState(prev => ({
+      ...prev,
+      currentSongId: songs[prevIndex].id,
+      currentTime: 0,
+      isPlaying: true
+    }));
+  };
+
+  const seekTo = (time: number) => {
+    setPlayerState(prev => ({ ...prev, currentTime: time }));
+  };
+
+  const setVolume = (volume: number) => {
+    setPlayerState(prev => ({ ...prev, volume, isMuted: false }));
+  };
+
+  const toggleMute = () => {
+    setPlayerState(prev => ({ ...prev, isMuted: !prev.isMuted }));
+  };
+
+  return (
+    <AudioContext.Provider value={{
+      profile,
+      setProfile,
+      eqSettings,
+      setEQSettings,
+      songs,
+      playerState,
+      voiceCommand,
+      setVoiceCommand,
+      isVoiceListening,
+      toggleVoiceListening,
+      commandHistory,
+      togglePlayPause,
+      nextSong,
+      prevSong,
+      seekTo,
+      setVolume,
+      toggleMute,
+      currentSong,
+      waveformData,
+      isSignedUp,
+      processingVoice
+    }}>
+      {children}
+    </AudioContext.Provider>
+  );
+};
+
+export const useAudio = () => {
+  const context = useContext(AudioContext);
+  if (context === undefined) {
+    throw new Error('useAudio must be used within an AudioProvider');
+  }
+  return context;
+};
