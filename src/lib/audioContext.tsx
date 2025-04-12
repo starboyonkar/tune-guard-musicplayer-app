@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { UserProfile, EQSettings, Song, PlayerState, VoiceCommand } from './types';
 import { toast } from '@/components/ui/use-toast';
@@ -6,27 +7,27 @@ import { toast } from '@/components/ui/use-toast';
 const SAMPLE_SONGS: Song[] = [
   {
     id: '1',
-    title: 'Blinding Lights',
+    title: "Blinding Lights",
     artist: 'The Weeknd',
     albumArt: 'https://i.scdn.co/image/ab67616d0000b273aad49f1f5c14ebdbe5b6250a',
     duration: 200,
-    source: 'spotify:track:0VjIjW4GlUZAMYd2vXMi3b'
+    source: 'https://assets.mixkit.co/music/preview/mixkit-tech-house-vibes-130.mp3' // Using free audio
   },
   {
     id: '2',
-    title: 'Shape of You',
+    title: "Shape of You",
     artist: 'Ed Sheeran',
     albumArt: 'https://i.scdn.co/image/ab67616d0000b273ba5db46f4b838ef6027e6f96',
     duration: 234,
-    source: 'spotify:track:7qiZfU4dY1lWllzX7mPBI3'
+    source: 'https://assets.mixkit.co/music/preview/mixkit-dance-with-me-3.mp3' // Using free audio
   },
   {
     id: '3',
-    title: 'Dance Monkey',
+    title: "Dance Monkey",
     artist: 'Tones and I',
     albumArt: 'https://i.scdn.co/image/ab67616d0000b273c6f7af36eccd256764e0a9f6',
     duration: 210,
-    source: 'spotify:track:2XU0oxnq2qxCpomAAuJY8K'
+    source: 'https://assets.mixkit.co/music/preview/mixkit-uplift-breakbeat-loop-180.mp3' // Using free audio
   },
   {
     id: '4',
@@ -34,7 +35,7 @@ const SAMPLE_SONGS: Song[] = [
     artist: 'Dua Lipa',
     albumArt: 'https://i.scdn.co/image/ab67616d0000b273bd26ede1ae69327010d49946',
     duration: 183,
-    source: 'spotify:track:3PfIrDoz19wz7qK7tYeu62'
+    source: 'https://assets.mixkit.co/music/preview/mixkit-serene-view-443.mp3' // Using free audio
   }
 ];
 
@@ -244,28 +245,111 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, []);
 
-  // Generate random waveform data when song is playing
+  // Initialize audio element
+  useEffect(() => {
+    audioRef.current = new Audio();
+    
+    // Event listeners for audio element
+    const onEnded = () => {
+      nextSong();
+    };
+    
+    const onTimeUpdate = () => {
+      if (audioRef.current) {
+        setPlayerState(prev => ({
+          ...prev,
+          currentTime: Math.floor(audioRef.current!.currentTime)
+        }));
+      }
+    };
+    
+    const onLoadedMetadata = () => {
+      if (audioRef.current) {
+        const duration = Math.floor(audioRef.current.duration);
+        if (currentSong) {
+          // Update the song's duration with actual duration
+          const updatedSongs = songs.map(song => 
+            song.id === currentSong.id ? { ...song, duration } : song
+          );
+          if (customSongs.some(song => song.id === currentSong.id)) {
+            setCustomSongs(customSongs.map(song => 
+              song.id === currentSong.id ? { ...song, duration } : song
+            ));
+          }
+        }
+      }
+    };
+    
+    const audio = audioRef.current;
+    audio.addEventListener('ended', onEnded);
+    audio.addEventListener('timeupdate', onTimeUpdate);
+    audio.addEventListener('loadedmetadata', onLoadedMetadata);
+    
+    return () => {
+      audio.removeEventListener('ended', onEnded);
+      audio.removeEventListener('timeupdate', onTimeUpdate);
+      audio.removeEventListener('loadedmetadata', onLoadedMetadata);
+      audio.pause();
+      audio.src = '';
+    };
+  }, []);
+  
+  // Handle song changes and play/pause
+  useEffect(() => {
+    if (!audioRef.current || !currentSong) return;
+    
+    // If current song changes or source changes, load new source
+    if (audioRef.current.src !== currentSong.source) {
+      audioRef.current.src = currentSong.source;
+      audioRef.current.load();
+    }
+    
+    // Handle play/pause
+    if (playerState.isPlaying) {
+      const playPromise = audioRef.current.play();
+      
+      // Handle play promise to avoid DOMException
+      if (playPromise !== undefined) {
+        playPromise.catch(error => {
+          console.error("Audio play error:", error);
+          setPlayerState(prev => ({ ...prev, isPlaying: false }));
+          toast({
+            title: "Playback Error",
+            description: "There was an error playing this audio file.",
+            variant: "destructive"
+          });
+        });
+      }
+    } else {
+      audioRef.current.pause();
+    }
+  }, [currentSong, playerState.isPlaying]);
+  
+  // Handle volume and mute changes
+  useEffect(() => {
+    if (!audioRef.current) return;
+    
+    // Apply volume settings
+    audioRef.current.volume = playerState.isMuted ? 0 : playerState.volume / 100;
+  }, [playerState.volume, playerState.isMuted]);
+
+  // Generate waveform data when song is playing
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
     
-    if (playerState.isPlaying) {
+    if (playerState.isPlaying && audioRef.current) {
       interval = setInterval(() => {
-        // Simulate audio waveform data with random peaks
+        // Generate random waveform data that somewhat correlates to volume
+        const baseAmplitude = audioRef.current?.volume || 0.5;
         const newWaveformData = Array(30).fill(0).map(() => 
-          Math.random() * 0.8 + 0.2
+          Math.min(Math.random() * baseAmplitude * 1.5 + 0.2, 1)
         );
         setWaveformData(newWaveformData);
-        
-        // Update current time
-        setPlayerState(prev => ({
-          ...prev,
-          currentTime: prev.currentTime + 1 > (currentSong?.duration || 0) ? 0 : prev.currentTime + 1
-        }));
-      }, 1000);
+      }, 100);
     }
     
     return () => clearInterval(interval);
-  }, [playerState.isPlaying, currentSong]);
+  }, [playerState.isPlaying]);
 
   const togglePlayPause = () => {
     setPlayerState(prev => ({ ...prev, isPlaying: !prev.isPlaying }));
@@ -296,7 +380,10 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const seekTo = (time: number) => {
-    setPlayerState(prev => ({ ...prev, currentTime: time }));
+    if (audioRef.current) {
+      audioRef.current.currentTime = time;
+      setPlayerState(prev => ({ ...prev, currentTime: time }));
+    }
   };
 
   const setVolume = (volume: number) => {
