@@ -14,7 +14,7 @@ const SongInfo: React.FC = () => {
         playerState.isPlaying && "animate-pulse-slow"
       )}>
         <img 
-          src={currentSong.albumArt} 
+          src="/lovable-uploads/fef0ffdf-0081-4643-b618-d0389707cde1.png" 
           alt={`${currentSong.title} album art`}
           className="w-full h-full object-cover"
         />

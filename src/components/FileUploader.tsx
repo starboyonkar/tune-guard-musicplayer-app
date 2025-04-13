@@ -15,14 +15,15 @@ const FileUploader: React.FC = () => {
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (files && files.length > 0) {
-      const file = files[0];
-      
-      // Check if the file is an MP3
-      if (file.type === 'audio/mpeg' || file.name.endsWith('.mp3')) {
-        addSong(file);
-      } else {
-        alert('Please select an MP3 file.');
-      }
+      // Process each selected file
+      Array.from(files).forEach(file => {
+        // Check if the file is an MP3
+        if (file.type === 'audio/mpeg' || file.name.endsWith('.mp3')) {
+          addSong(file);
+        } else {
+          console.error('Invalid file format:', file.name);
+        }
+      });
       
       // Reset the input
       if (fileInputRef.current) {
@@ -39,6 +40,7 @@ const FileUploader: React.FC = () => {
         accept="audio/mpeg, .mp3"
         onChange={handleFileChange}
         className="hidden"
+        multiple // Allow multiple file selection
       />
       <Button
         variant="outline"
@@ -47,7 +49,7 @@ const FileUploader: React.FC = () => {
         disabled={isLoading}
       >
         <Plus className="mr-2 h-4 w-4" />
-        {isLoading ? 'Loading...' : 'Add MP3 from Device'}
+        {isLoading ? 'Loading...' : 'Add MP3 Files from Device'}
       </Button>
     </div>
   );

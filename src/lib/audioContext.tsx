@@ -11,13 +11,13 @@ import {
 } from './types';
 import { toast } from '@/components/ui/use-toast';
 
-// Sample songs data
+// Sample songs data - update with the new logo
 const SAMPLE_SONGS: Song[] = [
   {
     id: '1',
     title: "Blinding Lights",
     artist: 'The Weeknd',
-    albumArt: 'https://i.scdn.co/image/ab67616d0000b273aad49f1f5c14ebdbe5b6250a',
+    albumArt: '/lovable-uploads/fef0ffdf-0081-4643-b618-d0389707cde1.png',
     duration: 200,
     source: 'https://assets.mixkit.co/music/preview/mixkit-tech-house-vibes-130.mp3'
   },
@@ -25,7 +25,7 @@ const SAMPLE_SONGS: Song[] = [
     id: '2',
     title: "Shape of You",
     artist: 'Ed Sheeran',
-    albumArt: 'https://i.scdn.co/image/ab67616d0000b273ba5db46f4b838ef6027e6f96',
+    albumArt: '/lovable-uploads/fef0ffdf-0081-4643-b618-d0389707cde1.png',
     duration: 234,
     source: 'https://assets.mixkit.co/music/preview/mixkit-dance-with-me-3.mp3'
   },
@@ -33,7 +33,7 @@ const SAMPLE_SONGS: Song[] = [
     id: '3',
     title: "Dance Monkey",
     artist: 'Tones and I',
-    albumArt: 'https://i.scdn.co/image/ab67616d0000b273c6f7af36eccd256764e0a9f6',
+    albumArt: '/lovable-uploads/fef0ffdf-0081-4643-b618-d0389707cde1.png',
     duration: 210,
     source: 'https://assets.mixkit.co/music/preview/mixkit-uplift-breakbeat-loop-180.mp3'
   },
@@ -41,7 +41,7 @@ const SAMPLE_SONGS: Song[] = [
     id: '4',
     title: "Don't Start Now",
     artist: 'Dua Lipa',
-    albumArt: 'https://i.scdn.co/image/ab67616d0000b273bd26ede1ae69327010d49946',
+    albumArt: '/lovable-uploads/fef0ffdf-0081-4643-b618-d0389707cde1.png',
     duration: 183,
     source: 'https://assets.mixkit.co/music/preview/mixkit-serene-view-443.mp3'
   }
@@ -186,7 +186,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     ? songs.find(song => song.id === playerState.currentSongId) 
     : null;
 
-  const initializeAudioNodes = () => {
+  const initializeAudioContext = () => {
     if (!audioContextRef.current) {
       try {
         const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
@@ -212,6 +212,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         trebleFilter.frequency.value = 3000;
         
         eqNodesRef.current = [bassFilter, midFilter, trebleFilter];
+        
+        console.log("Audio context initialized successfully");
       } catch (error) {
         console.error('Error initializing Web Audio API:', error);
         toast({
@@ -237,15 +239,23 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  const createAudioGraph = () => {
-    if (!audioRef.current || !audioContextRef.current) return;
+  const setupAudioGraph = () => {
+    if (!audioRef.current || !audioContextRef.current) {
+      console.error("Audio element or context not available");
+      return;
+    }
     
     try {
       if (sourceNodeRef.current) {
-        sourceNodeRef.current.disconnect();
+        try {
+          sourceNodeRef.current.disconnect();
+        } catch (e) {
+          console.log("Failed to disconnect old source, may already be disconnected:", e);
+        }
       }
       
       sourceNodeRef.current = audioContextRef.current.createMediaElementSource(audioRef.current);
+      console.log("Source node created:", sourceNodeRef.current);
       
       const [bassFilter, midFilter, trebleFilter] = eqNodesRef.current;
       
@@ -257,13 +267,14 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       analyserNodeRef.current!.connect(audioContextRef.current.destination);
       
       updateEQSettings();
+      console.log("Audio graph setup completed successfully");
     } catch (error) {
       console.error('Error creating audio graph:', error);
     }
   };
 
   const processAudioFrame = () => {
-    if (!analyserNodeRef.current || !audioContextRef.current || !sourceNodeRef.current) return;
+    if (!analyserNodeRef.current) return;
     
     const bufferLength = analyserNodeRef.current.frequencyBinCount;
     const timeDataArray = new Uint8Array(bufferLength);
@@ -333,14 +344,20 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       
       await new Promise<void>((resolve) => {
         audio.addEventListener('loadedmetadata', () => resolve());
+        audio.addEventListener('error', () => {
+          console.error("Error loading audio metadata for file:", file.name);
+          resolve();
+        });
+        
+        setTimeout(() => resolve(), 5000);
       });
       
       const newSong: Song = {
-        id: `local-${Date.now()}`,
+        id: `local-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         title: file.name.replace(/\.[^/.]+$/, ""),
         artist: 'Local File',
-        albumArt: 'https://i.scdn.co/image/ab67616d0000b273c6f7af36eccd256764e0a9f6',
-        duration: Math.round(audio.duration),
+        albumArt: '/lovable-uploads/fef0ffdf-0081-4643-b618-d0389707cde1.png',
+        duration: Math.round(audio.duration) || 180,
         source: fileUrl
       };
       
@@ -372,7 +389,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   useEffect(() => {
     audioRef.current = new Audio();
-    initializeAudioNodes();
+    initializeAudioContext();
     
     const onEnded = () => {
       nextSong();
@@ -407,6 +424,9 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     audio.addEventListener('ended', onEnded);
     audio.addEventListener('timeupdate', onTimeUpdate);
     audio.addEventListener('loadedmetadata', onLoadedMetadata);
+    audio.addEventListener('error', (e) => {
+      console.error("Audio element error:", e);
+    });
     
     const savedPlaylists = localStorage.getItem('audioPersonaPlaylists');
     if (savedPlaylists) {
@@ -477,14 +497,18 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (!audioRef.current || !currentSong) return;
     
     if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
-      audioContextRef.current.resume();
+      audioContextRef.current.resume().then(() => {
+        console.log("AudioContext resumed successfully");
+      }).catch(err => {
+        console.error("Failed to resume AudioContext:", err);
+      });
     }
     
     if (audioRef.current.src !== currentSong.source) {
       audioRef.current.src = currentSong.source;
       audioRef.current.load();
       
-      createAudioGraph();
+      setupAudioGraph();
     }
     
     if (playerState.isPlaying) {
