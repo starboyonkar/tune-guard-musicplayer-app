@@ -3,6 +3,7 @@ import React, { useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAudio } from '@/lib/audioContext';
 import { Plus } from 'lucide-react';
+import { toast } from '@/components/ui/use-toast';
 
 const FileUploader: React.FC = () => {
   const { addSong, isLoading } = useAudio();
@@ -16,14 +17,28 @@ const FileUploader: React.FC = () => {
     const files = event.target.files;
     if (files && files.length > 0) {
       // Process each selected file
+      let uploadCount = 0;
+      
       Array.from(files).forEach(file => {
         // Check if the file is an MP3
         if (file.type === 'audio/mpeg' || file.name.endsWith('.mp3')) {
           addSong(file);
+          uploadCount++;
         } else {
-          console.error('Invalid file format:', file.name);
+          toast({
+            title: "Invalid File Format",
+            description: `"${file.name}" is not an MP3 file.`,
+            variant: "destructive"
+          });
         }
       });
+      
+      if (uploadCount > 0) {
+        toast({
+          title: `${uploadCount} File(s) Added`,
+          description: `Successfully added ${uploadCount} audio files.`
+        });
+      }
       
       // Reset the input
       if (fileInputRef.current) {

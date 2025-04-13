@@ -179,6 +179,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const analyserNodeRef = useRef<AnalyserNode | null>(null);
   const gainNodeRef = useRef<GainNode | null>(null);
   const eqNodesRef = useRef<BiquadFilterNode[]>([]);
+  const audioGraphSetup = useRef<boolean>(false);
 
   const songs = [...SAMPLE_SONGS, ...customSongs];
   
@@ -246,28 +247,24 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
     
     try {
-      if (sourceNodeRef.current) {
-        try {
-          sourceNodeRef.current.disconnect();
-        } catch (e) {
-          console.log("Failed to disconnect old source, may already be disconnected:", e);
-        }
+      if (!audioGraphSetup.current) {
+        sourceNodeRef.current = audioContextRef.current.createMediaElementSource(audioRef.current);
+        console.log("Source node created:", sourceNodeRef.current);
+        
+        const [bassFilter, midFilter, trebleFilter] = eqNodesRef.current;
+        
+        sourceNodeRef.current.connect(bassFilter);
+        bassFilter.connect(midFilter);
+        midFilter.connect(trebleFilter);
+        trebleFilter.connect(gainNodeRef.current!);
+        gainNodeRef.current!.connect(analyserNodeRef.current!);
+        analyserNodeRef.current!.connect(audioContextRef.current.destination);
+        
+        audioGraphSetup.current = true;
+        console.log("Audio graph setup completed successfully");
       }
       
-      sourceNodeRef.current = audioContextRef.current.createMediaElementSource(audioRef.current);
-      console.log("Source node created:", sourceNodeRef.current);
-      
-      const [bassFilter, midFilter, trebleFilter] = eqNodesRef.current;
-      
-      sourceNodeRef.current.connect(bassFilter);
-      bassFilter.connect(midFilter);
-      midFilter.connect(trebleFilter);
-      trebleFilter.connect(gainNodeRef.current!);
-      gainNodeRef.current!.connect(analyserNodeRef.current!);
-      analyserNodeRef.current!.connect(audioContextRef.current.destination);
-      
       updateEQSettings();
-      console.log("Audio graph setup completed successfully");
     } catch (error) {
       console.error('Error creating audio graph:', error);
     }
@@ -427,6 +424,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     audio.addEventListener('error', (e) => {
       console.error("Audio element error:", e);
     });
+    
+    setupAudioGraph();
     
     const savedPlaylists = localStorage.getItem('audioPersonaPlaylists');
     if (savedPlaylists) {
