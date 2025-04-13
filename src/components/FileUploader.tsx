@@ -2,7 +2,7 @@
 import React, { useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAudio } from '@/lib/audioContext';
-import { Plus } from 'lucide-react';
+import { Plus, Music } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 
 const FileUploader: React.FC = () => {
@@ -18,13 +18,15 @@ const FileUploader: React.FC = () => {
     if (files && files.length > 0) {
       // Process each selected file
       let uploadCount = 0;
+      let invalidCount = 0;
       
       Array.from(files).forEach(file => {
         // Check if the file is an MP3
-        if (file.type === 'audio/mpeg' || file.name.endsWith('.mp3')) {
+        if (file.type === 'audio/mpeg' || file.name.toLowerCase().endsWith('.mp3')) {
           addSong(file);
           uploadCount++;
         } else {
+          invalidCount++;
           toast({
             title: "Invalid File Format",
             description: `"${file.name}" is not an MP3 file.`,
@@ -36,7 +38,15 @@ const FileUploader: React.FC = () => {
       if (uploadCount > 0) {
         toast({
           title: `${uploadCount} File(s) Added`,
-          description: `Successfully added ${uploadCount} audio files.`
+          description: `Successfully added ${uploadCount} audio file${uploadCount > 1 ? 's' : ''}.`
+        });
+      }
+      
+      if (invalidCount > 0) {
+        toast({
+          title: "Some files were skipped",
+          description: `${invalidCount} file(s) were not MP3 format.`,
+          variant: "destructive"
         });
       }
       
@@ -63,9 +73,21 @@ const FileUploader: React.FC = () => {
         onClick={handleButtonClick}
         disabled={isLoading}
       >
-        <Plus className="mr-2 h-4 w-4" />
-        {isLoading ? 'Loading...' : 'Add MP3 Files from Device'}
+        {isLoading ? (
+          <div className="flex items-center">
+            <div className="animate-spin mr-2 h-4 w-4 border-2 border-t-transparent border-futuristic-accent1 rounded-full"></div>
+            Loading...
+          </div>
+        ) : (
+          <>
+            <Music className="mr-2 h-4 w-4" />
+            Add MP3 Files from Device
+          </>
+        )}
       </Button>
+      <div className="text-center text-xs text-futuristic-muted mt-1">
+        You can select multiple MP3 files at once
+      </div>
     </div>
   );
 };

@@ -14,8 +14,8 @@ const SongInfo: React.FC = () => {
         playerState.isPlaying && "animate-pulse-slow"
       )}>
         <img 
-          src="/lovable-uploads/fef0ffdf-0081-4643-b618-d0389707cde1.png" 
-          alt={`${currentSong.title} album art`}
+          src="/lovable-uploads/b26c60f6-26f9-4e3b-afb1-ba0d0a2e076d.png" 
+          alt="TUNE GUARD"
           className="w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-br from-futuristic-accent1/10 to-futuristic-accent2/10"></div>

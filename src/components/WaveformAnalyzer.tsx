@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from 'react';
 import { Slider } from '@/components/ui/slider';
 import { useAudio } from '@/lib/audioContext';
@@ -80,6 +81,59 @@ const WaveformAnalyzer: React.FC = () => {
     const timeScaleFactor = settings.timeScale;
     const ampScaleFactor = settings.amplitudeScale;
     
+    // Draw axis labels and grid
+    ctx.strokeStyle = 'rgba(100, 100, 100, 0.3)';
+    ctx.lineWidth = 1;
+    
+    // Draw horizontal center line (amplitude = 0)
+    ctx.beginPath();
+    ctx.setLineDash([5, 5]);
+    ctx.moveTo(0, centerY);
+    ctx.lineTo(canvas.width, centerY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    
+    // Draw vertical time markers
+    for (let i = 0; i <= 5; i++) {
+      const x = (canvas.width / 5) * i;
+      ctx.beginPath();
+      ctx.setLineDash([3, 3]);
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, canvas.height);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    
+    // Draw axis labels
+    ctx.fillStyle = 'rgba(200, 200, 200, 0.7)';
+    ctx.font = '10px Arial';
+    
+    // Time labels
+    ctx.textAlign = 'center';
+    for (let i = 0; i <= 5; i++) {
+      const x = (canvas.width / 5) * i;
+      ctx.fillText(`${i * 0.2}s`, x, canvas.height - 5);
+    }
+    
+    // Amplitude labels
+    ctx.textAlign = 'right';
+    ctx.fillText('1.0', 20, 15);
+    ctx.fillText('0.5', 20, centerY / 2);
+    ctx.fillText('0.0', 20, centerY);
+    ctx.fillText('-0.5', 20, centerY + centerY / 2);
+    ctx.fillText('-1.0', 20, canvas.height - 5);
+    
+    // X-Axis Label
+    ctx.textAlign = 'center';
+    ctx.fillText('Time (s)', canvas.width / 2, canvas.height - 20);
+    
+    // Y-Axis Label
+    ctx.save();
+    ctx.translate(10, canvas.height / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText('Amplitude', 0, 0);
+    ctx.restore();
+    
     // Draw time position indicator
     ctx.beginPath();
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
@@ -132,7 +186,7 @@ const WaveformAnalyzer: React.FC = () => {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center mb-2">
-        <h3 className="text-lg font-semibold">Waveform Analysis</h3>
+        <h3 className="text-lg font-semibold">Waveform Analysis - Amplitude vs Time</h3>
         <div className="flex space-x-2">
           <Button 
             variant="ghost" 
@@ -165,11 +219,11 @@ const WaveformAnalyzer: React.FC = () => {
         </div>
       </div>
       
-      <div className="relative bg-gray-900 rounded-lg overflow-hidden h-32">
+      <div className="relative bg-gray-900 rounded-lg overflow-hidden h-48">
         <canvas 
           ref={canvasRef}
           width={800}
-          height={150}
+          height={250}
           className="w-full h-full"
         />
         

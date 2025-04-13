@@ -17,7 +17,7 @@ const SAMPLE_SONGS: Song[] = [
     id: '1',
     title: "Blinding Lights",
     artist: 'The Weeknd',
-    albumArt: '/lovable-uploads/fef0ffdf-0081-4643-b618-d0389707cde1.png',
+    albumArt: '/lovable-uploads/b26c60f6-26f9-4e3b-afb1-ba0d0a2e076d.png',
     duration: 200,
     source: 'https://assets.mixkit.co/music/preview/mixkit-tech-house-vibes-130.mp3'
   },
@@ -25,7 +25,7 @@ const SAMPLE_SONGS: Song[] = [
     id: '2',
     title: "Shape of You",
     artist: 'Ed Sheeran',
-    albumArt: '/lovable-uploads/fef0ffdf-0081-4643-b618-d0389707cde1.png',
+    albumArt: '/lovable-uploads/b26c60f6-26f9-4e3b-afb1-ba0d0a2e076d.png',
     duration: 234,
     source: 'https://assets.mixkit.co/music/preview/mixkit-dance-with-me-3.mp3'
   },
@@ -33,7 +33,7 @@ const SAMPLE_SONGS: Song[] = [
     id: '3',
     title: "Dance Monkey",
     artist: 'Tones and I',
-    albumArt: '/lovable-uploads/fef0ffdf-0081-4643-b618-d0389707cde1.png',
+    albumArt: '/lovable-uploads/b26c60f6-26f9-4e3b-afb1-ba0d0a2e076d.png',
     duration: 210,
     source: 'https://assets.mixkit.co/music/preview/mixkit-uplift-breakbeat-loop-180.mp3'
   },
@@ -41,7 +41,7 @@ const SAMPLE_SONGS: Song[] = [
     id: '4',
     title: "Don't Start Now",
     artist: 'Dua Lipa',
-    albumArt: '/lovable-uploads/fef0ffdf-0081-4643-b618-d0389707cde1.png',
+    albumArt: '/lovable-uploads/b26c60f6-26f9-4e3b-afb1-ba0d0a2e076d.png',
     duration: 183,
     source: 'https://assets.mixkit.co/music/preview/mixkit-serene-view-443.mp3'
   }
@@ -163,7 +163,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   });
   const [playerState, setPlayerState] = useState<PlayerState>(defaultPlayerState);
   const [voiceCommand, setVoiceCommandText] = useState<string>('');
-  const [isVoiceListening, setIsVoiceListening] = useState<boolean>(false);
+  const [isVoiceListening, setIsVoiceListening] = useState<boolean>(true);
   const [commandHistory, setCommandHistory] = useState<VoiceCommand[]>([]);
   const [waveformData, setWaveformData] = useState<WaveformData>(defaultWaveformData);
   const [isSignedUp, setIsSignedUp] = useState<boolean>(false);
@@ -353,7 +353,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         id: `local-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         title: file.name.replace(/\.[^/.]+$/, ""),
         artist: 'Local File',
-        albumArt: '/lovable-uploads/fef0ffdf-0081-4643-b618-d0389707cde1.png',
+        albumArt: '/lovable-uploads/b26c60f6-26f9-4e3b-afb1-ba0d0a2e076d.png',
         duration: Math.round(audio.duration) || 180,
         source: fileUrl
       };
@@ -426,6 +426,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     });
     
     setupAudioGraph();
+    
+    setIsVoiceListening(true);
     
     const savedPlaylists = localStorage.getItem('audioPersonaPlaylists');
     if (savedPlaylists) {
@@ -743,7 +745,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setTimeout(() => {
       processVoiceCommand(command);
       setProcessingVoice(false);
-    }, 1500);
+    }, 1000);
   };
 
   const toggleVoiceListening = () => {
@@ -760,7 +762,13 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const lowerCommand = command.toLowerCase();
     
     if (lowerCommand.includes('play') && !lowerCommand.includes('next') && !lowerCommand.includes('previous')) {
-      if (lowerCommand.includes('play ')) {
+      if (lowerCommand === 'play') {
+        setPlayerState(prev => ({ ...prev, isPlaying: true }));
+        toast({
+          title: "Playback Started",
+          description: currentSong ? `Playing "${currentSong.title}"` : "Playing music",
+        });
+      } else if (lowerCommand.includes('play ')) {
         const songName = lowerCommand.replace('play ', '').trim();
         const foundSong = songs.find(
           song => song.title.toLowerCase().includes(songName) || 
@@ -768,7 +776,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         );
         
         if (foundSong) {
-          setPlayerState(prev => ({ ...prev, currentSongId: foundSong.id, isPlaying: true }));
+          setPlayerState(prev => ({ ...prev, currentSongId: foundSong.id, isPlaying: true, currentTime: 0 }));
           toast({
             title: "Playing Song",
             description: `Now playing "${foundSong.title}" by ${foundSong.artist}`,
@@ -780,14 +788,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             variant: "destructive"
           });
         }
-      } else {
-        setPlayerState(prev => ({ ...prev, isPlaying: true }));
-        toast({
-          title: "Playback Started",
-          description: currentSong ? `Playing "${currentSong.title}"` : "Playing music",
-        });
       }
-    } else if (lowerCommand.includes('pause')) {
+    } else if (lowerCommand.includes('pause') || lowerCommand.includes('stop')) {
       setPlayerState(prev => ({ ...prev, isPlaying: false }));
       toast({
         title: "Playback Paused",
@@ -799,7 +801,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         title: "Next Track",
         description: "Playing next song"
       });
-    } else if (lowerCommand.includes('previous') || lowerCommand.includes('last')) {
+    } else if (lowerCommand.includes('previous') || lowerCommand.includes('last') || lowerCommand.includes('back')) {
       prevSong();
       toast({
         title: "Previous Track",
@@ -818,6 +820,34 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           title: "Volume Decreased",
           description: `Volume set to ${Math.max(playerState.volume - 10, 0)}%`
         });
+      } else if (lowerCommand.includes('mute')) {
+        setPlayerState(prev => ({ ...prev, isMuted: true }));
+        toast({
+          title: "Volume Muted",
+          description: "Audio muted"
+        });
+      } else if (lowerCommand.includes('unmute')) {
+        setPlayerState(prev => ({ ...prev, isMuted: false }));
+        toast({
+          title: "Volume Unmuted",
+          description: "Audio unmuted"
+        });
+      }
+    } else if (lowerCommand.includes('voice') || lowerCommand.includes('listen')) {
+      if (lowerCommand.includes('off') || lowerCommand.includes('disable') || lowerCommand.includes('stop')) {
+        setIsVoiceListening(false);
+        toast({
+          title: "Voice Assistant Deactivated",
+          description: "Voice commands are now disabled"
+        });
+      } else if (lowerCommand.includes('on') || lowerCommand.includes('enable') || lowerCommand.includes('start')) {
+        setIsVoiceListening(true);
+        toast({
+          title: "Voice Assistant Activated", 
+          description: "Listening for commands..."
+        });
+      } else {
+        toggleVoiceListening();
       }
     } else {
       toast({

@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,13 @@ import { Mic, Send } from 'lucide-react';
 const VoiceCommandPanel: React.FC = () => {
   const { setVoiceCommand, isVoiceListening, toggleVoiceListening, commandHistory, processingVoice } = useAudio();
   const [inputCommand, setInputCommand] = useState('');
+  
+  // Auto-enable voice listening on component mount
+  useEffect(() => {
+    if (!isVoiceListening) {
+      toggleVoiceListening();
+    }
+  }, []);
   
   const handleSendCommand = () => {
     if (inputCommand.trim()) {
@@ -49,7 +56,7 @@ const VoiceCommandPanel: React.FC = () => {
         <div className="mb-3 flex flex-col space-y-2 h-32 overflow-y-auto">
           {commandHistory.length === 0 && (
             <div className="text-center text-xs text-futuristic-muted py-4">
-              No commands yet. Try saying "Play music" or "Next song"
+              Try saying "Play music" or "Next song"
             </div>
           )}
           
@@ -102,7 +109,7 @@ const VoiceCommandPanel: React.FC = () => {
         <div className="mt-3 pt-3 border-t border-futuristic-border">
           <p className="text-xs text-futuristic-muted mb-2">Try these commands:</p>
           <div className="flex flex-wrap gap-2">
-            {['Play music', 'Pause', 'Next song', 'Volume up', 'Play Shape of You'].map((cmd, idx) => (
+            {['Play music', 'Pause', 'Next song', 'Voice off', 'Voice on', 'Volume up'].map((cmd, idx) => (
               <Button 
                 key={idx}
                 variant="outline"
