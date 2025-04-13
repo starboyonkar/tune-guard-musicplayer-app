@@ -11,7 +11,7 @@ import FileUploader from './FileUploader';
 import ProfileEditor from './ProfileEditor';
 import PlaylistManager from './PlaylistManager';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { WaveformIcon, ListMusic, Settings } from 'lucide-react';
+import { AudioWaveform, ListMusic, Settings } from 'lucide-react';
 
 const AudioPlayerUI: React.FC = () => {
   return (
@@ -48,7 +48,7 @@ const AudioPlayerUI: React.FC = () => {
                 <Settings className="mr-1 h-4 w-4" /> EQ
               </TabsTrigger>
               <TabsTrigger value="voice">
-                <WaveformIcon className="mr-1 h-4 w-4" /> Voice
+                <AudioWaveform className="mr-1 h-4 w-4" /> Voice
               </TabsTrigger>
             </TabsList>
             <TabsContent value="playlists">

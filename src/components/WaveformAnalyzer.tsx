@@ -3,7 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Slider } from '@/components/ui/slider';
 import { useAudio } from '@/lib/audioContext';
 import { WaveformData, VisSettings } from '@/lib/types';
-import { ZoomIn, ZoomOut, Maximize2, Minimize2, WaveformIcon } from 'lucide-react';
+import { ZoomIn, ZoomOut, Maximize2, Minimize2, AudioWaveform } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -177,7 +177,7 @@ const WaveformAnalyzer: React.FC = () => {
         
         {!playerState.isPlaying && (
           <div className="absolute inset-0 flex items-center justify-center">
-            <WaveformIcon className="h-10 w-10 text-gray-500 opacity-50" />
+            <AudioWaveform className="h-10 w-10 text-gray-500 opacity-50" />
           </div>
         )}
       </div>
