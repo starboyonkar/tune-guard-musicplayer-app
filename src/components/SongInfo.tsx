@@ -26,7 +26,7 @@ const SongInfo: React.FC = () => {
           {currentSong.title}
         </h3>
         <p className="text-futuristic-muted text-sm truncate">
-          {currentSong.artist}
+          {currentSong.artist || "TUNE GUARD"}
         </p>
       </div>
     </div>

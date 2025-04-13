@@ -10,12 +10,21 @@ const VoiceCommandPanel: React.FC = () => {
   const { setVoiceCommand, isVoiceListening, toggleVoiceListening, commandHistory, processingVoice } = useAudio();
   const [inputCommand, setInputCommand] = useState('');
   
-  // Auto-enable voice listening on component mount
+  // Auto-enable voice listening on component mount and maintain it
   useEffect(() => {
     if (!isVoiceListening) {
       toggleVoiceListening();
     }
-  }, []);
+    
+    // Re-enable listening if it gets disabled
+    const checkInterval = setInterval(() => {
+      if (!isVoiceListening) {
+        toggleVoiceListening();
+      }
+    }, 5000);
+    
+    return () => clearInterval(checkInterval);
+  }, [isVoiceListening]);
   
   const handleSendCommand = () => {
     if (inputCommand.trim()) {
@@ -34,7 +43,7 @@ const VoiceCommandPanel: React.FC = () => {
     <Card className="w-full glass border-futuristic-border">
       <CardHeader className="pb-2">
         <CardTitle className="text-sm flex items-center justify-between">
-          <span>Voice Commands</span>
+          <span>TUNE GUARD Voice Commands</span>
           <Button 
             variant={isVoiceListening ? "default" : "outline"}
             size="sm"
@@ -109,7 +118,7 @@ const VoiceCommandPanel: React.FC = () => {
         <div className="mt-3 pt-3 border-t border-futuristic-border">
           <p className="text-xs text-futuristic-muted mb-2">Try these commands:</p>
           <div className="flex flex-wrap gap-2">
-            {['Play music', 'Pause', 'Next song', 'Voice off', 'Voice on', 'Volume up'].map((cmd, idx) => (
+            {['Play music', 'Pause', 'Next song', 'Previous song', 'Volume up', 'Volume down'].map((cmd, idx) => (
               <Button 
                 key={idx}
                 variant="outline"

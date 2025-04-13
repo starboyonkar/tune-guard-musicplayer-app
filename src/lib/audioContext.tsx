@@ -243,7 +243,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const setupAudioGraph = () => {
     if (!audioRef.current || !audioContextRef.current) {
       console.error("Audio element or context not available");
-      return;
+      return false;
     }
     
     try {
@@ -265,8 +265,10 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
       
       updateEQSettings();
+      return true;
     } catch (error) {
       console.error('Error creating audio graph:', error);
+      return false;
     }
   };
 
@@ -339,11 +341,11 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       
       const audio = new Audio(fileUrl);
       
-      await new Promise<void>((resolve) => {
+      await new Promise<void>((resolve, reject) => {
         audio.addEventListener('loadedmetadata', () => resolve());
-        audio.addEventListener('error', () => {
-          console.error("Error loading audio metadata for file:", file.name);
-          resolve();
+        audio.addEventListener('error', (e) => {
+          console.error("Error loading audio metadata for file:", file.name, e);
+          reject(e);
         });
         
         setTimeout(() => resolve(), 5000);
@@ -352,7 +354,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const newSong: Song = {
         id: `local-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         title: file.name.replace(/\.[^/.]+$/, ""),
-        artist: 'Local File',
+        artist: 'TUNE GUARD',
         albumArt: '/lovable-uploads/b26c60f6-26f9-4e3b-afb1-ba0d0a2e076d.png',
         duration: Math.round(audio.duration) || 180,
         source: fileUrl
@@ -372,7 +374,6 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         description: `Now playing "${newSong.title}"`,
       });
       
-      setIsLoading(false);
     } catch (error) {
       console.error("Error adding song:", error);
       toast({
@@ -380,6 +381,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         description: "Failed to add song. Please try again.",
         variant: "destructive"
       });
+    } finally {
       setIsLoading(false);
     }
   };
@@ -423,9 +425,13 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     audio.addEventListener('loadedmetadata', onLoadedMetadata);
     audio.addEventListener('error', (e) => {
       console.error("Audio element error:", e);
+      toast({
+        title: "Audio Error",
+        description: "Error playing audio file. Trying next song...",
+        variant: "destructive"
+      });
+      setTimeout(() => nextSong(), 1000);
     });
-    
-    setupAudioGraph();
     
     setIsVoiceListening(true);
     
@@ -761,78 +767,91 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const processVoiceCommand = (command: string) => {
     const lowerCommand = command.toLowerCase();
     
-    if (lowerCommand.includes('play') && !lowerCommand.includes('next') && !lowerCommand.includes('previous')) {
-      if (lowerCommand === 'play') {
+    const playCommands = ['play', 'start', 'begin', 'resume'];
+    const pauseCommands = ['pause', 'stop', 'halt', 'wait'];
+    const nextCommands = ['next', 'skip', 'forward', 'advance'];
+    const prevCommands = ['previous', 'last', 'back', 'backward', 'earlier', 'return'];
+    const volumeUpCommands = ['volume up', 'louder', 'increase volume', 'turn it up'];
+    const volumeDownCommands = ['volume down', 'lower', 'decrease volume', 'quieter', 'turn it down'];
+    const muteCommands = ['mute', 'silence', 'quiet', 'no sound'];
+    const unmuteCommands = ['unmute', 'sound on', 'enable sound'];
+    
+    const matchesCommand = (cmd: string, variations: string[]) => {
+      return variations.some(variation => cmd.includes(variation));
+    };
+    
+    if (matchesCommand(lowerCommand, playCommands)) {
+      if (lowerCommand === 'play' || lowerCommand === 'start' || lowerCommand === 'resume') {
         setPlayerState(prev => ({ ...prev, isPlaying: true }));
         toast({
           title: "Playback Started",
           description: currentSong ? `Playing "${currentSong.title}"` : "Playing music",
         });
-      } else if (lowerCommand.includes('play ')) {
-        const songName = lowerCommand.replace('play ', '').trim();
-        const foundSong = songs.find(
-          song => song.title.toLowerCase().includes(songName) || 
-                 song.artist.toLowerCase().includes(songName)
-        );
-        
-        if (foundSong) {
-          setPlayerState(prev => ({ ...prev, currentSongId: foundSong.id, isPlaying: true, currentTime: 0 }));
-          toast({
-            title: "Playing Song",
-            description: `Now playing "${foundSong.title}" by ${foundSong.artist}`,
-          });
-        } else {
-          toast({
-            title: "Song Not Found",
-            description: `Sorry, I couldn't find "${songName}"`,
-            variant: "destructive"
-          });
+      } else {
+        const searchTerm = lowerCommand.replace(/play |start |begin /i, '').trim();
+        if (searchTerm) {
+          const foundSong = songs.find(
+            song => song.title.toLowerCase().includes(searchTerm) || 
+                  song.artist.toLowerCase().includes(searchTerm)
+          );
+          
+          if (foundSong) {
+            setPlayerState(prev => ({ ...prev, currentSongId: foundSong.id, isPlaying: true, currentTime: 0 }));
+            toast({
+              title: "Playing Song",
+              description: `Now playing "${foundSong.title}" by ${foundSong.artist}`,
+            });
+          } else {
+            toast({
+              title: "Song Not Found",
+              description: `Sorry, I couldn't find "${searchTerm}"`,
+              variant: "destructive"
+            });
+          }
         }
       }
-    } else if (lowerCommand.includes('pause') || lowerCommand.includes('stop')) {
+    } else if (matchesCommand(lowerCommand, pauseCommands)) {
       setPlayerState(prev => ({ ...prev, isPlaying: false }));
       toast({
         title: "Playback Paused",
         description: "Music paused"
       });
-    } else if (lowerCommand.includes('next')) {
+    } else if (matchesCommand(lowerCommand, nextCommands)) {
       nextSong();
       toast({
         title: "Next Track",
         description: "Playing next song"
       });
-    } else if (lowerCommand.includes('previous') || lowerCommand.includes('last') || lowerCommand.includes('back')) {
+    } else if (matchesCommand(lowerCommand, prevCommands)) {
       prevSong();
       toast({
         title: "Previous Track",
         description: "Playing previous song"
       });
-    } else if (lowerCommand.includes('volume')) {
-      if (lowerCommand.includes('up')) {
-        setVolume(Math.min(playerState.volume + 10, 100));
-        toast({
-          title: "Volume Increased",
-          description: `Volume set to ${Math.min(playerState.volume + 10, 100)}%`
-        });
-      } else if (lowerCommand.includes('down')) {
-        setVolume(Math.max(playerState.volume - 10, 0));
-        toast({
-          title: "Volume Decreased",
-          description: `Volume set to ${Math.max(playerState.volume - 10, 0)}%`
-        });
-      } else if (lowerCommand.includes('mute')) {
-        setPlayerState(prev => ({ ...prev, isMuted: true }));
-        toast({
-          title: "Volume Muted",
-          description: "Audio muted"
-        });
-      } else if (lowerCommand.includes('unmute')) {
-        setPlayerState(prev => ({ ...prev, isMuted: false }));
-        toast({
-          title: "Volume Unmuted",
-          description: "Audio unmuted"
-        });
-      }
+    } else if (matchesCommand(lowerCommand, volumeUpCommands)) {
+      setVolume(Math.min(playerState.volume + 10, 100));
+      toast({
+        title: "Volume Increased",
+        description: `Volume set to ${Math.min(playerState.volume + 10, 100)}%`
+      });
+    } else if (matchesCommand(lowerCommand, volumeDownCommands)) {
+      setVolume(Math.max(playerState.volume - 10, 0));
+      toast({
+        title: "Volume Decreased",
+        description: `Volume set to ${Math.max(playerState.volume - 10, 0)}%`
+      });
+    } else if (matchesCommand(lowerCommand, muteCommands)) {
+      setPlayerState(prev => ({ ...prev, isMuted: true }));
+      toast({
+        title: "Volume Muted",
+        description: "Audio muted"
+      });
+    } else if (matchesCommand(lowerCommand, unmuteCommands)) {
+      setPlayerState(prev => ({ ...prev, isMuted: false }));
+      toast({
+        title: "Volume Unmuted",
+        description: "Audio unmuted"
+      });
     } else if (lowerCommand.includes('voice') || lowerCommand.includes('listen')) {
       if (lowerCommand.includes('off') || lowerCommand.includes('disable') || lowerCommand.includes('stop')) {
         setIsVoiceListening(false);

@@ -38,7 +38,7 @@ const FileUploader: React.FC = () => {
       if (uploadCount > 0) {
         toast({
           title: `${uploadCount} File(s) Added`,
-          description: `Successfully added ${uploadCount} audio file${uploadCount > 1 ? 's' : ''}.`
+          description: `Successfully added ${uploadCount} audio file${uploadCount > 1 ? 's' : ''} to TUNE GUARD.`
         });
       }
       
@@ -81,7 +81,7 @@ const FileUploader: React.FC = () => {
         ) : (
           <>
             <Music className="mr-2 h-4 w-4" />
-            Add MP3 Files from Device
+            Add MP3 Files to TUNE GUARD
           </>
         )}
       </Button>

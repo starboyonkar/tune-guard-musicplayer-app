@@ -16,10 +16,10 @@ const Index = () => {
       {/* App logo */}
       <div className="absolute top-4 left-4 flex items-center space-x-2">
         <Avatar className="h-10 w-10 border border-white/10">
-          <AvatarImage src="/lovable-uploads/fef0ffdf-0081-4643-b618-d0389707cde1.png" alt="Audio Player Logo" />
-          <AvatarFallback>AP</AvatarFallback>
+          <AvatarImage src="/lovable-uploads/b26c60f6-26f9-4e3b-afb1-ba0d0a2e076d.png" alt="TUNE GUARD" />
+          <AvatarFallback>TG</AvatarFallback>
         </Avatar>
-        <span className="text-lg font-semibold text-white">Audio Persona</span>
+        <span className="text-lg font-semibold text-white">TUNE GUARD</span>
       </div>
       
       {/* Main content */}

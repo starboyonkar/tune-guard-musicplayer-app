@@ -123,11 +123,13 @@ const WaveformAnalyzer: React.FC = () => {
     ctx.fillText('-0.5', 20, centerY + centerY / 2);
     ctx.fillText('-1.0', 20, canvas.height - 5);
     
-    // X-Axis Label
+    // X-Axis Label - "Time (s)"
     ctx.textAlign = 'center';
+    ctx.font = '12px Arial';
+    ctx.fillStyle = 'rgba(200, 200, 200, 0.9)';
     ctx.fillText('Time (s)', canvas.width / 2, canvas.height - 20);
     
-    // Y-Axis Label
+    // Y-Axis Label - "Amplitude"
     ctx.save();
     ctx.translate(10, canvas.height / 2);
     ctx.rotate(-Math.PI / 2);
