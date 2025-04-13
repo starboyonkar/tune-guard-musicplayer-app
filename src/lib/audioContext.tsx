@@ -11,7 +11,6 @@ import {
 } from './types';
 import { toast } from '@/components/ui/use-toast';
 
-// Sample songs data - update with the new logo
 const SAMPLE_SONGS: Song[] = [
   {
     id: '1',
@@ -47,7 +46,6 @@ const SAMPLE_SONGS: Song[] = [
   }
 ];
 
-// Sample playlist data
 const SAMPLE_PLAYLISTS: Playlist[] = [
   {
     id: 'playlist1',
@@ -57,9 +55,7 @@ const SAMPLE_PLAYLISTS: Playlist[] = [
   }
 ];
 
-// Get EQ settings based on age
 const getEQSettingsByAge = (age: number, gender: string): EQSettings => {
-  // Different EQ profiles based on age groups
   if (age < 20) {
     return {
       bass: gender === 'male' ? 75 : 70,
@@ -248,6 +244,16 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     
     try {
       if (!audioGraphSetup.current) {
+        console.log("Setting up audio graph");
+        
+        if (sourceNodeRef.current) {
+          try {
+            sourceNodeRef.current.disconnect();
+          } catch (e) {
+            console.log("Error disconnecting old source node:", e);
+          }
+        }
+        
         sourceNodeRef.current = audioContextRef.current.createMediaElementSource(audioRef.current);
         console.log("Source node created:", sourceNodeRef.current);
         
@@ -268,6 +274,11 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       return true;
     } catch (error) {
       console.error('Error creating audio graph:', error);
+      toast({
+        title: "Audio Setup Error",
+        description: "There was a problem setting up audio processing.",
+        variant: "destructive"
+      });
       return false;
     }
   };
@@ -282,14 +293,21 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     analyserNodeRef.current.getByteTimeDomainData(timeDataArray);
     analyserNodeRef.current.getByteFrequencyData(frequencyDataArray);
     
+    const sampleRate = audioContextRef.current?.sampleRate || 44100;
+    const timeStep = bufferLength / sampleRate; // Time in seconds for the whole buffer
+    
     const downsampleFactor = Math.floor(bufferLength / 30);
     
+    const timeData = Array(30).fill(0).map((_, i) => 
+      (i * downsampleFactor / sampleRate) * 1000 // Convert to milliseconds
+    );
+    
     const original = Array(30).fill(0).map((_, i) => 
-      timeDataArray[i * downsampleFactor] / 256
+      (timeDataArray[i * downsampleFactor] / 128.0) - 1.0
     );
     
     const processed = Array(30).fill(0).map((_, i) => {
-      const value = timeDataArray[i * downsampleFactor] / 256;
+      const value = (timeDataArray[i * downsampleFactor] / 128.0) - 1.0;
       
       const bassBoost = (eqSettings.bass - 50) / 100;
       const trebleBoost = (eqSettings.treble - 50) / 100;
@@ -309,8 +327,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setWaveformData({
       original,
       processed,
-      timeData: Array.from(timeDataArray).slice(0, 30).map(v => v / 256),
-      frequencyData: frequencyData
+      timeData,
+      frequencyData
     });
   };
 
@@ -419,6 +437,18 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
     };
     
+    const onPlaySong = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const { songId } = customEvent.detail;
+      
+      setPlayerState(prev => ({
+        ...prev,
+        currentSongId: songId,
+        currentTime: 0,
+        isPlaying: true
+      }));
+    };
+    
     const audio = audioRef.current;
     audio.addEventListener('ended', onEnded);
     audio.addEventListener('timeupdate', onTimeUpdate);
@@ -432,6 +462,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       });
       setTimeout(() => nextSong(), 1000);
     });
+    
+    document.addEventListener('play-song', onPlaySong);
     
     setIsVoiceListening(true);
     
@@ -451,6 +483,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       audio.removeEventListener('ended', onEnded);
       audio.removeEventListener('timeupdate', onTimeUpdate);
       audio.removeEventListener('loadedmetadata', onLoadedMetadata);
+      document.removeEventListener('play-song', onPlaySong);
       audio.pause();
       audio.src = '';
       
@@ -503,6 +536,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     if (!audioRef.current || !currentSong) return;
     
+    console.log("Current song changed:", currentSong);
+    
     if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
       audioContextRef.current.resume().then(() => {
         console.log("AudioContext resumed successfully");
@@ -512,29 +547,41 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
     
     if (audioRef.current.src !== currentSong.source) {
+      console.log("Setting audio source to:", currentSong.source);
       audioRef.current.src = currentSong.source;
       audioRef.current.load();
       
-      setupAudioGraph();
+      if (!audioGraphSetup.current) {
+        console.log("Setting up audio graph for the first time");
+        setupAudioGraph();
+      }
     }
     
-    if (playerState.isPlaying) {
-      const playPromise = audioRef.current.play();
+    audioRef.current.oncanplaythrough = () => {
+      console.log("Audio can play through");
       
-      if (playPromise !== undefined) {
-        playPromise.catch(error => {
-          console.error("Audio play error:", error);
-          setPlayerState(prev => ({ ...prev, isPlaying: false }));
-          toast({
-            title: "Playback Error",
-            description: "There was an error playing this audio file.",
-            variant: "destructive"
+      if (playerState.isPlaying) {
+        console.log("Starting playback");
+        const playPromise = audioRef.current!.play();
+        
+        if (playPromise !== undefined) {
+          playPromise.catch(error => {
+            console.error("Audio play error:", error);
+            setPlayerState(prev => ({ ...prev, isPlaying: false }));
+            toast({
+              title: "Playback Error",
+              description: "There was an error playing this song.",
+              variant: "destructive"
+            });
+            return prev; // Don't update state if play fails
           });
-        });
+        }
+      } else {
+        audioRef.current!.pause();
       }
-    } else {
-      audioRef.current.pause();
-    }
+      
+      audioRef.current!.oncanplaythrough = null;
+    };
   }, [currentSong, playerState.isPlaying]);
 
   useEffect(() => {
@@ -569,7 +616,28 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
       audioContextRef.current.resume();
     }
-    setPlayerState(prev => ({ ...prev, isPlaying: !prev.isPlaying }));
+    
+    setPlayerState(prev => {
+      const newIsPlaying = !prev.isPlaying;
+      
+      if (audioRef.current) {
+        if (newIsPlaying) {
+          audioRef.current.play().catch(error => {
+            console.error("Error playing audio:", error);
+            toast({
+              title: "Playback Error",
+              description: "There was an error playing this song.",
+              variant: "destructive"
+            });
+            return prev; // Don't update state if play fails
+          });
+        } else {
+          audioRef.current.pause();
+        }
+      }
+      
+      return { ...prev, isPlaying: newIsPlaying };
+    });
   };
 
   const nextSong = () => {
@@ -767,6 +835,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const processVoiceCommand = (command: string) => {
     const lowerCommand = command.toLowerCase();
     
+    let commandRecognized = false;
+    
     const playCommands = ['play', 'start', 'begin', 'resume'];
     const pauseCommands = ['pause', 'stop', 'halt', 'wait'];
     const nextCommands = ['next', 'skip', 'forward', 'advance'];
@@ -781,6 +851,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
     
     if (matchesCommand(lowerCommand, playCommands)) {
+      commandRecognized = true;
+      
       if (lowerCommand === 'play' || lowerCommand === 'start' || lowerCommand === 'resume') {
         setPlayerState(prev => ({ ...prev, isPlaying: true }));
         toast({
@@ -811,48 +883,56 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }
       }
     } else if (matchesCommand(lowerCommand, pauseCommands)) {
+      commandRecognized = true;
       setPlayerState(prev => ({ ...prev, isPlaying: false }));
       toast({
         title: "Playback Paused",
         description: "Music paused"
       });
     } else if (matchesCommand(lowerCommand, nextCommands)) {
+      commandRecognized = true;
       nextSong();
       toast({
         title: "Next Track",
         description: "Playing next song"
       });
     } else if (matchesCommand(lowerCommand, prevCommands)) {
+      commandRecognized = true;
       prevSong();
       toast({
         title: "Previous Track",
         description: "Playing previous song"
       });
     } else if (matchesCommand(lowerCommand, volumeUpCommands)) {
+      commandRecognized = true;
       setVolume(Math.min(playerState.volume + 10, 100));
       toast({
         title: "Volume Increased",
         description: `Volume set to ${Math.min(playerState.volume + 10, 100)}%`
       });
     } else if (matchesCommand(lowerCommand, volumeDownCommands)) {
+      commandRecognized = true;
       setVolume(Math.max(playerState.volume - 10, 0));
       toast({
         title: "Volume Decreased",
         description: `Volume set to ${Math.max(playerState.volume - 10, 0)}%`
       });
     } else if (matchesCommand(lowerCommand, muteCommands)) {
+      commandRecognized = true;
       setPlayerState(prev => ({ ...prev, isMuted: true }));
       toast({
         title: "Volume Muted",
         description: "Audio muted"
       });
     } else if (matchesCommand(lowerCommand, unmuteCommands)) {
+      commandRecognized = true;
       setPlayerState(prev => ({ ...prev, isMuted: false }));
       toast({
         title: "Volume Unmuted",
         description: "Audio unmuted"
       });
     } else if (lowerCommand.includes('voice') || lowerCommand.includes('listen')) {
+      commandRecognized = true;
       if (lowerCommand.includes('off') || lowerCommand.includes('disable') || lowerCommand.includes('stop')) {
         setIsVoiceListening(false);
         toast({
@@ -868,7 +948,9 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       } else {
         toggleVoiceListening();
       }
-    } else {
+    }
+    
+    if (!commandRecognized) {
       toast({
         title: "Command Not Recognized",
         description: "I didn't understand that command",

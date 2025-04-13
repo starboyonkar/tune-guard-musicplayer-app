@@ -9,16 +9,8 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 
 const WaveformAnalyzer: React.FC = () => {
-  const { waveformData, playerState, currentSong, seekTo } = useAudio();
+  const { waveformData, playerState, currentSong, seekTo, visSettings, setVisSettings } = useAudio();
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [settings, setSettings] = useState<VisSettings>({
-    scale: 1,
-    timeScale: 1,
-    amplitudeScale: 1,
-    showProcessed: true,
-    showOriginal: true,
-    overlay: true
-  });
   
   const [timePosition, setTimePosition] = useState<number>(0);
   
@@ -42,30 +34,30 @@ const WaveformAnalyzer: React.FC = () => {
   };
   
   const handleScaleChange = (values: number[]) => {
-    setSettings(prev => ({ ...prev, scale: values[0] }));
+    setVisSettings({ scale: values[0] });
   };
   
   const handleTimeScaleChange = (values: number[]) => {
-    setSettings(prev => ({ ...prev, timeScale: values[0] }));
+    setVisSettings({ timeScale: values[0] });
   };
   
   const handleAmplitudeScaleChange = (values: number[]) => {
-    setSettings(prev => ({ ...prev, amplitudeScale: values[0] }));
+    setVisSettings({ amplitudeScale: values[0] });
   };
   
   const toggleShowProcessed = () => {
-    setSettings(prev => ({ ...prev, showProcessed: !prev.showProcessed }));
+    setVisSettings({ showProcessed: !visSettings.showProcessed });
   };
   
   const toggleShowOriginal = () => {
-    setSettings(prev => ({ ...prev, showOriginal: !prev.showOriginal }));
+    setVisSettings({ showOriginal: !visSettings.showOriginal });
   };
   
   const toggleOverlay = () => {
-    setSettings(prev => ({ ...prev, overlay: !prev.overlay }));
+    setVisSettings({ overlay: !visSettings.overlay });
   };
   
-  // Draw waveform on canvas
+  // Draw waveform on canvas with accurate amplitude vs. time representation
   useEffect(() => {
     if (!canvasRef.current) return;
     
@@ -76,10 +68,14 @@ const WaveformAnalyzer: React.FC = () => {
     // Clear the canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    const { original, processed } = waveformData;
+    const { original, processed, timeData } = waveformData;
     const centerY = canvas.height / 2;
-    const timeScaleFactor = settings.timeScale;
-    const ampScaleFactor = settings.amplitudeScale;
+    const timeScaleFactor = visSettings.timeScale;
+    const ampScaleFactor = visSettings.amplitudeScale;
+    
+    // Draw dark background with grid
+    ctx.fillStyle = "rgba(17, 24, 39, 0.7)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
     
     // Draw axis labels and grid
     ctx.strokeStyle = 'rgba(100, 100, 100, 0.3)';
@@ -93,9 +89,29 @@ const WaveformAnalyzer: React.FC = () => {
     ctx.stroke();
     ctx.setLineDash([]);
     
+    // Draw amplitude grid lines
+    const amplitudeLines = 4; // Number of lines above and below center
+    const amplitudeStep = canvas.height / (2 * amplitudeLines);
+    
+    for (let i = 1; i <= amplitudeLines; i++) {
+      // Lines above center (positive amplitude)
+      ctx.beginPath();
+      ctx.setLineDash([3, 3]);
+      ctx.moveTo(0, centerY - i * amplitudeStep);
+      ctx.lineTo(canvas.width, centerY - i * amplitudeStep);
+      ctx.stroke();
+      
+      // Lines below center (negative amplitude)
+      ctx.beginPath();
+      ctx.moveTo(0, centerY + i * amplitudeStep);
+      ctx.lineTo(canvas.width, centerY + i * amplitudeStep);
+      ctx.stroke();
+    }
+    
     // Draw vertical time markers
-    for (let i = 0; i <= 5; i++) {
-      const x = (canvas.width / 5) * i;
+    const timeLines = 10;
+    for (let i = 0; i <= timeLines; i++) {
+      const x = (canvas.width / timeLines) * i;
       ctx.beginPath();
       ctx.setLineDash([3, 3]);
       ctx.moveTo(x, 0);
@@ -108,26 +124,32 @@ const WaveformAnalyzer: React.FC = () => {
     ctx.fillStyle = 'rgba(200, 200, 200, 0.7)';
     ctx.font = '10px Arial';
     
-    // Time labels
+    // Time labels (in milliseconds)
     ctx.textAlign = 'center';
-    for (let i = 0; i <= 5; i++) {
-      const x = (canvas.width / 5) * i;
-      ctx.fillText(`${i * 0.2}s`, x, canvas.height - 5);
+    const maxTimeMs = timeData.length > 0 ? Math.max(...timeData) : 1000;
+    for (let i = 0; i <= timeLines; i++) {
+      const x = (canvas.width / timeLines) * i;
+      const timeMs = (i / timeLines) * maxTimeMs * timeScaleFactor;
+      ctx.fillText(`${Math.round(timeMs)} ms`, x, canvas.height - 5);
     }
     
-    // Amplitude labels
+    // Amplitude labels (-1 to 1 range)
     ctx.textAlign = 'right';
-    ctx.fillText('1.0', 20, 15);
-    ctx.fillText('0.5', 20, centerY / 2);
-    ctx.fillText('0.0', 20, centerY);
-    ctx.fillText('-0.5', 20, centerY + centerY / 2);
-    ctx.fillText('-1.0', 20, canvas.height - 5);
+    for (let i = -amplitudeLines; i <= amplitudeLines; i++) {
+      const y = centerY - i * amplitudeStep;
+      const amplitude = i / amplitudeLines;
+      if (i !== 0) { // Skip zero since we already have the center line
+        ctx.fillText(amplitude.toFixed(1), 20, y + 4);
+      } else {
+        ctx.fillText('0.0', 20, y + 4);
+      }
+    }
     
-    // X-Axis Label - "Time (s)"
+    // X-Axis Label - "Time (ms)"
     ctx.textAlign = 'center';
     ctx.font = '12px Arial';
     ctx.fillStyle = 'rgba(200, 200, 200, 0.9)';
-    ctx.fillText('Time (s)', canvas.width / 2, canvas.height - 20);
+    ctx.fillText('Time (ms)', canvas.width / 2, canvas.height - 20);
     
     // Y-Axis Label - "Amplitude"
     ctx.save();
@@ -145,14 +167,19 @@ const WaveformAnalyzer: React.FC = () => {
     ctx.stroke();
     
     // Draw original waveform
-    if (settings.showOriginal) {
+    if (visSettings.showOriginal && original.length > 0) {
       ctx.beginPath();
       ctx.strokeStyle = 'rgba(100, 200, 255, 0.7)';
       ctx.lineWidth = 2;
       
+      // Plot points with proper time and amplitude scaling
       original.forEach((value, i) => {
-        const x = (i / original.length) * canvas.width * timeScaleFactor;
-        const y = centerY + (value - 0.5) * canvas.height * ampScaleFactor;
+        // Scale x position based on relative time
+        const relativeTimePosition = i / original.length;
+        const x = relativeTimePosition * canvas.width * timeScaleFactor;
+        
+        // Scale y position based on amplitude (-1 to 1)
+        const y = centerY - (value * (canvas.height / 2) * ampScaleFactor);
         
         if (i === 0) {
           ctx.moveTo(x, y);
@@ -165,14 +192,19 @@ const WaveformAnalyzer: React.FC = () => {
     }
     
     // Draw processed waveform
-    if (settings.showProcessed) {
+    if (visSettings.showProcessed && processed.length > 0) {
       ctx.beginPath();
       ctx.strokeStyle = 'rgba(255, 100, 100, 0.7)';
       ctx.lineWidth = 2;
       
+      // Plot points with proper time and amplitude scaling
       processed.forEach((value, i) => {
-        const x = (i / processed.length) * canvas.width * timeScaleFactor;
-        const y = centerY + (value - 0.5) * canvas.height * ampScaleFactor;
+        // Scale x position based on relative time
+        const relativeTimePosition = i / processed.length;
+        const x = relativeTimePosition * canvas.width * timeScaleFactor;
+        
+        // Scale y position based on amplitude (-1 to 1)
+        const y = centerY - (value * (canvas.height / 2) * ampScaleFactor);
         
         if (i === 0) {
           ctx.moveTo(x, y);
@@ -183,7 +215,41 @@ const WaveformAnalyzer: React.FC = () => {
       
       ctx.stroke();
     }
-  }, [waveformData, settings, timePosition]);
+    
+    // Add legend
+    if (visSettings.showOriginal || visSettings.showProcessed) {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+      ctx.fillRect(canvas.width - 120, 10, 110, visSettings.showOriginal && visSettings.showProcessed ? 50 : 30);
+      
+      if (visSettings.showOriginal) {
+        ctx.beginPath();
+        ctx.strokeStyle = 'rgba(100, 200, 255, 0.7)';
+        ctx.lineWidth = 2;
+        ctx.moveTo(canvas.width - 110, 20);
+        ctx.lineTo(canvas.width - 70, 20);
+        ctx.stroke();
+        
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        ctx.textAlign = 'left';
+        ctx.fillText('Original', canvas.width - 65, 24);
+      }
+      
+      if (visSettings.showProcessed) {
+        const y = visSettings.showOriginal ? 40 : 20;
+        
+        ctx.beginPath();
+        ctx.strokeStyle = 'rgba(255, 100, 100, 0.7)';
+        ctx.lineWidth = 2;
+        ctx.moveTo(canvas.width - 110, y);
+        ctx.lineTo(canvas.width - 70, y);
+        ctx.stroke();
+        
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        ctx.textAlign = 'left';
+        ctx.fillText('Processed', canvas.width - 65, y + 4);
+      }
+    }
+  }, [waveformData, visSettings, timePosition]);
   
   return (
     <div className="space-y-4">
@@ -193,21 +259,21 @@ const WaveformAnalyzer: React.FC = () => {
           <Button 
             variant="ghost" 
             size="sm"
-            onClick={() => setSettings(prev => ({ ...prev, scale: Math.max(prev.scale - 0.1, 0.1) }))}
+            onClick={() => setVisSettings({ scale: Math.max(visSettings.scale - 0.1, 0.1) })}
           >
             <ZoomOut className="h-4 w-4" />
           </Button>
           <Button 
             variant="ghost"
             size="sm" 
-            onClick={() => setSettings(prev => ({ ...prev, scale: prev.scale + 0.1 }))}
+            onClick={() => setVisSettings({ scale: visSettings.scale + 0.1 })}
           >
             <ZoomIn className="h-4 w-4" />
           </Button>
           <Button 
             variant="ghost"
             size="sm"
-            onClick={() => setSettings({
+            onClick={() => setVisSettings({
               scale: 1,
               timeScale: 1,
               amplitudeScale: 1,
@@ -257,7 +323,7 @@ const WaveformAnalyzer: React.FC = () => {
             <Slider
               id="time-scale"
               className="w-32"
-              value={[settings.timeScale]}
+              value={[visSettings.timeScale]}
               min={0.5}
               max={2}
               step={0.1}
@@ -270,7 +336,7 @@ const WaveformAnalyzer: React.FC = () => {
             <Slider
               id="amp-scale"
               className="w-32"
-              value={[settings.amplitudeScale]}
+              value={[visSettings.amplitudeScale]}
               min={0.5}
               max={2}
               step={0.1}
@@ -284,7 +350,7 @@ const WaveformAnalyzer: React.FC = () => {
             <Label htmlFor="show-original">Original</Label>
             <Switch 
               id="show-original" 
-              checked={settings.showOriginal} 
+              checked={visSettings.showOriginal} 
               onCheckedChange={toggleShowOriginal} 
             />
           </div>
@@ -293,7 +359,7 @@ const WaveformAnalyzer: React.FC = () => {
             <Label htmlFor="show-processed">Processed</Label>
             <Switch 
               id="show-processed" 
-              checked={settings.showProcessed} 
+              checked={visSettings.showProcessed} 
               onCheckedChange={toggleShowProcessed} 
             />
           </div>
@@ -302,7 +368,7 @@ const WaveformAnalyzer: React.FC = () => {
             <Label htmlFor="overlay">Overlay</Label>
             <Switch 
               id="overlay" 
-              checked={settings.overlay} 
+              checked={visSettings.overlay} 
               onCheckedChange={toggleOverlay} 
             />
           </div>

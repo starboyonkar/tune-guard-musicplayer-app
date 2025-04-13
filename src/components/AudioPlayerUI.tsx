@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card } from '@/components/ui/card';
 import PlayerControls from './PlayerControls';
@@ -10,8 +9,9 @@ import VoiceCommandPanel from './VoiceCommandPanel';
 import FileUploader from './FileUploader';
 import ProfileEditor from './ProfileEditor';
 import PlaylistManager from './PlaylistManager';
+import SongsList from './SongsList';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { AudioWaveform, ListMusic, Settings } from 'lucide-react';
+import { AudioWaveform, ListMusic, Settings, Music } from 'lucide-react';
 
 const AudioPlayerUI: React.FC = () => {
   return (
@@ -29,7 +29,12 @@ const AudioPlayerUI: React.FC = () => {
           <PlayerControls />
         </Card>
         
-        {/* File Uploader */}
+        {/* Songs List - Added here */}
+        <Card className="p-4 mb-4">
+          <SongsList />
+        </Card>
+        
+        {/* File Uploader - We'll keep this as an alternative way to add songs */}
         <FileUploader />
         
         {/* Advanced Waveform Analyzer */}
