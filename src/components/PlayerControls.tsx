@@ -83,22 +83,22 @@ const PlayerControls: React.FC = () => {
       
       {/* Main controls */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-6">
           <Button 
             variant="ghost" 
             size="icon" 
             onClick={handlePrev}
             className="text-futuristic-accent2 hover:text-futuristic-accent1 hover:bg-futuristic-bg"
           >
-            <SkipBack />
+            <SkipBack className="h-5 w-5" />
           </Button>
           
           <Button 
             onClick={handlePlayPause}
             size="icon"
-            className="rounded-full bg-gradient-to-r from-futuristic-accent1 to-futuristic-accent2 hover:opacity-90 animate-glow"
+            className="rounded-full bg-gradient-to-r from-futuristic-accent1 to-futuristic-accent2 hover:opacity-90 animate-glow h-12 w-12"
           >
-            {isPlaying ? <Pause fill="white" /> : <Play fill="white" className="ml-1" />}
+            {isPlaying ? <Pause fill="white" className="h-5 w-5" /> : <Play fill="white" className="ml-1 h-5 w-5" />}
           </Button>
           
           <Button 
@@ -107,7 +107,7 @@ const PlayerControls: React.FC = () => {
             onClick={handleNext}
             className="text-futuristic-accent2 hover:text-futuristic-accent1 hover:bg-futuristic-bg"
           >
-            <SkipForward />
+            <SkipForward className="h-5 w-5" />
           </Button>
         </div>
         

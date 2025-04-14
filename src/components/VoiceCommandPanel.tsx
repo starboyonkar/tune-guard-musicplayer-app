@@ -3,9 +3,11 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
 import { useAudio } from '@/lib/audioContext';
 import { Mic, Send, MicOff, Command, Settings, Volume2, VolumeX } from 'lucide-react';
 import { soundEffects } from '@/lib/soundEffects';
+import { Label } from '@/components/ui/label';
 
 const VoiceCommandPanel: React.FC = () => {
   const { 
@@ -52,6 +54,11 @@ const VoiceCommandPanel: React.FC = () => {
     setVoiceCommand(command);
   };
   
+  const handleToggleVoice = () => {
+    soundEffects.playTouchFeedback();
+    toggleVoiceListening();
+  };
+  
   // Group commands by category
   const playbackCommands = ['Play music', 'Pause', 'Next song', 'Previous song'];
   const volumeCommands = ['Volume up', 'Volume down', 'Mute', 'Unmute'];
@@ -62,21 +69,18 @@ const VoiceCommandPanel: React.FC = () => {
     <Card className="w-full glass border-futuristic-border">
       <CardHeader className="pb-2">
         <CardTitle className="text-sm flex items-center justify-between">
-          <span>TUNE GUARD Voice Commands</span>
-          <Button 
-            variant={isVoiceListening ? "default" : "outline"}
-            size="sm"
-            onClick={toggleVoiceListening}
-            className={isVoiceListening 
-              ? "bg-futuristic-accent1 text-white hover:bg-futuristic-accent1/90 text-xs h-7" 
-              : "text-futuristic-muted border-futuristic-border hover:text-futuristic-accent1 hover:bg-futuristic-bg text-xs h-7"}
-          >
-            {isVoiceListening ? (
-              <><Mic size={14} className="mr-1 animate-pulse" /> Listening</>
-            ) : (
-              <><MicOff size={14} className="mr-1" /> Enable Voice</>
-            )}
-          </Button>
+          <span className="neon-text">TUNE GUARD Voice Commands</span>
+          <div className="flex items-center space-x-2">
+            <Label htmlFor="voice-toggle" className="text-xs text-futuristic-muted">
+              {isVoiceListening ? "Voice Active" : "Voice Disabled"}
+            </Label>
+            <Switch 
+              id="voice-toggle" 
+              checked={isVoiceListening} 
+              onCheckedChange={handleToggleVoice}
+              className="data-[state=checked]:bg-futuristic-accent1"
+            />
+          </div>
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-0">
@@ -150,7 +154,7 @@ const VoiceCommandPanel: React.FC = () => {
                     variant="outline"
                     size="sm"
                     onClick={() => handleExecuteCommand(cmd)}
-                    className="text-xs py-0 h-6 border-futuristic-border bg-futuristic-bg/20 hover:bg-futuristic-bg"
+                    className="text-xs py-0 h-6 border-futuristic-border bg-futuristic-bg/20 hover:bg-futuristic-bg hover:text-futuristic-accent1"
                   >
                     {cmd}
                   </Button>
@@ -170,7 +174,7 @@ const VoiceCommandPanel: React.FC = () => {
                     variant="outline"
                     size="sm"
                     onClick={() => handleExecuteCommand(cmd)}
-                    className="text-xs py-0 h-6 border-futuristic-border bg-futuristic-bg/20 hover:bg-futuristic-bg"
+                    className="text-xs py-0 h-6 border-futuristic-border bg-futuristic-bg/20 hover:bg-futuristic-bg hover:text-futuristic-accent1"
                   >
                     {cmd}
                   </Button>
@@ -190,7 +194,7 @@ const VoiceCommandPanel: React.FC = () => {
                     variant="outline"
                     size="sm"
                     onClick={() => handleExecuteCommand(cmd)}
-                    className="text-xs py-0 h-6 border-futuristic-border bg-futuristic-bg/20 hover:bg-futuristic-bg"
+                    className="text-xs py-0 h-6 border-futuristic-border bg-futuristic-bg/20 hover:bg-futuristic-bg hover:text-futuristic-accent1"
                   >
                     {cmd}
                   </Button>
@@ -210,7 +214,7 @@ const VoiceCommandPanel: React.FC = () => {
                     variant="outline"
                     size="sm"
                     onClick={() => handleExecuteCommand(cmd)}
-                    className="text-xs py-0 h-6 border-futuristic-border bg-futuristic-bg/20 hover:bg-futuristic-bg"
+                    className="text-xs py-0 h-6 border-futuristic-border bg-futuristic-bg/20 hover:bg-futuristic-bg hover:text-futuristic-accent1"
                   >
                     {cmd}
                   </Button>

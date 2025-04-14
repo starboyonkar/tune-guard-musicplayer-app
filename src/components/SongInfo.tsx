@@ -10,7 +10,7 @@ const SongInfo: React.FC = () => {
       <div className="flex items-center">
         <div className={cn(
           "w-16 h-16 rounded-md overflow-hidden mr-4 shadow-lg relative",
-          playerState.isPlaying && "animate-pulse-slow"
+          playerState.isPlaying ? "animate-pulse-slow animate-glow" : ""
         )}>
           <img 
             src="/lovable-uploads/d4fe6f3e-e72d-4760-93e5-5f71a12f2238.png" 

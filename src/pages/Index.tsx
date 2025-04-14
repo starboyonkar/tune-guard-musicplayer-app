@@ -33,12 +33,16 @@ const Index = () => {
   return (
     <div className="min-h-screen w-full bg-futuristic-bg overflow-hidden relative">
       {/* Background gradient elements */}
+      <div className="absolute inset-0 bg-black/80 z-[-20]"></div>
       <div className="absolute top-0 left-1/4 w-96 h-96 bg-futuristic-accent1/20 rounded-full blur-3xl -z-10" />
       <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-futuristic-accent2/20 rounded-full blur-3xl -z-10" />
       
+      {/* Animated grid lines for cyberpunk effect */}
+      <div className="absolute inset-0 bg-[linear-gradient(transparent_1px,_#000_1px),_linear-gradient(90deg,_transparent_1px,_#000_1px)] bg-[size:20px_20px] [mask-image:linear-gradient(to_bottom,transparent,black)] opacity-10 z-[-15]"></div>
+      
       {/* App logo */}
       <div className="absolute top-4 left-4 flex items-center space-x-2">
-        <Avatar className="h-10 w-10 border border-white/10">
+        <Avatar className="h-10 w-10 border border-white/10 animate-pulse-slow">
           <AvatarImage src="/lovable-uploads/d4fe6f3e-e72d-4760-93e5-5f71a12f2238.png" alt="TUNE GUARD" />
           <AvatarFallback>TG</AvatarFallback>
         </Avatar>

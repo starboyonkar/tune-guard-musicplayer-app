@@ -46,7 +46,7 @@ const SignUpForm: React.FC = () => {
     
     setTimeout(() => {
       setProfile({
-        id: `user-${Date.now()}`, // Add an id to fix the build error
+        id: `user-${Date.now()}`,
         name,
         age: parseInt(age),
         dob,
@@ -60,7 +60,7 @@ const SignUpForm: React.FC = () => {
   return (
     <div className="w-full max-w-md mx-auto p-6 animate-fade-in">
       <div className="flex justify-center mb-8">
-        <Avatar className="h-24 w-24 border-4 border-white/20 shadow-lg animate-pulse-slow">
+        <Avatar className="h-32 w-32 border-4 border-white/20 shadow-lg animate-pulse-slow">
           <AvatarImage 
             src="/lovable-uploads/d4fe6f3e-e72d-4760-93e5-5f71a12f2238.png" 
             alt="TUNE GUARD" 
@@ -70,13 +70,13 @@ const SignUpForm: React.FC = () => {
         </Avatar>
       </div>
       
-      <h1 className="text-2xl md:text-4xl font-bold text-center mb-6 neon-text">
+      <h1 className="text-3xl md:text-5xl font-bold text-center mb-8 neon-text">
         Welcome to Cognitive Audio Synthesis
       </h1>
       
       <Card className="glass border-futuristic-border backdrop-blur-xl bg-white/5">
         <CardHeader className="border-b border-futuristic-border">
-          <CardTitle className="text-xl text-center text-futuristic-accent1">Create Your Audio Profile</CardTitle>
+          <CardTitle className="text-xl text-center text-futuristic-accent1 neon-text">Create Your Audio Profile</CardTitle>
         </CardHeader>
         <CardContent className="pt-6">
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -140,7 +140,8 @@ const SignUpForm: React.FC = () => {
             <Button 
               type="submit" 
               disabled={isLoading}
-              className="w-full bg-gradient-to-r from-futuristic-accent1 to-futuristic-accent2 hover:opacity-90 transition-all animate-pulse-slow"
+              className="w-full bg-gradient-to-r from-futuristic-accent1 to-futuristic-accent2 hover:opacity-90 transition-all animate-glow"
+              onClick={() => soundEffects.playTouchFeedback()}
             >
               {isLoading ? "Creating Profile..." : "Create Profile"}
             </Button>
@@ -148,7 +149,7 @@ const SignUpForm: React.FC = () => {
         </CardContent>
       </Card>
       
-      <div className="text-center mt-4 text-futuristic-muted text-sm">
+      <div className="text-center mt-6 text-futuristic-muted text-sm">
         TUNE GUARD - Cognitive Audio Synthesis
       </div>
     </div>
