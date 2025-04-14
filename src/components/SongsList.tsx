@@ -46,18 +46,22 @@ const SongsList: React.FC = () => {
     input.click();
   };
 
+  // Enhanced song click handler to toggle play/pause
   const handleSongClick = (songId: string) => {
     soundEffects.playTouchFeedback();
     playSong(songId);
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold neon-text">TUNE GUARD Songs</h3>
+    <div className="space-y-4 relative glass-panel">
+      {/* Animated scan line effect */}
+      <div className="scan-line absolute"></div>
+      
+      <div className="flex justify-between items-center backdrop-blur-sm">
+        <h3 className="text-lg font-bold neon-text">TUNE GUARD Songs</h3>
         <Button 
           variant="outline"
-          className="border-futuristic-border text-futuristic-accent1 hover:bg-futuristic-bg/50"
+          className="border-futuristic-border text-futuristic-accent1 hover:bg-futuristic-bg/50 animate-pulse-slow"
           onClick={handleFileSelect}
         >
           <Plus className="mr-2 h-4 w-4" />
@@ -65,25 +69,29 @@ const SongsList: React.FC = () => {
         </Button>
       </div>
 
-      <div className="max-h-80 overflow-y-auto">
+      <div className="max-h-80 overflow-y-auto custom-scrollbar">
         {songs.length === 0 ? (
-          <div className="flex flex-col items-center justify-center p-8 text-center text-futuristic-muted">
-            <Music className="h-12 w-12 mb-2 opacity-50" />
-            <p>No songs added yet. Add your first song to get started!</p>
+          <div className="flex flex-col items-center justify-center p-8 text-center text-futuristic-muted glass-panel rounded-lg">
+            <Music className="h-12 w-12 mb-2 opacity-50 animate-pulse-slow" />
+            <p className="font-bold">No songs added yet. Add your first song to get started!</p>
           </div>
         ) : (
           <div className="space-y-2">
             {songs.map((song) => (
               <Card 
                 key={song.id} 
-                className={`p-2 hover:bg-futuristic-bg/20 transition-colors cursor-pointer ${
-                  currentSong?.id === song.id ? 'border-futuristic-accent1 bg-futuristic-bg/10' : ''
+                className={`p-2 transition-all duration-300 cursor-pointer glass-element ${
+                  currentSong?.id === song.id 
+                    ? 'border-futuristic-accent1 bg-futuristic-bg/30 neon-border' 
+                    : 'hover:bg-futuristic-bg/20 hover:scale-[1.02]'
                 }`}
                 onClick={() => handleSongClick(song.id)}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center flex-1 min-w-0">
-                    <div className="h-10 w-10 rounded overflow-hidden mr-3 flex-shrink-0">
+                    <div className={`h-10 w-10 rounded overflow-hidden mr-3 flex-shrink-0 ${
+                      currentSong?.id === song.id && playerState.isPlaying ? 'animate-pulse-slow animate-glow' : ''
+                    }`}>
                       <img 
                         src={song.albumArt || "/lovable-uploads/d4fe6f3e-e72d-4760-93e5-5f71a12f2238.png"} 
                         alt="TUNE GUARD"
@@ -91,7 +99,9 @@ const SongsList: React.FC = () => {
                       />
                     </div>
                     <div className="overflow-hidden">
-                      <p className="font-medium truncate">{song.title}</p>
+                      <p className={`font-bold truncate ${currentSong?.id === song.id ? 'neon-text' : ''}`}>
+                        {song.title}
+                      </p>
                       <p className="text-sm text-futuristic-muted truncate">{song.artist}</p>
                     </div>
                   </div>
@@ -103,7 +113,9 @@ const SongsList: React.FC = () => {
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="h-8 w-8 rounded-full hover:bg-futuristic-accent1/20"
+                      className={`h-8 w-8 rounded-full transition-colors ${
+                        currentSong?.id === song.id ? 'hover:bg-futuristic-accent1/40' : 'hover:bg-futuristic-accent2/20'
+                      }`}
                       onClick={(e) => {
                         e.stopPropagation();
                         soundEffects.playTouchFeedback();
@@ -111,7 +123,7 @@ const SongsList: React.FC = () => {
                       }}
                     >
                       {currentSong?.id === song.id && playerState.isPlaying ? (
-                        <Pause className="h-4 w-4" />
+                        <Pause className="h-4 w-4 text-futuristic-accent1" />
                       ) : (
                         <Play className="h-4 w-4" />
                       )}

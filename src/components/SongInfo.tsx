@@ -6,7 +6,10 @@ const SongInfo: React.FC = () => {
   const { currentSong, playerState, profile } = useAudio();
   
   return (
-    <div className="flex justify-between items-center w-full p-4">
+    <div className="flex justify-between items-center w-full p-4 glass-panel relative overflow-hidden">
+      {/* Animated scan line effect */}
+      <div className="scan-line absolute"></div>
+      
       <div className="flex items-center">
         <div className={cn(
           "w-16 h-16 rounded-md overflow-hidden mr-4 shadow-lg relative",
@@ -17,11 +20,11 @@ const SongInfo: React.FC = () => {
             alt="TUNE GUARD"
             className="w-full h-full object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-br from-futuristic-accent1/10 to-futuristic-accent2/10"></div>
+          <div className="absolute inset-0 bg-gradient-to-br from-futuristic-accent1/30 to-futuristic-accent2/30"></div>
         </div>
         
         <div className="overflow-hidden">
-          <h3 className="font-semibold text-lg truncate neon-text">
+          <h3 className="font-bold text-lg truncate neon-text-bright">
             {currentSong ? currentSong.title : "No Song Selected"}
           </h3>
           <p className="text-futuristic-muted text-sm truncate">
@@ -29,14 +32,14 @@ const SongInfo: React.FC = () => {
           </p>
           {playerState.isPlaying ? (
             <div className="mt-1 flex items-center">
-              <span className="text-xs text-futuristic-accent1">Now Playing</span>
+              <span className="text-xs text-futuristic-accent1 font-bold">Now Playing</span>
               <div className="flex ml-2 space-x-1">
-                {[1, 2, 3].map((i) => (
+                {[1, 2, 3, 4, 5].map((i) => (
                   <span 
                     key={i} 
-                    className="w-1 h-3 bg-futuristic-accent1 rounded-full opacity-75" 
+                    className="w-1 h-3 bg-futuristic-accent1 rounded-full opacity-75 waveform-bar" 
                     style={{ 
-                      animation: `pulse 0.6s ease-in-out ${i * 0.2}s infinite alternate`
+                      animation: `wave-${i} 0.${5+i}s ease-in-out infinite alternate`
                     }}
                   />
                 ))}
@@ -50,10 +53,10 @@ const SongInfo: React.FC = () => {
         </div>
       </div>
       
-      {/* Welcome message */}
+      {/* Welcome message with neon styling */}
       {profile && (
         <div className="hidden md:block">
-          <p className="neon-text text-right">
+          <p className="neon-text text-right font-bold">
             Welcome, {profile.name} — <span className="text-sm">Cognitive Audio Synthesis</span>
           </p>
         </div>
