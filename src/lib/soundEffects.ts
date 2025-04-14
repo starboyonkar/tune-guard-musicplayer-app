@@ -8,7 +8,7 @@ class SoundEffects {
   private initialized: boolean = false;
 
   private constructor() {
-    this.notificationSound = new Audio('https://www.zedge.net/notification-sounds/13202c7e-4f9a-47ae-8e25-b13eaaacf490');
+    this.notificationSound = new Audio('https://www.zedge.net/ringtone/13202c7e-4f9a-47ae-8e25-b13eaaacf490');
     this.touchSound = new Audio('/sounds/touch-feedback.mp3');
     
     // Preload sounds

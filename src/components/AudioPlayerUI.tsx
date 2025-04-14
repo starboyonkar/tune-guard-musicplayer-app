@@ -9,10 +9,9 @@ import EQSettings from './EQSettings';
 import VoiceCommandPanel from './VoiceCommandPanel';
 import FileUploader from './FileUploader';
 import ProfileEditor from './ProfileEditor';
-import PlaylistManager from './PlaylistManager';
 import SongsList from './SongsList';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { AudioWaveform, ListMusic, Settings, Music, LogOut } from 'lucide-react';
+import { AudioWaveform, Settings, Music, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAudio } from '@/lib/audioContext';
 import { Avatar } from '@/components/ui/avatar';
@@ -22,7 +21,7 @@ const AudioPlayerUI: React.FC = () => {
   
   return (
     <div className="flex flex-col lg:flex-row gap-4 w-full max-w-6xl mx-auto p-4">
-      <div className="w-full lg:w-3/5">
+      <div className="w-full">
         {/* Main Player Card */}
         <Card className="glass border-futuristic-border w-full overflow-hidden mb-4">
           <div className="flex justify-between items-center">
@@ -44,7 +43,7 @@ const AudioPlayerUI: React.FC = () => {
           <PlayerControls />
         </Card>
         
-        {/* Songs List - Added here */}
+        {/* Songs List */}
         <Card className="p-4 mb-4">
           <SongsList />
         </Card>
@@ -55,12 +54,9 @@ const AudioPlayerUI: React.FC = () => {
         </Card>
         
         {/* Side panels for smaller screens */}
-        <div className="flex flex-col sm:flex-row gap-4 lg:hidden mt-4">
-          <Tabs defaultValue="playlists" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="playlists">
-                <ListMusic className="mr-1 h-4 w-4" /> Playlists
-              </TabsTrigger>
+        <div className="flex flex-col sm:flex-row gap-4 mt-4">
+          <Tabs defaultValue="eq" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="eq">
                 <Settings className="mr-1 h-4 w-4" /> EQ
               </TabsTrigger>
@@ -68,11 +64,6 @@ const AudioPlayerUI: React.FC = () => {
                 <AudioWaveform className="mr-1 h-4 w-4" /> Voice
               </TabsTrigger>
             </TabsList>
-            <TabsContent value="playlists">
-              <Card className="p-4">
-                <PlaylistManager />
-              </Card>
-            </TabsContent>
             <TabsContent value="eq">
               <Card>
                 <EQSettings />
@@ -85,28 +76,6 @@ const AudioPlayerUI: React.FC = () => {
             </TabsContent>
           </Tabs>
         </div>
-      </div>
-      
-      {/* Control Panels - hidden on small screens */}
-      <div className="w-full lg:w-2/5 space-y-4 hidden lg:block">
-        <Card className="p-4">
-          <div className="flex justify-between items-center mb-2">
-            <div className="flex items-center">
-              <Avatar className="h-8 w-8 mr-2">
-                <img src="/lovable-uploads/b26c60f6-26f9-4e3b-afb1-ba0d0a2e076d.png" alt="TUNE GUARD" />
-              </Avatar>
-              <span className="font-bold">TUNE GUARD</span>
-            </div>
-            {profile && (
-              <span className="text-sm text-futuristic-muted">
-                Welcome, {profile.name}
-              </span>
-            )}
-          </div>
-          <PlaylistManager />
-        </Card>
-        <EQSettings />
-        <VoiceCommandPanel />
       </div>
     </div>
   );

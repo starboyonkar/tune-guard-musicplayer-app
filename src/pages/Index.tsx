@@ -39,10 +39,10 @@ const Index = () => {
       {/* App logo */}
       <div className="absolute top-4 left-4 flex items-center space-x-2">
         <Avatar className="h-10 w-10 border border-white/10">
-          <AvatarImage src="/lovable-uploads/e7c069fb-6149-4e2a-aa7e-5549daf2514d.png" alt="TUNE GUARD" />
+          <AvatarImage src="/lovable-uploads/d4fe6f3e-e72d-4760-93e5-5f71a12f2238.png" alt="TUNE GUARD" />
           <AvatarFallback>TG</AvatarFallback>
         </Avatar>
-        <span className="text-lg font-semibold text-white">TUNE GUARD</span>
+        <span className="text-lg font-semibold neon-text">TUNE GUARD</span>
       </div>
       
       {/* Main content */}

@@ -46,6 +46,7 @@ const SignUpForm: React.FC = () => {
     
     setTimeout(() => {
       setProfile({
+        id: `user-${Date.now()}`, // Add an id to fix the build error
         name,
         age: parseInt(age),
         dob,
@@ -61,7 +62,7 @@ const SignUpForm: React.FC = () => {
       <div className="flex justify-center mb-8">
         <Avatar className="h-24 w-24 border-4 border-white/20 shadow-lg animate-pulse-slow">
           <AvatarImage 
-            src="/lovable-uploads/e7c069fb-6149-4e2a-aa7e-5549daf2514d.png" 
+            src="/lovable-uploads/d4fe6f3e-e72d-4760-93e5-5f71a12f2238.png" 
             alt="TUNE GUARD" 
             className="object-cover"
           />
@@ -69,7 +70,7 @@ const SignUpForm: React.FC = () => {
         </Avatar>
       </div>
       
-      <h1 className="text-2xl md:text-4xl font-bold text-center mb-6 bg-gradient-to-r from-white to-blue-200 bg-clip-text text-transparent">
+      <h1 className="text-2xl md:text-4xl font-bold text-center mb-6 neon-text">
         Welcome to Cognitive Audio Synthesis
       </h1>
       
