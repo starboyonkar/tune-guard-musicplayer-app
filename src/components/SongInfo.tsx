@@ -14,7 +14,7 @@ const SongInfo: React.FC = () => {
         playerState.isPlaying && "animate-pulse-slow"
       )}>
         <img 
-          src="/lovable-uploads/b26c60f6-26f9-4e3b-afb1-ba0d0a2e076d.png" 
+          src="/lovable-uploads/e7c069fb-6149-4e2a-aa7e-5549daf2514d.png" 
           alt="TUNE GUARD"
           className="w-full h-full object-cover"
         />

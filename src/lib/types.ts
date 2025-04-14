@@ -1,4 +1,3 @@
-
 // User Profile Type
 export interface UserProfile {
   id: string;
@@ -16,6 +15,9 @@ export interface EQSettings {
   mid: number;
   treble: number;
   volume: number;
+  presence?: number;
+  clarity?: number;
+  warmth?: number;
 }
 
 // Song Type

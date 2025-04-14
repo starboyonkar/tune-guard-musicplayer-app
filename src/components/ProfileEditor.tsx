@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAudio } from '@/lib/audioContext';
 import { Settings, User } from 'lucide-react';
+import { soundEffects } from '@/lib/soundEffects';
 
 const ProfileEditor: React.FC = () => {
   const { profile, updateProfile, logout } = useAudio();
@@ -28,6 +29,8 @@ const ProfileEditor: React.FC = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    soundEffects.playTouchFeedback();
+    
     updateProfile({
       name,
       age: parseInt(age),
@@ -36,6 +39,12 @@ const ProfileEditor: React.FC = () => {
     });
     
     setOpen(false);
+  };
+
+  const handleLogout = () => {
+    soundEffects.playNotification();
+    setOpen(false);
+    setTimeout(() => logout(), 500);
   };
 
   if (!profile) return null;
@@ -123,10 +132,7 @@ const ProfileEditor: React.FC = () => {
               type="button" 
               variant="destructive" 
               className="flex-1"
-              onClick={() => {
-                setOpen(false);
-                logout();
-              }}
+              onClick={handleLogout}
             >
               Logout
             </Button>

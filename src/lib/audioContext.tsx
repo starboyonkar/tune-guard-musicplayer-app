@@ -883,6 +883,13 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const unmuteCommands = ['unmute', 'sound on', 'enable sound'];
     const playlistCommands = ['playlist', 'play list', 'list'];
     
+    const bassCommands = ['more bass', 'increase bass', 'boost bass', 'bass up'];
+    const lessBassCommands = ['less bass', 'decrease bass', 'reduce bass', 'bass down'];
+    const trebleCommands = ['more treble', 'increase treble', 'boost treble', 'treble up'];
+    const lessTrebleCommands = ['less treble', 'decrease treble', 'reduce treble', 'treble down'];
+    const presenceCommands = ['more presence', 'increase presence', 'boost presence', 'presence up'];
+    const warmthCommands = ['more warmth', 'increase warmth', 'warmer', 'warmth up'];
+    
     const matchesCommand = (cmd: string, variations: string[]) => {
       return variations.some(variation => cmd.includes(variation));
     };
@@ -998,6 +1005,66 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           description: playlistNames || "No playlists available"
         });
       }
+    } else if (matchesCommand(lowerCommand, bassCommands)) {
+      commandRecognized = true;
+      setEQSettings(prevSettings => ({
+        ...prevSettings,
+        bass: Math.min(prevSettings.bass + 10, 100)
+      }));
+      toast({
+        title: "Bass Increased",
+        description: "Bass level increased"
+      });
+    } else if (matchesCommand(lowerCommand, lessBassCommands)) {
+      commandRecognized = true;
+      setEQSettings(prevSettings => ({
+        ...prevSettings,
+        bass: Math.max(prevSettings.bass - 10, 0)
+      }));
+      toast({
+        title: "Bass Decreased",
+        description: "Bass level decreased"
+      });
+    } else if (matchesCommand(lowerCommand, trebleCommands)) {
+      commandRecognized = true;
+      setEQSettings(prevSettings => ({
+        ...prevSettings,
+        treble: Math.min(prevSettings.treble + 10, 100)
+      }));
+      toast({
+        title: "Treble Increased",
+        description: "Treble level increased"
+      });
+    } else if (matchesCommand(lowerCommand, lessTrebleCommands)) {
+      commandRecognized = true;
+      setEQSettings(prevSettings => ({
+        ...prevSettings,
+        treble: Math.max(prevSettings.treble - 10, 0)
+      }));
+      toast({
+        title: "Treble Decreased",
+        description: "Treble level decreased"
+      });
+    } else if (matchesCommand(lowerCommand, presenceCommands)) {
+      commandRecognized = true;
+      setEQSettings(prevSettings => ({
+        ...prevSettings,
+        presence: Math.min((prevSettings.presence || 50) + 10, 100)
+      }));
+      toast({
+        title: "Presence Increased",
+        description: "Audio presence increased"
+      });
+    } else if (matchesCommand(lowerCommand, warmthCommands)) {
+      commandRecognized = true;
+      setEQSettings(prevSettings => ({
+        ...prevSettings,
+        warmth: Math.min((prevSettings.warmth || 50) + 10, 100)
+      }));
+      toast({
+        title: "Warmth Increased",
+        description: "Audio warmth increased"
+      });
     } else if (lowerCommand.includes('voice') || lowerCommand.includes('listen')) {
       commandRecognized = true;
       if (lowerCommand.includes('off') || lowerCommand.includes('disable') || lowerCommand.includes('stop')) {
@@ -1017,7 +1084,17 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
     } else if (lowerCommand.includes('logout') || lowerCommand.includes('sign out') || lowerCommand.includes('log out')) {
       commandRecognized = true;
-      logout();
+      toast({
+        title: "Logging out",
+        description: "Signing out of your account..."
+      });
+      setTimeout(() => logout(), 1000);
+    } else if (lowerCommand.includes('eq') || lowerCommand.includes('equalizer')) {
+      commandRecognized = true;
+      toast({
+        title: "Equalizer Settings",
+        description: "Try 'more bass', 'less treble' or specific EQ commands"
+      });
     }
     
     if (!commandRecognized) {

@@ -4,10 +4,17 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useAudio } from '@/lib/audioContext';
-import { Mic, Send } from 'lucide-react';
+import { Mic, Send, MicOff, Command, Settings, Volume2, VolumeX } from 'lucide-react';
+import { soundEffects } from '@/lib/soundEffects';
 
 const VoiceCommandPanel: React.FC = () => {
-  const { setVoiceCommand, isVoiceListening, toggleVoiceListening, commandHistory, processingVoice } = useAudio();
+  const { 
+    setVoiceCommand, 
+    isVoiceListening, 
+    toggleVoiceListening, 
+    commandHistory, 
+    processingVoice 
+  } = useAudio();
   const [inputCommand, setInputCommand] = useState('');
   
   // Auto-enable voice listening on component mount and maintain it
@@ -28,6 +35,7 @@ const VoiceCommandPanel: React.FC = () => {
   
   const handleSendCommand = () => {
     if (inputCommand.trim()) {
+      soundEffects.playTouchFeedback();
       setVoiceCommand(inputCommand);
       setInputCommand('');
     }
@@ -38,6 +46,17 @@ const VoiceCommandPanel: React.FC = () => {
       handleSendCommand();
     }
   };
+
+  const handleExecuteCommand = (command: string) => {
+    soundEffects.playTouchFeedback();
+    setVoiceCommand(command);
+  };
+  
+  // Group commands by category
+  const playbackCommands = ['Play music', 'Pause', 'Next song', 'Previous song'];
+  const volumeCommands = ['Volume up', 'Volume down', 'Mute', 'Unmute'];
+  const eqCommands = ['More bass', 'Less bass', 'More treble', 'Less treble'];
+  const systemCommands = ['Play playlist', 'Logout'];
   
   return (
     <Card className="w-full glass border-futuristic-border">
@@ -55,7 +74,7 @@ const VoiceCommandPanel: React.FC = () => {
             {isVoiceListening ? (
               <><Mic size={14} className="mr-1 animate-pulse" /> Listening</>
             ) : (
-              <><Mic size={14} className="mr-1" /> Enable Voice</>
+              <><MicOff size={14} className="mr-1" /> Enable Voice</>
             )}
           </Button>
         </CardTitle>
@@ -114,21 +133,90 @@ const VoiceCommandPanel: React.FC = () => {
           </Button>
         </div>
         
-        {/* Sample commands */}
+        {/* Sample commands - categorized */}
         <div className="mt-3 pt-3 border-t border-futuristic-border">
-          <p className="text-xs text-futuristic-muted mb-2">Try these commands:</p>
-          <div className="flex flex-wrap gap-2">
-            {['Play music', 'Pause', 'Next song', 'Previous song', 'Play playlist', 'Logout'].map((cmd, idx) => (
-              <Button 
-                key={idx}
-                variant="outline"
-                size="sm"
-                onClick={() => setVoiceCommand(cmd)}
-                className="text-xs py-0 h-6 border-futuristic-border bg-futuristic-bg/20 hover:bg-futuristic-bg"
-              >
-                {cmd}
-              </Button>
-            ))}
+          <p className="text-xs text-futuristic-muted mb-2">Command Categories:</p>
+          
+          <div className="space-y-3">
+            {/* Playback commands */}
+            <div>
+              <div className="flex items-center text-xs text-futuristic-accent2 mb-1">
+                <Command className="h-3 w-3 mr-1" /> Playback
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {playbackCommands.map((cmd, idx) => (
+                  <Button 
+                    key={idx}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleExecuteCommand(cmd)}
+                    className="text-xs py-0 h-6 border-futuristic-border bg-futuristic-bg/20 hover:bg-futuristic-bg"
+                  >
+                    {cmd}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            
+            {/* Volume commands */}
+            <div>
+              <div className="flex items-center text-xs text-futuristic-accent2 mb-1">
+                <Volume2 className="h-3 w-3 mr-1" /> Volume
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {volumeCommands.map((cmd, idx) => (
+                  <Button 
+                    key={idx}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleExecuteCommand(cmd)}
+                    className="text-xs py-0 h-6 border-futuristic-border bg-futuristic-bg/20 hover:bg-futuristic-bg"
+                  >
+                    {cmd}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            
+            {/* EQ commands */}
+            <div>
+              <div className="flex items-center text-xs text-futuristic-accent2 mb-1">
+                <Settings className="h-3 w-3 mr-1" /> Equalizer
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {eqCommands.map((cmd, idx) => (
+                  <Button 
+                    key={idx}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleExecuteCommand(cmd)}
+                    className="text-xs py-0 h-6 border-futuristic-border bg-futuristic-bg/20 hover:bg-futuristic-bg"
+                  >
+                    {cmd}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            
+            {/* System commands */}
+            <div>
+              <div className="flex items-center text-xs text-futuristic-accent2 mb-1">
+                <Settings className="h-3 w-3 mr-1" /> System
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {systemCommands.map((cmd, idx) => (
+                  <Button 
+                    key={idx}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleExecuteCommand(cmd)}
+                    className="text-xs py-0 h-6 border-futuristic-border bg-futuristic-bg/20 hover:bg-futuristic-bg"
+                  >
+                    {cmd}
+                  </Button>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </CardContent>

@@ -7,6 +7,7 @@ import {
   Play, Pause, SkipBack, SkipForward, 
   Volume2, VolumeX, Mic
 } from 'lucide-react';
+import { soundEffects } from '@/lib/soundEffects';
 
 const formatTime = (seconds: number): string => {
   const mins = Math.floor(seconds / 60);
@@ -37,6 +38,31 @@ const PlayerControls: React.FC = () => {
   const handleVolumeChange = (newValue: number[]) => {
     setVolume(newValue[0]);
   };
+
+  const handlePlayPause = () => {
+    soundEffects.playTouchFeedback();
+    togglePlayPause();
+  };
+
+  const handleNext = () => {
+    soundEffects.playTouchFeedback();
+    nextSong();
+  };
+
+  const handlePrev = () => {
+    soundEffects.playTouchFeedback();
+    prevSong();
+  };
+
+  const handleToggleMute = () => {
+    soundEffects.playTouchFeedback();
+    toggleMute();
+  };
+
+  const handleToggleVoice = () => {
+    soundEffects.playNotification();
+    toggleVoiceListening();
+  };
   
   return (
     <div className="w-full px-4 py-2">
@@ -61,14 +87,14 @@ const PlayerControls: React.FC = () => {
           <Button 
             variant="ghost" 
             size="icon" 
-            onClick={prevSong}
+            onClick={handlePrev}
             className="text-futuristic-accent2 hover:text-futuristic-accent1 hover:bg-futuristic-bg"
           >
             <SkipBack />
           </Button>
           
           <Button 
-            onClick={togglePlayPause}
+            onClick={handlePlayPause}
             size="icon"
             className="rounded-full bg-gradient-to-r from-futuristic-accent1 to-futuristic-accent2 hover:opacity-90 animate-glow"
           >
@@ -78,7 +104,7 @@ const PlayerControls: React.FC = () => {
           <Button 
             variant="ghost" 
             size="icon"
-            onClick={nextSong}
+            onClick={handleNext}
             className="text-futuristic-accent2 hover:text-futuristic-accent1 hover:bg-futuristic-bg"
           >
             <SkipForward />
@@ -89,7 +115,7 @@ const PlayerControls: React.FC = () => {
           <Button 
             variant="ghost" 
             size="icon"
-            onClick={toggleMute}
+            onClick={handleToggleMute}
             className="text-futuristic-muted hover:text-futuristic-accent1 hover:bg-futuristic-bg"
           >
             {isMuted ? <VolumeX /> : <Volume2 />}
@@ -108,7 +134,7 @@ const PlayerControls: React.FC = () => {
           <Button 
             variant={isVoiceListening ? "default" : "ghost"}
             size="icon" 
-            onClick={toggleVoiceListening}
+            onClick={handleToggleVoice}
             className={isVoiceListening 
               ? "bg-futuristic-accent1 text-white hover:bg-futuristic-accent1/90" 
               : "text-futuristic-muted hover:text-futuristic-accent1 hover:bg-futuristic-bg"}
