@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card } from '@/components/ui/card';
 import PlayerControls from './PlayerControls';
@@ -11,9 +12,14 @@ import ProfileEditor from './ProfileEditor';
 import PlaylistManager from './PlaylistManager';
 import SongsList from './SongsList';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { AudioWaveform, ListMusic, Settings, Music } from 'lucide-react';
+import { AudioWaveform, ListMusic, Settings, Music, LogOut } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useAudio } from '@/lib/audioContext';
+import { Avatar } from '@/components/ui/avatar';
 
 const AudioPlayerUI: React.FC = () => {
+  const { logout, profile } = useAudio();
+  
   return (
     <div className="flex flex-col lg:flex-row gap-4 w-full max-w-6xl mx-auto p-4">
       <div className="w-full lg:w-3/5">
@@ -21,8 +27,17 @@ const AudioPlayerUI: React.FC = () => {
         <Card className="glass border-futuristic-border w-full overflow-hidden mb-4">
           <div className="flex justify-between items-center">
             <SongInfo />
-            <div className="p-4">
+            <div className="flex items-center">
               <ProfileEditor />
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={logout}
+                className="text-futuristic-muted hover:text-destructive"
+                title="Logout"
+              >
+                <LogOut className="h-5 w-5" />
+              </Button>
             </div>
           </div>
           <Waveform />
@@ -33,9 +48,6 @@ const AudioPlayerUI: React.FC = () => {
         <Card className="p-4 mb-4">
           <SongsList />
         </Card>
-        
-        {/* File Uploader - We'll keep this as an alternative way to add songs */}
-        <FileUploader />
         
         {/* Advanced Waveform Analyzer */}
         <Card className="mt-4 p-4">
@@ -78,6 +90,19 @@ const AudioPlayerUI: React.FC = () => {
       {/* Control Panels - hidden on small screens */}
       <div className="w-full lg:w-2/5 space-y-4 hidden lg:block">
         <Card className="p-4">
+          <div className="flex justify-between items-center mb-2">
+            <div className="flex items-center">
+              <Avatar className="h-8 w-8 mr-2">
+                <img src="/lovable-uploads/b26c60f6-26f9-4e3b-afb1-ba0d0a2e076d.png" alt="TUNE GUARD" />
+              </Avatar>
+              <span className="font-bold">TUNE GUARD</span>
+            </div>
+            {profile && (
+              <span className="text-sm text-futuristic-muted">
+                Welcome, {profile.name}
+              </span>
+            )}
+          </div>
           <PlaylistManager />
         </Card>
         <EQSettings />

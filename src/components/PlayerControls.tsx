@@ -112,6 +112,7 @@ const PlayerControls: React.FC = () => {
             className={isVoiceListening 
               ? "bg-futuristic-accent1 text-white hover:bg-futuristic-accent1/90" 
               : "text-futuristic-muted hover:text-futuristic-accent1 hover:bg-futuristic-bg"}
+            title={isVoiceListening ? "Voice Assistant Active" : "Enable Voice Assistant"}
           >
             <Mic className={isVoiceListening ? "animate-pulse" : ""} />
           </Button>

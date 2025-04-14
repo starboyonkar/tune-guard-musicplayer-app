@@ -7,6 +7,7 @@ import { Playlist } from '@/lib/types';
 import { List, ListMusic, Music, Plus, Play, Trash2 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { toast } from '@/components/ui/use-toast';
+import { Badge } from '@/components/ui/badge';
 
 const PlaylistManager: React.FC = () => {
   const { 
@@ -16,8 +17,10 @@ const PlaylistManager: React.FC = () => {
     removeFromPlaylist,
     deletePlaylist, 
     playPlaylist,
+    playSong,
     currentSong,
-    songs
+    songs,
+    playerState
   } = useAudio();
   
   const [playlistName, setPlaylistName] = useState("");
@@ -73,12 +76,19 @@ const PlaylistManager: React.FC = () => {
         {playlists.map(playlist => (
           <Card 
             key={playlist.id}
-            className={`p-3 ${selectedPlaylist?.id === playlist.id ? 'border-primary' : ''}`}
+            className={`p-3 ${selectedPlaylist?.id === playlist.id ? 'border-primary' : ''} ${
+              playerState.currentPlaylistId === playlist.id ? 'bg-futuristic-accent1/10' : ''
+            }`}
             onClick={() => setSelectedPlaylist(playlist)}
           >
             <div className="flex justify-between items-center">
               <div>
-                <h4 className="font-medium">{playlist.name}</h4>
+                <div className="flex items-center gap-2">
+                  <h4 className="font-medium">{playlist.name}</h4>
+                  {playerState.currentPlaylistId === playlist.id && (
+                    <Badge variant="secondary" className="text-[10px]">PLAYING</Badge>
+                  )}
+                </div>
                 <p className="text-xs text-gray-400">{playlist.songs.length} songs</p>
               </div>
               <div className="flex space-x-1">
@@ -87,6 +97,7 @@ const PlaylistManager: React.FC = () => {
                   variant="ghost" 
                   onClick={() => handleAddCurrentToPlaylist(playlist.id)}
                   disabled={!currentSong}
+                  className="hover:bg-futuristic-accent1/20"
                 >
                   <Plus className="h-3 w-3" />
                 </Button>
@@ -95,13 +106,18 @@ const PlaylistManager: React.FC = () => {
                   variant="ghost" 
                   onClick={() => handlePlayPlaylist(playlist.id)}
                   disabled={playlist.songs.length === 0}
+                  className="hover:bg-futuristic-accent1/20"
                 >
                   <Play className="h-3 w-3" />
                 </Button>
                 <Button 
                   size="sm" 
                   variant="ghost" 
-                  onClick={() => deletePlaylist(playlist.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deletePlaylist(playlist.id);
+                  }}
+                  className="hover:bg-destructive/20"
                 >
                   <Trash2 className="h-3 w-3 text-destructive" />
                 </Button>
@@ -125,18 +141,51 @@ const PlaylistManager: React.FC = () => {
             {selectedPlaylist.songs.map(songId => {
               const song = songs.find(s => s.id === songId);
               return song ? (
-                <div key={song.id} className="flex justify-between items-center py-1 border-b">
+                <div 
+                  key={song.id} 
+                  className={`flex justify-between items-center py-1 px-2 border-b rounded-sm hover:bg-futuristic-bg/20 cursor-pointer ${
+                    currentSong?.id === song.id ? 'bg-futuristic-accent1/10' : ''
+                  }`}
+                  onClick={() => playSong(song.id)}
+                >
                   <div className="flex items-center">
-                    <Music className="h-3 w-3 mr-2" />
+                    <div className="h-6 w-6 rounded overflow-hidden mr-2">
+                      <img 
+                        src={song.albumArt || "/lovable-uploads/b26c60f6-26f9-4e3b-afb1-ba0d0a2e076d.png"} 
+                        alt={song.title}
+                        className="h-full w-full object-cover" 
+                      />
+                    </div>
                     <span className="text-sm">{song.title}</span>
                   </div>
-                  <Button 
-                    size="sm" 
-                    variant="ghost" 
-                    onClick={() => removeFromPlaylist(selectedPlaylist.id, song.id)}
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
+                  <div className="flex items-center">
+                    <Button 
+                      size="sm" 
+                      variant="ghost" 
+                      className="h-6 w-6 p-0"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        playSong(song.id);
+                      }}
+                    >
+                      {currentSong?.id === song.id && playerState.isPlaying ? (
+                        <Trash2 className="h-3 w-3" />
+                      ) : (
+                        <Play className="h-3 w-3" />
+                      )}
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="ghost"
+                      className="h-6 w-6 p-0"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeFromPlaylist(selectedPlaylist.id, song.id);
+                      }}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
                 </div>
               ) : null;
             })}

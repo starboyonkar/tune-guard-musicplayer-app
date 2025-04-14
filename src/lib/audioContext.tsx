@@ -120,6 +120,8 @@ interface AudioContextType {
   playPlaylist: (playlistId: string) => void;
   setVisSettings: (settings: Partial<VisSettings>) => void;
   visSettings: VisSettings;
+  logout: () => void;
+  playSong: (songId: string) => void;
 }
 
 const defaultPlayerState: PlayerState = {
@@ -378,10 +380,10 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         source: fileUrl
       };
       
-      setCustomSongs(prev => [...prev, newSong]);
+      setCustomSongs(prevSongs => [...prevSongs, newSong]);
       
-      setPlayerState(prev => ({
-        ...prev,
+      setPlayerState(prevState => ({
+        ...prevState,
         currentSongId: newSong.id,
         currentTime: 0,
         isPlaying: true
@@ -414,8 +416,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     
     const onTimeUpdate = () => {
       if (audioRef.current) {
-        setPlayerState(prev => ({
-          ...prev,
+        setPlayerState(prevState => ({
+          ...prevState,
           currentTime: Math.floor(audioRef.current!.currentTime)
         }));
       }
@@ -441,8 +443,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const customEvent = e as CustomEvent;
       const { songId } = customEvent.detail;
       
-      setPlayerState(prev => ({
-        ...prev,
+      setPlayerState(prevState => ({
+        ...prevState,
         currentSongId: songId,
         currentTime: 0,
         isPlaying: true
@@ -567,13 +569,12 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         if (playPromise !== undefined) {
           playPromise.catch(error => {
             console.error("Audio play error:", error);
-            setPlayerState(prev => ({ ...prev, isPlaying: false }));
+            setPlayerState(prevState => ({ ...prevState, isPlaying: false }));
             toast({
               title: "Playback Error",
               description: "There was an error playing this song.",
               variant: "destructive"
             });
-            return prev; // Don't update state if play fails
           });
         }
       } else {
@@ -617,8 +618,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       audioContextRef.current.resume();
     }
     
-    setPlayerState(prev => {
-      const newIsPlaying = !prev.isPlaying;
+    setPlayerState(prevState => {
+      const newIsPlaying = !prevState.isPlaying;
       
       if (audioRef.current) {
         if (newIsPlaying) {
@@ -629,14 +630,14 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               description: "There was an error playing this song.",
               variant: "destructive"
             });
-            return prev; // Don't update state if play fails
+            return prevState; // Don't update state if play fails
           });
         } else {
           audioRef.current.pause();
         }
       }
       
-      return { ...prev, isPlaying: newIsPlaying };
+      return { ...prevState, isPlaying: newIsPlaying };
     });
   };
 
@@ -648,8 +649,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const nextIndex = (currentSongIndex + 1) % currentPlaylist.songs.length;
         const nextSongId = currentPlaylist.songs[nextIndex];
         
-        setPlayerState(prev => ({
-          ...prev,
+        setPlayerState(prevState => ({
+          ...prevState,
           currentSongId: nextSongId,
           currentTime: 0,
           isPlaying: true
@@ -661,8 +662,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const currentIndex = songs.findIndex(song => song.id === playerState.currentSongId);
     const nextIndex = (currentIndex + 1) % songs.length;
     
-    setPlayerState(prev => ({
-      ...prev,
+    setPlayerState(prevState => ({
+      ...prevState,
       currentSongId: songs[nextIndex].id,
       currentTime: 0,
       isPlaying: true
@@ -677,8 +678,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const prevIndex = (currentSongIndex - 1 + currentPlaylist.songs.length) % currentPlaylist.songs.length;
         const prevSongId = currentPlaylist.songs[prevIndex];
         
-        setPlayerState(prev => ({
-          ...prev,
+        setPlayerState(prevState => ({
+          ...prevState,
           currentSongId: prevSongId,
           currentTime: 0,
           isPlaying: true
@@ -690,8 +691,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const currentIndex = songs.findIndex(song => song.id === playerState.currentSongId);
     const prevIndex = (currentIndex - 1 + songs.length) % songs.length;
     
-    setPlayerState(prev => ({
-      ...prev,
+    setPlayerState(prevState => ({
+      ...prevState,
       currentSongId: songs[prevIndex].id,
       currentTime: 0,
       isPlaying: true
@@ -701,16 +702,27 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const seekTo = (time: number) => {
     if (audioRef.current) {
       audioRef.current.currentTime = time;
-      setPlayerState(prev => ({ ...prev, currentTime: time }));
+      setPlayerState(prevState => ({ ...prevState, currentTime: time }));
     }
   };
 
   const setVolume = (volume: number) => {
-    setPlayerState(prev => ({ ...prev, volume, isMuted: false }));
+    setPlayerState(prevState => ({ ...prevState, volume, isMuted: false }));
   };
 
   const toggleMute = () => {
-    setPlayerState(prev => ({ ...prev, isMuted: !prev.isMuted }));
+    setPlayerState(prevState => ({ ...prevState, isMuted: !prevState.isMuted }));
+  };
+
+  const logout = () => {
+    setProfileState(null);
+    setIsSignedUp(false);
+    localStorage.removeItem('audioPersonaProfile');
+    
+    toast({
+      title: "Logged Out",
+      description: "You have been logged out successfully"
+    });
   };
 
   const createPlaylist = (name: string) => {
@@ -804,6 +816,30 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     });
   };
 
+  const playSong = (songId: string) => {
+    if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
+      audioContextRef.current.resume();
+    }
+
+    if (playerState.currentSongId === songId && playerState.isPlaying) {
+      setPlayerState(prevState => ({
+        ...prevState,
+        isPlaying: false
+      }));
+      
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+    } else {
+      setPlayerState(prevState => ({
+        ...prevState,
+        currentSongId: songId,
+        currentTime: 0,
+        isPlaying: true
+      }));
+    }
+  };
+
   const setVoiceCommand = (command: string) => {
     setVoiceCommandText(command);
     setProcessingVoice(true);
@@ -823,7 +859,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const toggleVoiceListening = () => {
-    setIsVoiceListening(!isVoiceListening);
+    setIsVoiceListening(prev => !prev);
     if (!isVoiceListening) {
       toast({
         title: "Voice Assistant Activated",
@@ -845,6 +881,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const volumeDownCommands = ['volume down', 'lower', 'decrease volume', 'quieter', 'turn it down'];
     const muteCommands = ['mute', 'silence', 'quiet', 'no sound'];
     const unmuteCommands = ['unmute', 'sound on', 'enable sound'];
+    const playlistCommands = ['playlist', 'play list', 'list'];
     
     const matchesCommand = (cmd: string, variations: string[]) => {
       return variations.some(variation => cmd.includes(variation));
@@ -854,7 +891,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       commandRecognized = true;
       
       if (lowerCommand === 'play' || lowerCommand === 'start' || lowerCommand === 'resume') {
-        setPlayerState(prev => ({ ...prev, isPlaying: true }));
+        setPlayerState(prevState => ({ ...prevState, isPlaying: true }));
         toast({
           title: "Playback Started",
           description: currentSong ? `Playing "${currentSong.title}"` : "Playing music",
@@ -868,23 +905,28 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           );
           
           if (foundSong) {
-            setPlayerState(prev => ({ ...prev, currentSongId: foundSong.id, isPlaying: true, currentTime: 0 }));
+            setPlayerState(prevState => ({ ...prevState, currentSongId: foundSong.id, isPlaying: true, currentTime: 0 }));
             toast({
               title: "Playing Song",
               description: `Now playing "${foundSong.title}" by ${foundSong.artist}`,
             });
           } else {
-            toast({
-              title: "Song Not Found",
-              description: `Sorry, I couldn't find "${searchTerm}"`,
-              variant: "destructive"
-            });
+            const foundPlaylist = playlists.find(pl => pl.name.toLowerCase().includes(searchTerm));
+            if (foundPlaylist && foundPlaylist.songs.length > 0) {
+              playPlaylist(foundPlaylist.id);
+            } else {
+              toast({
+                title: "Not Found",
+                description: `Sorry, I couldn't find "${searchTerm}"`,
+                variant: "destructive"
+              });
+            }
           }
         }
       }
     } else if (matchesCommand(lowerCommand, pauseCommands)) {
       commandRecognized = true;
-      setPlayerState(prev => ({ ...prev, isPlaying: false }));
+      setPlayerState(prevState => ({ ...prevState, isPlaying: false }));
       toast({
         title: "Playback Paused",
         description: "Music paused"
@@ -919,18 +961,43 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       });
     } else if (matchesCommand(lowerCommand, muteCommands)) {
       commandRecognized = true;
-      setPlayerState(prev => ({ ...prev, isMuted: true }));
+      setPlayerState(prevState => ({ ...prevState, isMuted: true }));
       toast({
         title: "Volume Muted",
         description: "Audio muted"
       });
     } else if (matchesCommand(lowerCommand, unmuteCommands)) {
       commandRecognized = true;
-      setPlayerState(prev => ({ ...prev, isMuted: false }));
+      setPlayerState(prevState => ({ ...prevState, isMuted: false }));
       toast({
         title: "Volume Unmuted",
         description: "Audio unmuted"
       });
+    } else if (matchesCommand(lowerCommand, playlistCommands)) {
+      commandRecognized = true;
+      const playlistName = lowerCommand.replace(/playlist |play list |list /i, '').trim();
+      if (playlistName) {
+        const foundPlaylist = playlists.find(pl => pl.name.toLowerCase().includes(playlistName));
+        if (foundPlaylist) {
+          playPlaylist(foundPlaylist.id);
+          toast({
+            title: "Playing Playlist",
+            description: `Playing playlist "${foundPlaylist.name}"`
+          });
+        } else {
+          toast({
+            title: "Playlist Not Found",
+            description: `Couldn't find a playlist named "${playlistName}"`,
+            variant: "destructive"
+          });
+        }
+      } else {
+        const playlistNames = playlists.map(pl => pl.name).join(", ");
+        toast({
+          title: "Available Playlists",
+          description: playlistNames || "No playlists available"
+        });
+      }
     } else if (lowerCommand.includes('voice') || lowerCommand.includes('listen')) {
       commandRecognized = true;
       if (lowerCommand.includes('off') || lowerCommand.includes('disable') || lowerCommand.includes('stop')) {
@@ -948,6 +1015,9 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       } else {
         toggleVoiceListening();
       }
+    } else if (lowerCommand.includes('logout') || lowerCommand.includes('sign out') || lowerCommand.includes('log out')) {
+      commandRecognized = true;
+      logout();
     }
     
     if (!commandRecognized) {
@@ -1000,7 +1070,9 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       deletePlaylist,
       playPlaylist,
       setVisSettings: (newSettings) => setVisSettings(prev => ({ ...prev, ...newSettings })),
-      visSettings
+      visSettings,
+      logout,
+      playSong
     }}>
       {children}
     </AudioContext.Provider>

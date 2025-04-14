@@ -24,7 +24,7 @@ const VoiceCommandPanel: React.FC = () => {
     }, 5000);
     
     return () => clearInterval(checkInterval);
-  }, [isVoiceListening]);
+  }, [isVoiceListening, toggleVoiceListening]);
   
   const handleSendCommand = () => {
     if (inputCommand.trim()) {
@@ -118,7 +118,7 @@ const VoiceCommandPanel: React.FC = () => {
         <div className="mt-3 pt-3 border-t border-futuristic-border">
           <p className="text-xs text-futuristic-muted mb-2">Try these commands:</p>
           <div className="flex flex-wrap gap-2">
-            {['Play music', 'Pause', 'Next song', 'Previous song', 'Volume up', 'Volume down'].map((cmd, idx) => (
+            {['Play music', 'Pause', 'Next song', 'Previous song', 'Play playlist', 'Logout'].map((cmd, idx) => (
               <Button 
                 key={idx}
                 variant="outline"

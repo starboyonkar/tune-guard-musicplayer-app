@@ -28,6 +28,26 @@ const SongInfo: React.FC = () => {
         <p className="text-futuristic-muted text-sm truncate">
           {currentSong.artist || "TUNE GUARD"}
         </p>
+        {playerState.isPlaying ? (
+          <div className="mt-1 flex items-center">
+            <span className="text-xs text-futuristic-accent1">Now Playing</span>
+            <div className="flex ml-2 space-x-1">
+              {[1, 2, 3].map((i) => (
+                <span 
+                  key={i} 
+                  className="w-1 h-3 bg-futuristic-accent1 rounded-full opacity-75" 
+                  style={{ 
+                    animation: `pulse 0.6s ease-in-out ${i * 0.2}s infinite alternate`
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="mt-1">
+            <span className="text-xs text-futuristic-muted">Paused</span>
+          </div>
+        )}
       </div>
     </div>
   );

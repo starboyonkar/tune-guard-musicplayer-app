@@ -13,10 +13,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAudio } from '@/lib/audioContext';
-import { Settings } from 'lucide-react';
+import { Settings, User } from 'lucide-react';
 
 const ProfileEditor: React.FC = () => {
-  const { profile, updateProfile } = useAudio();
+  const { profile, updateProfile, logout } = useAudio();
   const [name, setName] = useState(profile?.name || '');
   const [age, setAge] = useState(profile?.age.toString() || '');
   const [dob, setDob] = useState(profile?.dob || '');
@@ -44,12 +44,12 @@ const ProfileEditor: React.FC = () => {
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
         <Button variant="ghost" size="icon" className="text-futuristic-accent1">
-          <Settings className="h-5 w-5" />
+          <User className="h-5 w-5" />
         </Button>
       </SheetTrigger>
       <SheetContent className="bg-futuristic-bg border-futuristic-border">
         <SheetHeader>
-          <SheetTitle className="text-futuristic-accent1">Update Profile</SheetTitle>
+          <SheetTitle className="text-futuristic-accent1">User Profile</SheetTitle>
           <SheetDescription>
             Update your profile to adjust your audio experience.
           </SheetDescription>
@@ -112,12 +112,25 @@ const ProfileEditor: React.FC = () => {
             </Select>
           </div>
           
-          <Button 
-            type="submit" 
-            className="w-full bg-gradient-to-r from-futuristic-accent1 to-futuristic-accent2 hover:opacity-90"
-          >
-            Update Profile
-          </Button>
+          <div className="flex gap-4">
+            <Button 
+              type="submit" 
+              className="flex-1 bg-gradient-to-r from-futuristic-accent1 to-futuristic-accent2 hover:opacity-90"
+            >
+              Update Profile
+            </Button>
+            <Button 
+              type="button" 
+              variant="destructive" 
+              className="flex-1"
+              onClick={() => {
+                setOpen(false);
+                logout();
+              }}
+            >
+              Logout
+            </Button>
+          </div>
         </form>
       </SheetContent>
     </Sheet>

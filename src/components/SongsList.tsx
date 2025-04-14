@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useAudio } from '@/lib/audioContext';
 import { Button } from '@/components/ui/button';
@@ -9,39 +10,16 @@ const SongsList: React.FC = () => {
   const { 
     songs, 
     playerState, 
-    togglePlayPause,
+    playSong,
     currentSong,
     addSong
   } = useAudio();
 
-  // Function to handle playing a specific song
-  const handlePlaySong = (songId: string) => {
-    // If this is the current song, toggle play/pause
-    if (currentSong && currentSong.id === songId) {
-      togglePlayPause();
-    } else {
-      // Otherwise, start playing this song
-      const audio = new Audio();
-      const song = songs.find(s => s.id === songId);
-      
-      if (song) {
-        audio.src = song.source;
-        audio.play()
-          .then(() => {
-            // Set as current song in the context
-            const event = new CustomEvent('play-song', { detail: { songId } });
-            document.dispatchEvent(event);
-          })
-          .catch(error => {
-            console.error("Error playing song:", error);
-            toast({
-              title: "Playback Error",
-              description: "There was an error playing this song.",
-              variant: "destructive"
-            });
-          });
-      }
-    }
+  // Format duration from seconds to MM:SS
+  const formatDuration = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
 
   // Handle file selection for adding new songs
@@ -67,17 +45,10 @@ const SongsList: React.FC = () => {
     input.click();
   };
 
-  // Format duration from seconds to MM:SS
-  const formatDuration = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
-  };
-
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold">Your Songs</h3>
+        <h3 className="text-lg font-semibold">TUNE GUARD Songs</h3>
         <Button 
           variant="outline"
           className="border-futuristic-border text-futuristic-accent1 hover:bg-futuristic-bg/50"
@@ -99,15 +70,16 @@ const SongsList: React.FC = () => {
             {songs.map((song) => (
               <Card 
                 key={song.id} 
-                className={`p-2 hover:bg-futuristic-bg/20 transition-colors ${
-                  currentSong?.id === song.id ? 'border-futuristic-accent1' : ''
+                className={`p-2 hover:bg-futuristic-bg/20 transition-colors cursor-pointer ${
+                  currentSong?.id === song.id ? 'border-futuristic-accent1 bg-futuristic-bg/10' : ''
                 }`}
+                onClick={() => playSong(song.id)}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center flex-1 min-w-0">
                     <div className="h-10 w-10 rounded overflow-hidden mr-3 flex-shrink-0">
                       <img 
-                        src="/lovable-uploads/b26c60f6-26f9-4e3b-afb1-ba0d0a2e076d.png" 
+                        src={song.albumArt || "/lovable-uploads/b26c60f6-26f9-4e3b-afb1-ba0d0a2e076d.png"} 
                         alt="TUNE GUARD"
                         className="h-full w-full object-cover" 
                       />
@@ -126,7 +98,10 @@ const SongsList: React.FC = () => {
                       size="icon"
                       variant="ghost"
                       className="h-8 w-8 rounded-full hover:bg-futuristic-accent1/20"
-                      onClick={() => handlePlaySong(song.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        playSong(song.id);
+                      }}
                     >
                       {currentSong?.id === song.id && playerState.isPlaying ? (
                         <Pause className="h-4 w-4" />
