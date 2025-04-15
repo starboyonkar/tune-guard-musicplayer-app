@@ -24,7 +24,7 @@ const Index = () => {
       const hue2 = Math.floor(Math.random() * 20) + 180; // Blue-cyan range
       root.style.setProperty(
         '--dynamic-gradient', 
-        `linear-gradient(135deg, hsla(${hue1}, 80%, 70%, 0.8), hsla(${hue2}, 70%, 80%, 0.9))`
+        `linear-gradient(135deg, hsla(${hue1}, 80%, 98%, 0.9), hsla(${hue2}, 80%, 90%, 0.95))` // Lighter, whiter gradient
       );
     };
     
@@ -47,21 +47,21 @@ const Index = () => {
 
   return (
     <div className="min-h-screen w-full bg-futuristic-bg overflow-hidden relative">
-      {/* Background gradient elements */}
-      <div className="absolute inset-0 bg-black/80 z-[-20]"></div>
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-futuristic-accent1/20 rounded-full blur-3xl -z-10" />
-      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-futuristic-accent2/20 rounded-full blur-3xl -z-10" />
+      {/* Background gradient elements - updated to white/light blue */}
+      <div className="absolute inset-0 bg-white/90 z-[-20]"></div>
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-400/20 rounded-full blur-3xl -z-10 animate-pulse-slow" />
+      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-blue-200/30 rounded-full blur-3xl -z-10 animate-pulse-slow" />
       
       {/* Animated grid lines for cyberpunk effect */}
-      <div className="absolute inset-0 bg-[linear-gradient(transparent_1px,_#000_1px),_linear-gradient(90deg,_transparent_1px,_#000_1px)] bg-[size:20px_20px] [mask-image:linear-gradient(to_bottom,transparent,black)] opacity-10 z-[-15]"></div>
+      <div className="absolute inset-0 bg-[linear-gradient(transparent_1px,_#fff_1px),_linear-gradient(90deg,_transparent_1px,_#f0f8ff_1px)] bg-[size:20px_20px] [mask-image:linear-gradient(to_bottom,transparent,white)] opacity-10 z-[-15]"></div>
       
-      {/* App logo */}
-      <div className="absolute top-4 left-4 flex items-center space-x-2">
-        <Avatar className="h-10 w-10 border border-white/10 animate-pulse-slow">
+      {/* App logo - enlarged and centered for login */}
+      <div className={`${!isSignedUp ? 'absolute top-6 left-0 right-0 flex flex-col items-center justify-center' : 'absolute top-4 left-4 flex items-center space-x-2'}`}>
+        <Avatar className={`${!isSignedUp ? 'h-32 w-32' : 'h-10 w-10'} border border-white/30 animate-pulse-slow shadow-lg`}>
           <AvatarImage src="/lovable-uploads/d4fe6f3e-e72d-4760-93e5-5f71a12f2238.png" alt="TUNE GUARD" />
           <AvatarFallback>TG</AvatarFallback>
         </Avatar>
-        <span className="text-lg font-semibold neon-text">TUNE GUARD</span>
+        {isSignedUp && <span className="text-lg font-semibold neon-text">TUNE GUARD</span>}
       </div>
       
       {/* Voice control toggle before login */}

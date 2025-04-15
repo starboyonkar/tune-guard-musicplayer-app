@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useAudio } from '@/lib/audioContext';
 import { Settings, User } from 'lucide-react';
 import { soundEffects } from '@/lib/soundEffects';
+import { toast } from '@/components/ui/use-toast';
 
 const ProfileEditor: React.FC = () => {
   const { profile, updateProfile, logout } = useAudio();
@@ -40,9 +41,23 @@ const ProfileEditor: React.FC = () => {
   };
 
   const handleLogout = () => {
+    // Play notification sound
     soundEffects.playNotification();
+    
+    // Show toast message
+    toast({
+      title: "Logging out",
+      description: "Returning to login screen...",
+    });
+    
+    // Close the sheet
     setOpen(false);
-    setTimeout(() => logout(), 500);
+    
+    // Delay logout to allow animation to complete
+    setTimeout(() => {
+      // Reset all app state and return to login
+      logout();
+    }, 500);
   };
 
   if (!profile) return null;
