@@ -2,7 +2,7 @@
 import React from 'react';
 import { useAudio } from '@/lib/audioContext';
 import { Button } from '@/components/ui/button';
-import { Play, Pause, Plus, Music } from 'lucide-react';
+import { Play, Pause, Plus, Music, Shuffle, Repeat, Repeat1 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { soundEffects } from '@/lib/soundEffects';
 
@@ -12,7 +12,9 @@ const SongsList: React.FC = () => {
     playerState, 
     playSong,
     currentSong,
-    addSong
+    addSong,
+    toggleShuffle,
+    toggleRepeat
   } = useAudio();
 
   // Format duration from seconds to MM:SS
@@ -58,7 +60,41 @@ const SongsList: React.FC = () => {
       <div className="scan-line absolute"></div>
       
       <div className="flex justify-between items-center backdrop-blur-sm">
-        <h3 className="text-lg font-bold neon-text">TUNE GUARD Songs</h3>
+        <div className="flex items-center">
+          <h3 className="text-lg font-bold neon-text">TUNE GUARD Songs</h3>
+          
+          {/* Shuffle & Repeat controls */}
+          <div className="ml-4 flex items-center space-x-2">
+            <Button 
+              variant="ghost" 
+              size="icon"
+              onClick={toggleShuffle}
+              className={`h-8 w-8 rounded-full transition-colors ${
+                playerState.shuffleEnabled ? 'text-futuristic-accent1 hover:bg-futuristic-accent1/20' : 'text-futuristic-muted hover:bg-futuristic-bg/30'
+              }`}
+              title="Shuffle"
+            >
+              <Shuffle className={`h-4 w-4 ${playerState.shuffleEnabled ? 'neon-glow' : ''}`} />
+            </Button>
+            
+            <Button 
+              variant="ghost" 
+              size="icon"
+              onClick={toggleRepeat}
+              className={`h-8 w-8 rounded-full transition-colors ${
+                playerState.repeatMode !== 'off' ? 'text-futuristic-accent1 hover:bg-futuristic-accent1/20' : 'text-futuristic-muted hover:bg-futuristic-bg/30'
+              }`}
+              title={`Repeat ${playerState.repeatMode}`}
+            >
+              {playerState.repeatMode === 'one' ? (
+                <Repeat1 className="h-4 w-4 neon-glow" />
+              ) : (
+                <Repeat className={`h-4 w-4 ${playerState.repeatMode === 'all' ? 'neon-glow' : ''}`} />
+              )}
+            </Button>
+          </div>
+        </div>
+        
         <Button 
           variant="outline"
           className="border-futuristic-border text-futuristic-accent1 hover:bg-futuristic-bg/50 animate-pulse-slow"
@@ -103,6 +139,16 @@ const SongsList: React.FC = () => {
                         {song.title}
                       </p>
                       <p className="text-sm text-futuristic-muted truncate">{song.artist}</p>
+                      
+                      {/* Progress bar for currently playing song */}
+                      {currentSong?.id === song.id && (
+                        <div className="w-full bg-futuristic-bg/30 h-1 rounded-full mt-1">
+                          <div 
+                            className="h-1 bg-gradient-to-r from-futuristic-accent1 to-futuristic-accent2 rounded-full" 
+                            style={{ width: `${(playerState.currentTime / (currentSong?.duration || 1)) * 100}%` }}
+                          ></div>
+                        </div>
+                      )}
                     </div>
                   </div>
                   

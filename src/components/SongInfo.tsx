@@ -55,10 +55,22 @@ const SongInfo: React.FC = () => {
       
       {/* Welcome message with neon styling */}
       {profile && (
-        <div className="hidden md:block">
-          <p className="neon-text text-right font-bold">
-            Welcome, {profile.name} — <span className="text-sm">Cognitive Audio Synthesis</span>
-          </p>
+        <div className="hidden md:flex items-center">
+          <div className="mr-3">
+            <p className="neon-text text-right font-bold">
+              Welcome, {profile.name} — <span className="text-sm">Cognitive Audio Synthesis</span>
+            </p>
+            <div className="flex justify-end mt-1">
+              {playerState.shuffleEnabled && (
+                <span className="mr-2 text-xs text-futuristic-accent2 animate-pulse">SHUFFLE</span>
+              )}
+              {playerState.repeatMode !== 'off' && (
+                <span className="text-xs text-futuristic-accent2 animate-pulse">
+                  REPEAT {playerState.repeatMode === 'one' ? 'ONE' : 'ALL'}
+                </span>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>

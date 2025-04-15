@@ -1,10 +1,9 @@
 // User Profile Type
 export interface UserProfile {
-  id: string;
   name: string;
   age: number;
-  dob: string;
-  gender: 'male' | 'female' | 'non-binary' | 'prefer-not-to-say';
+  gender: string;
+  preferences: string[];
   createdAt: string;
   updatedAt?: string;
 }
@@ -16,7 +15,6 @@ export interface EQSettings {
   treble: number;
   volume: number;
   presence?: number;
-  clarity?: number;
   warmth?: number;
 }
 
@@ -25,7 +23,7 @@ export interface Song {
   id: string;
   title: string;
   artist: string;
-  albumArt: string;
+  albumArt?: string;
   duration: number;
   source: string;
 }
@@ -34,7 +32,7 @@ export interface Song {
 export interface Playlist {
   id: string;
   name: string;
-  songs: string[]; // Array of song ids
+  songs: string[];
   createdAt: string;
   updatedAt?: string;
 }
@@ -46,7 +44,9 @@ export interface PlayerState {
   volume: number;
   isMuted: boolean;
   currentSongId: string | null;
-  currentPlaylistId?: string | null;
+  currentPlaylistId: string | null;
+  shuffleEnabled: boolean;
+  repeatMode: 'off' | 'all' | 'one';
 }
 
 // Voice Command
@@ -58,10 +58,10 @@ export interface VoiceCommand {
 
 // Waveform Data
 export interface WaveformData {
-  original: number[];  // Original audio waveform data
-  processed: number[]; // Processed audio waveform data (after EQ)
-  timeData: number[];  // Time domain data
-  frequencyData: number[]; // Frequency domain data
+  original: number[];
+  processed: number[];
+  timeData: number[];
+  frequencyData: number[];
 }
 
 // Waveform Visualization Settings

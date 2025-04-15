@@ -5,7 +5,7 @@ import { Slider } from '@/components/ui/slider';
 import { useAudio } from '@/lib/audioContext';
 import { 
   Play, Pause, SkipBack, SkipForward, 
-  Volume2, VolumeX, Mic
+  Volume2, VolumeX, Mic, Shuffle, Repeat, Repeat1
 } from 'lucide-react';
 import { soundEffects } from '@/lib/soundEffects';
 
@@ -26,10 +26,12 @@ const PlayerControls: React.FC = () => {
     toggleMute,
     currentSong,
     isVoiceListening,
-    toggleVoiceListening
+    toggleVoiceListening,
+    toggleShuffle,
+    toggleRepeat
   } = useAudio();
   
-  const { isPlaying, currentTime, volume, isMuted } = playerState;
+  const { isPlaying, currentTime, volume, isMuted, shuffleEnabled, repeatMode } = playerState;
   
   const handleProgressChange = (newValue: number[]) => {
     seekTo(newValue[0]);
@@ -63,6 +65,16 @@ const PlayerControls: React.FC = () => {
     soundEffects.playNotification();
     toggleVoiceListening();
   };
+
+  const handleToggleShuffle = () => {
+    soundEffects.playTouchFeedback();
+    toggleShuffle();
+  };
+
+  const handleToggleRepeat = () => {
+    soundEffects.playTouchFeedback();
+    toggleRepeat();
+  };
   
   return (
     <div className="w-full px-4 py-2">
@@ -83,7 +95,20 @@ const PlayerControls: React.FC = () => {
       
       {/* Main controls */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-6">
+        <div className="flex items-center space-x-2">
+          {/* Shuffle button */}
+          <Button 
+            variant="ghost" 
+            size="icon"
+            onClick={handleToggleShuffle}
+            className={`text-futuristic-muted hover:text-futuristic-accent1 hover:bg-futuristic-bg ${
+              shuffleEnabled ? 'text-futuristic-accent1' : ''
+            }`}
+            title="Shuffle"
+          >
+            <Shuffle className={`h-4 w-4 ${shuffleEnabled ? 'neon-glow' : ''}`} />
+          </Button>
+
           <Button 
             variant="ghost" 
             size="icon" 
@@ -108,6 +133,23 @@ const PlayerControls: React.FC = () => {
             className="text-futuristic-accent2 hover:text-futuristic-accent1 hover:bg-futuristic-bg"
           >
             <SkipForward className="h-5 w-5" />
+          </Button>
+
+          {/* Repeat button */}
+          <Button 
+            variant="ghost" 
+            size="icon"
+            onClick={handleToggleRepeat}
+            className={`text-futuristic-muted hover:text-futuristic-accent1 hover:bg-futuristic-bg ${
+              repeatMode !== 'off' ? 'text-futuristic-accent1' : ''
+            }`}
+            title={`Repeat ${repeatMode}`}
+          >
+            {repeatMode === 'one' ? (
+              <Repeat1 className="h-4 w-4 neon-glow" />
+            ) : (
+              <Repeat className={`h-4 w-4 ${repeatMode === 'all' ? 'neon-glow' : ''}`} />
+            )}
           </Button>
         </div>
         

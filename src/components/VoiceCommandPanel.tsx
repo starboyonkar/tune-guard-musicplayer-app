@@ -5,9 +5,23 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { useAudio } from '@/lib/audioContext';
-import { Mic, Send, MicOff, Command, Settings, Volume2, VolumeX } from 'lucide-react';
+import { Mic, Send, MicOff, Command, Settings, Volume2, VolumeX, User, LogOut, HelpCircle, FileAudio, Shuffle, Repeat, List } from 'lucide-react';
 import { soundEffects } from '@/lib/soundEffects';
 import { Label } from '@/components/ui/label';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 const VoiceCommandPanel: React.FC = () => {
   const { 
@@ -15,9 +29,12 @@ const VoiceCommandPanel: React.FC = () => {
     isVoiceListening, 
     toggleVoiceListening, 
     commandHistory, 
-    processingVoice 
+    processingVoice,
+    profile,
+    logout
   } = useAudio();
   const [inputCommand, setInputCommand] = useState('');
+  const [isCommandListOpen, setIsCommandListOpen] = useState(false);
   
   // Auto-enable voice listening on component mount and maintain it
   useEffect(() => {
@@ -58,12 +75,17 @@ const VoiceCommandPanel: React.FC = () => {
     soundEffects.playTouchFeedback();
     toggleVoiceListening();
   };
+
+  const handleLogout = () => {
+    soundEffects.playNotification();
+    logout();
+  };
   
-  // Group commands by category
-  const playbackCommands = ['Play music', 'Pause', 'Next song', 'Previous song'];
+  // Enhanced command categories
+  const playbackCommands = ['Play music', 'Pause', 'Next song', 'Previous song', 'Shuffle on', 'Shuffle off', 'Repeat all', 'Repeat one', 'Repeat off'];
   const volumeCommands = ['Volume up', 'Volume down', 'Mute', 'Unmute'];
   const eqCommands = ['More bass', 'Less bass', 'More treble', 'Less treble'];
-  const systemCommands = ['Play playlist', 'Logout'];
+  const systemCommands = ['Edit profile', 'Logout', 'Help', 'Close', 'Add song'];
   
   return (
     <Card className="w-full glass border-futuristic-border">
@@ -80,12 +102,146 @@ const VoiceCommandPanel: React.FC = () => {
               onCheckedChange={handleToggleVoice}
               className="data-[state=checked]:bg-futuristic-accent1"
             />
+            
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Dialog open={isCommandListOpen} onOpenChange={setIsCommandListOpen}>
+                    <DialogTrigger asChild>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-6 w-6 text-futuristic-muted hover:text-futuristic-accent2"
+                      >
+                        <HelpCircle className="h-4 w-4" />
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-md glass border-futuristic-accent2">
+                      <DialogHeader>
+                        <DialogTitle className="neon-text">Available Voice Commands</DialogTitle>
+                        <DialogDescription className="text-futuristic-muted">
+                          Say any of these commands when voice control is active
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="grid gap-4 py-4">
+                        <div className="grid grid-cols-2 gap-6">
+                          <div>
+                            <h4 className="mb-2 font-semibold text-futuristic-accent2 flex items-center">
+                              <Command className="h-3 w-3 mr-1" /> Playback
+                            </h4>
+                            <ul className="space-y-1 text-sm text-futuristic-muted">
+                              {playbackCommands.map((cmd, i) => (
+                                <li key={i} className="hover:text-white cursor-pointer" onClick={() => {
+                                  handleExecuteCommand(cmd);
+                                  setIsCommandListOpen(false);
+                                }}>"{cmd}"</li>
+                              ))}
+                            </ul>
+                          </div>
+                          
+                          <div>
+                            <h4 className="mb-2 font-semibold text-futuristic-accent2 flex items-center">
+                              <Volume2 className="h-3 w-3 mr-1" /> Volume
+                            </h4>
+                            <ul className="space-y-1 text-sm text-futuristic-muted">
+                              {volumeCommands.map((cmd, i) => (
+                                <li key={i} className="hover:text-white cursor-pointer" onClick={() => {
+                                  handleExecuteCommand(cmd);
+                                  setIsCommandListOpen(false);
+                                }}>"{cmd}"</li>
+                              ))}
+                            </ul>
+                            
+                            <h4 className="mt-4 mb-2 font-semibold text-futuristic-accent2 flex items-center">
+                              <Settings className="h-3 w-3 mr-1" /> Sound
+                            </h4>
+                            <ul className="space-y-1 text-sm text-futuristic-muted">
+                              {eqCommands.map((cmd, i) => (
+                                <li key={i} className="hover:text-white cursor-pointer" onClick={() => {
+                                  handleExecuteCommand(cmd);
+                                  setIsCommandListOpen(false);
+                                }}>"{cmd}"</li>
+                              ))}
+                            </ul>
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <h4 className="mb-2 font-semibold text-futuristic-accent2 flex items-center">
+                            <Settings className="h-3 w-3 mr-1" /> System Commands
+                          </h4>
+                          <div className="grid grid-cols-2 gap-2 text-sm">
+                            {systemCommands.map((cmd, i) => (
+                              <div key={i} className="text-futuristic-muted hover:text-white cursor-pointer" onClick={() => {
+                                handleExecuteCommand(cmd);
+                                setIsCommandListOpen(false);
+                              }}>"{cmd}"</div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>View all voice commands</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-0">
+        {/* Quick action buttons - frequently used commands */}
+        <div className="mb-3 flex flex-wrap gap-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="py-1 h-7 text-xs border-futuristic-border bg-futuristic-bg/30 hover:bg-futuristic-accent1/20"
+            onClick={() => handleExecuteCommand("Edit profile")}
+          >
+            <User className="h-3 w-3 mr-1" /> Edit Profile
+          </Button>
+          
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="py-1 h-7 text-xs border-futuristic-border bg-futuristic-bg/30 hover:bg-futuristic-accent1/20"
+            onClick={() => handleExecuteCommand("Add song")}
+          >
+            <FileAudio className="h-3 w-3 mr-1" /> Add Song
+          </Button>
+          
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="py-1 h-7 text-xs border-futuristic-border bg-futuristic-bg/30 hover:bg-futuristic-accent1/20"
+            onClick={() => handleExecuteCommand("Shuffle on")}
+          >
+            <Shuffle className="h-3 w-3 mr-1" /> Shuffle
+          </Button>
+          
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="py-1 h-7 text-xs border-futuristic-border bg-futuristic-bg/30 hover:bg-futuristic-accent1/20"
+            onClick={() => handleExecuteCommand("Repeat all")}
+          >
+            <Repeat className="h-3 w-3 mr-1" /> Repeat
+          </Button>
+          
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="py-1 h-7 text-xs border-futuristic-border bg-futuristic-bg/30 hover:bg-destructive/20 hover:text-destructive"
+            onClick={handleLogout}
+          >
+            <LogOut className="h-3 w-3 mr-1" /> Logout
+          </Button>
+        </div>
+        
         {/* Command history */}
-        <div className="mb-3 flex flex-col space-y-2 h-32 overflow-y-auto">
+        <div className="mb-3 flex flex-col space-y-2 h-24 overflow-y-auto">
           {commandHistory.length === 0 && (
             <div className="text-center text-xs text-futuristic-muted py-4">
               Try saying "Play music" or "Next song"
@@ -135,93 +291,6 @@ const VoiceCommandPanel: React.FC = () => {
           >
             <Send size={18} />
           </Button>
-        </div>
-        
-        {/* Sample commands - categorized */}
-        <div className="mt-3 pt-3 border-t border-futuristic-border">
-          <p className="text-xs text-futuristic-muted mb-2">Command Categories:</p>
-          
-          <div className="space-y-3">
-            {/* Playback commands */}
-            <div>
-              <div className="flex items-center text-xs text-futuristic-accent2 mb-1">
-                <Command className="h-3 w-3 mr-1" /> Playback
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {playbackCommands.map((cmd, idx) => (
-                  <Button 
-                    key={idx}
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleExecuteCommand(cmd)}
-                    className="text-xs py-0 h-6 border-futuristic-border bg-futuristic-bg/20 hover:bg-futuristic-bg hover:text-futuristic-accent1"
-                  >
-                    {cmd}
-                  </Button>
-                ))}
-              </div>
-            </div>
-            
-            {/* Volume commands */}
-            <div>
-              <div className="flex items-center text-xs text-futuristic-accent2 mb-1">
-                <Volume2 className="h-3 w-3 mr-1" /> Volume
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {volumeCommands.map((cmd, idx) => (
-                  <Button 
-                    key={idx}
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleExecuteCommand(cmd)}
-                    className="text-xs py-0 h-6 border-futuristic-border bg-futuristic-bg/20 hover:bg-futuristic-bg hover:text-futuristic-accent1"
-                  >
-                    {cmd}
-                  </Button>
-                ))}
-              </div>
-            </div>
-            
-            {/* EQ commands */}
-            <div>
-              <div className="flex items-center text-xs text-futuristic-accent2 mb-1">
-                <Settings className="h-3 w-3 mr-1" /> Equalizer
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {eqCommands.map((cmd, idx) => (
-                  <Button 
-                    key={idx}
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleExecuteCommand(cmd)}
-                    className="text-xs py-0 h-6 border-futuristic-border bg-futuristic-bg/20 hover:bg-futuristic-bg hover:text-futuristic-accent1"
-                  >
-                    {cmd}
-                  </Button>
-                ))}
-              </div>
-            </div>
-            
-            {/* System commands */}
-            <div>
-              <div className="flex items-center text-xs text-futuristic-accent2 mb-1">
-                <Settings className="h-3 w-3 mr-1" /> System
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {systemCommands.map((cmd, idx) => (
-                  <Button 
-                    key={idx}
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleExecuteCommand(cmd)}
-                    className="text-xs py-0 h-6 border-futuristic-border bg-futuristic-bg/20 hover:bg-futuristic-bg hover:text-futuristic-accent1"
-                  >
-                    {cmd}
-                  </Button>
-                ))}
-              </div>
-            </div>
-          </div>
         </div>
       </CardContent>
     </Card>

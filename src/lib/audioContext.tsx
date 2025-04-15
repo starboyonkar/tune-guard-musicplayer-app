@@ -122,6 +122,9 @@ interface AudioContextType {
   visSettings: VisSettings;
   logout: () => void;
   playSong: (songId: string) => void;
+  toggleShuffle: () => void;
+  toggleRepeat: () => void;
+  resetWaveform: () => void;
 }
 
 const defaultPlayerState: PlayerState = {
@@ -130,7 +133,9 @@ const defaultPlayerState: PlayerState = {
   volume: 70,
   isMuted: false,
   currentSongId: '1',
-  currentPlaylistId: null
+  currentPlaylistId: null,
+  shuffleEnabled: false,
+  repeatMode: 'off'
 };
 
 const defaultWaveformData: WaveformData = {
@@ -646,12 +651,46 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const currentPlaylist = playlists.find(p => p.id === playerState.currentPlaylistId);
       if (currentPlaylist) {
         const currentSongIndex = currentPlaylist.songs.findIndex(id => id === playerState.currentSongId);
-        const nextIndex = (currentSongIndex + 1) % currentPlaylist.songs.length;
+        let nextIndex;
+        
+        if (playerState.shuffleEnabled) {
+          const availableSongs = currentPlaylist.songs.filter(id => id !== playerState.currentSongId);
+          if (availableSongs.length > 0) {
+            const randomIndex = Math.floor(Math.random() * availableSongs.length);
+            const nextSongId = availableSongs[randomIndex];
+            
+            setPlayerState(prevState => ({
+              ...prevState,
+              currentSongId: nextSongId,
+              currentTime: 0,
+              isPlaying: true
+            }));
+            return;
+          }
+        }
+        
+        nextIndex = (currentSongIndex + 1) % currentPlaylist.songs.length;
         const nextSongId = currentPlaylist.songs[nextIndex];
         
         setPlayerState(prevState => ({
           ...prevState,
           currentSongId: nextSongId,
+          currentTime: 0,
+          isPlaying: true
+        }));
+        return;
+      }
+    }
+    
+    if (playerState.shuffleEnabled) {
+      const availableSongs = songs.filter(song => song.id !== playerState.currentSongId);
+      if (availableSongs.length > 0) {
+        const randomIndex = Math.floor(Math.random() * availableSongs.length);
+        const nextSong = availableSongs[randomIndex];
+        
+        setPlayerState(prevState => ({
+          ...prevState,
+          currentSongId: nextSong.id,
           currentTime: 0,
           isPlaying: true
         }));
@@ -882,6 +921,14 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const muteCommands = ['mute', 'silence', 'quiet', 'no sound'];
     const unmuteCommands = ['unmute', 'sound on', 'enable sound'];
     const playlistCommands = ['playlist', 'play list', 'list'];
+    const shuffleOnCommands = ['shuffle', 'shuffle on', 'random', 'mix'];
+    const shuffleOffCommands = ['shuffle off', 'no shuffle', 'sequential'];
+    const repeatAllCommands = ['repeat all', 'repeat playlist', 'loop all'];
+    const repeatOneCommands = ['repeat one', 'repeat song', 'loop one', 'loop song'];
+    const repeatOffCommands = ['repeat off', 'no repeat', 'stop repeating'];
+    const profileCommands = ['profile', 'edit profile', 'account', 'user settings'];
+    const addSongCommands = ['add song', 'upload song', 'new song', 'browse file'];
+    const closeCommands = ['close', 'back', 'return', 'exit', 'dismiss'];
     
     const bassCommands = ['more bass', 'increase bass', 'boost bass', 'bass up'];
     const lessBassCommands = ['less bass', 'decrease bass', 'reduce bass', 'bass down'];
@@ -1114,6 +1161,40 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     });
   };
 
+  useEffect(() => {
+    if (!audioRef.current) return;
+    
+    const handleEnded = () => {
+      if (playerState.repeatMode === 'one') {
+        if (audioRef.current) {
+          audioRef.current.currentTime = 0;
+          audioRef.current.play();
+        }
+      } else if (playerState.repeatMode === 'all' || playerState.shuffleEnabled) {
+        nextSong();
+      } else {
+        const currentIndex = songs.findIndex(song => song.id === playerState.currentSongId);
+        if (currentIndex < songs.length - 1) {
+          nextSong();
+        } else {
+          setPlayerState(prev => ({ ...prev, isPlaying: false, currentTime: 0 }));
+          
+          if (audioRef.current) {
+            audioRef.current.currentTime = 0;
+          }
+        }
+      }
+    };
+    
+    audioRef.current.addEventListener('ended', handleEnded);
+    
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.removeEventListener('ended', handleEnded);
+      }
+    };
+  }, [playerState.repeatMode, playerState.shuffleEnabled, playerState.currentSongId, songs]);
+
   return (
     <AudioContext.Provider value={{
       profile,
@@ -1149,7 +1230,10 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setVisSettings: (newSettings) => setVisSettings(prev => ({ ...prev, ...newSettings })),
       visSettings,
       logout,
-      playSong
+      playSong,
+      toggleShuffle,
+      toggleRepeat,
+      resetWaveform
     }}>
       {children}
     </AudioContext.Provider>
