@@ -861,16 +861,15 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
 
     if (playerState.currentSongId === songId) {
-      // Toggle play/pause for the current song
-      const newIsPlaying = !playerState.isPlaying;
-      
       setPlayerState(prevState => ({
         ...prevState,
-        isPlaying: newIsPlaying
+        isPlaying: !prevState.isPlaying
       }));
       
       if (audioRef.current) {
-        if (newIsPlaying) {
+        if (playerState.isPlaying) {
+          audioRef.current.pause();
+        } else {
           audioRef.current.play().catch(error => {
             console.error("Error playing audio:", error);
             toast({
@@ -878,34 +877,16 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               description: "Failed to play audio",
               variant: "destructive"
             });
-            
-            // Revert player state if play fails
-            setPlayerState(prevState => ({
-              ...prevState,
-              isPlaying: false
-            }));
           });
-        } else {
-          audioRef.current.pause();
         }
       }
     } else {
-      // Play a different song
       setPlayerState(prevState => ({
         ...prevState,
         currentSongId: songId,
         currentTime: 0,
         isPlaying: true
       }));
-      
-      // Provide feedback
-      const song = songs.find(s => s.id === songId);
-      if (song) {
-        toast({
-          title: "Now Playing",
-          description: `"${song.title}" by ${song.artist}`
-        });
-      }
     }
   };
 
@@ -975,35 +956,21 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       commandRecognized = true;
       
       if (lowerCommand === 'play' || lowerCommand === 'start' || lowerCommand === 'resume') {
-        if (!playerState.isPlaying && currentSong) {
-          setPlayerState(prevState => ({ ...prevState, isPlaying: true }));
-          toast({
-            title: "Playback Started",
-            description: currentSong ? `Playing "${currentSong.title}"` : "Playing music",
-          });
-        } else if (!currentSong && songs.length > 0) {
-          playSong(songs[0].id);
-          toast({
-            title: "Playback Started",
-            description: `Playing "${songs[0].title}"`,
-          });
-        }
+        setPlayerState(prevState => ({ ...prevState, isPlaying: true }));
+        toast({
+          title: "Playback Started",
+          description: currentSong ? `Playing "${currentSong.title}"` : "Playing music",
+        });
       } else {
         const searchTerm = lowerCommand.replace(/play |start |begin /i, '').trim();
         if (searchTerm) {
-          let foundSong = songs.find(
-            song => song.title.toLowerCase() === searchTerm
+          const foundSong = songs.find(
+            song => song.title.toLowerCase().includes(searchTerm) || 
+                  song.artist.toLowerCase().includes(searchTerm)
           );
           
-          if (!foundSong) {
-            foundSong = songs.find(
-              song => song.title.toLowerCase().includes(searchTerm) || 
-                    song.artist.toLowerCase().includes(searchTerm)
-            );
-          }
-          
           if (foundSong) {
-            playSong(foundSong.id);
+            setPlayerState(prevState => ({ ...prevState, currentSongId: foundSong.id, isPlaying: true, currentTime: 0 }));
             toast({
               title: "Playing Song",
               description: `Now playing "${foundSong.title}" by ${foundSong.artist}`,
@@ -1024,13 +991,11 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
     } else if (matchesCommand(lowerCommand, pauseCommands)) {
       commandRecognized = true;
-      if (playerState.isPlaying) {
-        setPlayerState(prevState => ({ ...prevState, isPlaying: false }));
-        toast({
-          title: "Playback Paused",
-          description: "Music paused"
-        });
-      }
+      setPlayerState(prevState => ({ ...prevState, isPlaying: false }));
+      toast({
+        title: "Playback Paused",
+        description: "Music paused"
+      });
     } else if (matchesCommand(lowerCommand, nextCommands)) {
       commandRecognized = true;
       nextSong();
@@ -1077,11 +1042,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       commandRecognized = true;
       const playlistName = lowerCommand.replace(/playlist |play list |list /i, '').trim();
       if (playlistName) {
-        let foundPlaylist = playlists.find(pl => pl.name.toLowerCase() === playlistName);
-        if (!foundPlaylist) {
-          foundPlaylist = playlists.find(pl => pl.name.toLowerCase().includes(playlistName));
-        }
-        
+        const foundPlaylist = playlists.find(pl => pl.name.toLowerCase().includes(playlistName));
         if (foundPlaylist) {
           playPlaylist(foundPlaylist.id);
           toast({
@@ -1191,23 +1152,6 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       toast({
         title: "Equalizer Settings",
         description: "Try 'more bass', 'less treble' or specific EQ commands"
-      });
-    } else if (lowerCommand === 'stop music' || lowerCommand === 'stop playing' || lowerCommand === 'stop playback') {
-      commandRecognized = true;
-      setPlayerState(prev => ({
-        ...prev,
-        isPlaying: false,
-        currentTime: 0
-      }));
-      
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.currentTime = 0;
-      }
-      
-      toast({
-        title: "Playback Stopped",
-        description: "Music stopped"
       });
     }
     
