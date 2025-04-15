@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useAudio } from '@/lib/audioContext';
 import { z } from 'zod';
@@ -55,7 +56,7 @@ const SignUpForm: React.FC = () => {
       setLoading(false);
     }, 1500);
   };
-
+  
   return (
     <div className="w-full max-w-md mx-auto relative">
       {/* Particle effect background */}
