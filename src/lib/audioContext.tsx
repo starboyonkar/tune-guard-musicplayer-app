@@ -1195,6 +1195,48 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
   }, [playerState.repeatMode, playerState.shuffleEnabled, playerState.currentSongId, songs]);
 
+  const toggleShuffle = () => {
+    setPlayerState(prevState => ({
+      ...prevState,
+      shuffleEnabled: !prevState.shuffleEnabled
+    }));
+    
+    toast({
+      title: playerState.shuffleEnabled ? "Shuffle Disabled" : "Shuffle Enabled",
+      description: playerState.shuffleEnabled ? "Songs will play in order" : "Songs will play in random order"
+    });
+  };
+
+  const toggleRepeat = () => {
+    const modes: ('off' | 'all' | 'one')[] = ['off', 'all', 'one'];
+    const currentIndex = modes.indexOf(playerState.repeatMode);
+    const nextMode = modes[(currentIndex + 1) % modes.length];
+    
+    setPlayerState(prevState => ({
+      ...prevState,
+      repeatMode: nextMode
+    }));
+    
+    const messages = {
+      off: "Repeat disabled",
+      all: "Repeating all songs",
+      one: "Repeating current song"
+    };
+    
+    toast({
+      title: `Repeat Mode: ${nextMode}`,
+      description: messages[nextMode]
+    });
+  };
+
+  const resetWaveform = () => {
+    setWaveformData(defaultWaveformData);
+    toast({
+      title: "Waveform Reset",
+      description: "Waveform visualization has been reset"
+    });
+  };
+
   return (
     <AudioContext.Provider value={{
       profile,
