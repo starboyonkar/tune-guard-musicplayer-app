@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { useAudio } from '@/lib/audioContext';
-import { Mic, Send, MicOff, Command, Settings, Volume2, VolumeX, User, LogOut, HelpCircle, FileAudio, Shuffle, Repeat, List } from 'lucide-react';
+import { Mic, Send, MicOff, Command, Settings, Volume2, VolumeX, User, LogOut, HelpCircle, FileAudio, Shuffle, Repeat, List, Play, Pause, SkipForward, SkipBack, Music } from 'lucide-react';
 import { soundEffects } from '@/lib/soundEffects';
 import { Label } from '@/components/ui/label';
 import {
@@ -31,8 +31,16 @@ const VoiceCommandPanel: React.FC = () => {
     commandHistory, 
     processingVoice,
     profile,
-    logout
+    logout,
+    playerState,
+    togglePlayPause,
+    nextSong,
+    prevSong,
+    songs,
+    currentSong,
+    playSong
   } = useAudio();
+  
   const [inputCommand, setInputCommand] = useState('');
   const [isCommandListOpen, setIsCommandListOpen] = useState(false);
   
@@ -70,6 +78,25 @@ const VoiceCommandPanel: React.FC = () => {
     soundEffects.playTouchFeedback();
     setVoiceCommand(command);
   };
+
+  const handleDirectPlayback = (action: 'play' | 'pause' | 'next' | 'previous') => {
+    soundEffects.playTouchFeedback();
+    
+    switch(action) {
+      case 'play':
+        if (!playerState.isPlaying) togglePlayPause();
+        break;
+      case 'pause':
+        if (playerState.isPlaying) togglePlayPause();
+        break;
+      case 'next':
+        nextSong();
+        break;
+      case 'previous':
+        prevSong();
+        break;
+    }
+  };
   
   const handleToggleVoice = () => {
     soundEffects.playTouchFeedback();
@@ -82,7 +109,7 @@ const VoiceCommandPanel: React.FC = () => {
   };
   
   // Enhanced command categories
-  const playbackCommands = ['Play music', 'Pause', 'Next song', 'Previous song', 'Shuffle on', 'Shuffle off', 'Repeat all', 'Repeat one', 'Repeat off'];
+  const playbackCommands = ['Play music', 'Pause', 'Next song', 'Previous song', 'Stop music', 'Shuffle on', 'Shuffle off', 'Repeat all', 'Repeat one', 'Repeat off'];
   const volumeCommands = ['Volume up', 'Volume down', 'Mute', 'Unmute'];
   const eqCommands = ['More bass', 'Less bass', 'More treble', 'Less treble'];
   const systemCommands = ['Edit profile', 'Logout', 'Help', 'Close', 'Add song'];
@@ -179,6 +206,26 @@ const VoiceCommandPanel: React.FC = () => {
                             ))}
                           </div>
                         </div>
+                        
+                        <div>
+                          <h4 className="mb-2 font-semibold text-futuristic-accent2 flex items-center">
+                            <Music className="h-3 w-3 mr-1" /> Available Songs
+                          </h4>
+                          <div className="max-h-32 overflow-y-auto custom-scrollbar grid grid-cols-2 gap-1 text-sm">
+                            {songs.map((song) => (
+                              <div 
+                                key={song.id} 
+                                className={`text-futuristic-muted hover:text-white cursor-pointer px-1 py-0.5 rounded ${currentSong?.id === song.id ? 'bg-futuristic-accent1/20 text-white' : ''}`} 
+                                onClick={() => {
+                                  handleExecuteCommand(`Play ${song.title}`);
+                                  setIsCommandListOpen(false);
+                                }}
+                              >
+                                "{song.title}"
+                              </div>
+                            ))}
+                          </div>
+                        </div>
                       </div>
                     </DialogContent>
                   </Dialog>
@@ -192,6 +239,39 @@ const VoiceCommandPanel: React.FC = () => {
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-0">
+        {/* Quick playback control buttons */}
+        <div className="mb-3 flex justify-center gap-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="py-1 h-7 text-xs border-futuristic-border bg-futuristic-bg/30 hover:bg-futuristic-accent1/20"
+            onClick={() => handleDirectPlayback('previous')}
+          >
+            <SkipBack className="h-3 w-3" />
+          </Button>
+          
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="py-1 h-7 text-xs border-futuristic-border bg-futuristic-bg/30 hover:bg-futuristic-accent1/20"
+            onClick={() => playerState.isPlaying ? handleDirectPlayback('pause') : handleDirectPlayback('play')}
+          >
+            {playerState.isPlaying ? 
+              <Pause className="h-3 w-3" /> : 
+              <Play className="h-3 w-3" />
+            }
+          </Button>
+          
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="py-1 h-7 text-xs border-futuristic-border bg-futuristic-bg/30 hover:bg-futuristic-accent1/20"
+            onClick={() => handleDirectPlayback('next')}
+          >
+            <SkipForward className="h-3 w-3" />
+          </Button>
+        </div>
+        
         {/* Quick action buttons - frequently used commands */}
         <div className="mb-3 flex flex-wrap gap-2">
           <Button 
