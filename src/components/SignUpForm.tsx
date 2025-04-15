@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useAudio } from '@/lib/audioContext';
 import { soundEffects } from '@/lib/soundEffects';
 import { UserProfile } from '@/lib/types';
-import { AudioWaveform } from 'lucide-react';
+import { Mic, MicOff } from 'lucide-react';
 
 const SignUpForm: React.FC = () => {
   const { setProfile } = useAudio();
@@ -14,9 +14,8 @@ const SignUpForm: React.FC = () => {
   const [formData, setFormData] = useState({
     name: '',
     age: 25,
+    dateOfBirth: '',
     gender: 'non-binary',
-    experience: 'intermediate',
-    genre: 'rock'
   });
   
   const [error, setError] = useState('');
@@ -41,15 +40,14 @@ const SignUpForm: React.FC = () => {
       name: formData.name,
       age: formData.age,
       gender: formData.gender,
-      // Store experience and genre in profile metadata
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      // Add metadata to track user preferences that aren't in the UserProfile type
-      metadata: {
-        experience: formData.experience,
-        genre: formData.genre
-      }
+      updatedAt: new Date().toISOString()
     };
+    
+    // Store any additional user preferences separately
+    localStorage.setItem('userPreferences', JSON.stringify({
+      dateOfBirth: formData.dateOfBirth
+    }));
     
     setProfile(profile);
   };
@@ -57,111 +55,89 @@ const SignUpForm: React.FC = () => {
   return (
     <div className="w-full max-w-md mx-auto animate-fade-in">
       <div className="text-center mb-8">
-        <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-futuristic-accent1 to-futuristic-accent2">
-          Welcome to <span className="animate-pulse">Cognitive Audio Synthesis</span>
+        <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-2 text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 neon-text-bright">
+          Cognitive Audio Synthesis
         </h1>
-        <p className="text-futuristic-muted">Create your personalized audio profile</p>
-        
-        <div className="flex justify-center my-4">
-          <AudioWaveform className="w-24 h-24 text-futuristic-accent1 animate-pulse" />
-        </div>
+        <p className="text-cyan-300 mt-2 opacity-80">
+          Advanced music player with age-aware audio enhancement
+        </p>
       </div>
       
-      <form onSubmit={handleSubmit} className="space-y-4 bg-futuristic-bg/10 backdrop-blur-sm p-6 rounded-lg shadow-lg border border-futuristic-border">
-        <div className="space-y-2">
-          <label htmlFor="name" className="block text-sm font-medium">Name</label>
-          <Input 
-            id="name"
-            value={formData.name}
-            onChange={(e) => handleChange('name', e.target.value)}
-            placeholder="Enter your name"
-            className="w-full border-futuristic-border bg-futuristic-bg/20"
-          />
-        </div>
+      <div className="bg-black/80 backdrop-blur-md rounded-xl border border-cyan-500/30 p-6 shadow-lg shadow-cyan-500/20">
+        <h2 className="text-xl font-semibold mb-6 text-center neon-text">Create Your Audio Profile</h2>
         
-        <div className="space-y-2">
-          <label htmlFor="age" className="block text-sm font-medium">Age</label>
-          <Input 
-            id="age"
-            type="number"
-            value={formData.age}
-            onChange={(e) => handleChange('age', parseInt(e.target.value) || 18)}
-            min={13}
-            max={100}
-            className="w-full border-futuristic-border bg-futuristic-bg/20"
-          />
-        </div>
-        
-        <div className="space-y-2">
-          <label htmlFor="gender" className="block text-sm font-medium">Gender</label>
-          <Select 
-            value={formData.gender}
-            onValueChange={(value) => handleChange('gender', value)}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <label htmlFor="name" className="block text-sm font-medium text-cyan-300">Name</label>
+            <Input 
+              id="name"
+              value={formData.name}
+              onChange={(e) => handleChange('name', e.target.value)}
+              placeholder="Enter your name"
+              className="bg-black/50 border-cyan-800/50 text-white placeholder:text-gray-500"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <label htmlFor="age" className="block text-sm font-medium text-cyan-300">Age</label>
+            <Input 
+              id="age"
+              type="number"
+              value={formData.age}
+              onChange={(e) => handleChange('age', parseInt(e.target.value) || 18)}
+              min={13}
+              max={100}
+              placeholder="Enter your age"
+              className="bg-black/50 border-cyan-800/50 text-white placeholder:text-gray-500"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <label htmlFor="dateOfBirth" className="block text-sm font-medium text-cyan-300">Date of Birth</label>
+            <Input 
+              id="dateOfBirth"
+              type="text"
+              placeholder="mm/dd/yyyy"
+              value={formData.dateOfBirth}
+              onChange={(e) => handleChange('dateOfBirth', e.target.value)}
+              className="bg-black/50 border-cyan-800/50 text-white placeholder:text-gray-500"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <label htmlFor="gender" className="block text-sm font-medium text-cyan-300">Gender</label>
+            <Select 
+              value={formData.gender}
+              onValueChange={(value) => handleChange('gender', value)}
+            >
+              <SelectTrigger className="bg-black/50 border-cyan-800/50 text-white">
+                <SelectValue placeholder="Select gender" />
+              </SelectTrigger>
+              <SelectContent className="bg-black/90 border-cyan-800/50 text-white">
+                <SelectItem value="male">Male</SelectItem>
+                <SelectItem value="female">Female</SelectItem>
+                <SelectItem value="non-binary">Non-binary</SelectItem>
+                <SelectItem value="other">Other</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          {error && (
+            <p className="text-red-400 text-sm">{error}</p>
+          )}
+          
+          <Button 
+            type="submit" 
+            className="w-full mt-6 bg-gradient-to-r from-cyan-500 to-purple-600 hover:opacity-90 transition-all"
           >
-            <SelectTrigger className="w-full border-futuristic-border bg-futuristic-bg/20">
-              <SelectValue placeholder="Select gender" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="male">Male</SelectItem>
-              <SelectItem value="female">Female</SelectItem>
-              <SelectItem value="non-binary">Non-binary</SelectItem>
-              <SelectItem value="other">Other</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        
-        <div className="space-y-2">
-          <label htmlFor="experience" className="block text-sm font-medium">Music Experience</label>
-          <Select 
-            value={formData.experience}
-            onValueChange={(value) => handleChange('experience', value)}
-          >
-            <SelectTrigger className="w-full border-futuristic-border bg-futuristic-bg/20">
-              <SelectValue placeholder="Select experience" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="casual">Casual Listener</SelectItem>
-              <SelectItem value="beginner">Beginner</SelectItem>
-              <SelectItem value="intermediate">Intermediate</SelectItem>
-              <SelectItem value="audiophile">Audiophile</SelectItem>
-              <SelectItem value="professional">Audio Professional</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        
-        <div className="space-y-2">
-          <label htmlFor="genre" className="block text-sm font-medium">Favorite Genre</label>
-          <Select 
-            value={formData.genre}
-            onValueChange={(value) => handleChange('genre', value)}
-          >
-            <SelectTrigger className="w-full border-futuristic-border bg-futuristic-bg/20">
-              <SelectValue placeholder="Select genre" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="rock">Rock</SelectItem>
-              <SelectItem value="pop">Pop</SelectItem>
-              <SelectItem value="electronic">Electronic</SelectItem>
-              <SelectItem value="hiphop">Hip Hop</SelectItem>
-              <SelectItem value="jazz">Jazz</SelectItem>
-              <SelectItem value="classical">Classical</SelectItem>
-              <SelectItem value="ambient">Ambient</SelectItem>
-              <SelectItem value="folk">Folk</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        
-        {error && (
-          <p className="text-destructive text-sm">{error}</p>
-        )}
-        
-        <Button 
-          type="submit" 
-          className="w-full bg-gradient-to-r from-futuristic-accent1 to-futuristic-accent2 hover:from-futuristic-accent2 hover:to-futuristic-accent1 transition-all animate-pulse-slow"
-        >
-          Create Profile & Continue
-        </Button>
-      </form>
+            Create Profile
+          </Button>
+          
+          <div className="text-center text-xs text-cyan-300/60 mt-4">
+            Your profile data helps us optimize audio for your hearing
+          </div>
+        </form>
+      </div>
     </div>
   );
 };
