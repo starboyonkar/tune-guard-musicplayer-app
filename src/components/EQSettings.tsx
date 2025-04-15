@@ -7,7 +7,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { 
-  Waveform, 
+  Waves, 
   Music3, 
   Volume2, 
   Settings2, 
@@ -92,7 +92,7 @@ const EQSettings: React.FC = () => {
             soundEffects.playTouchFeedback();
             setEQSettings({ ...eqSettings, bass: value[0] });
           }}
-          icon={<Waveform className="h-3 w-3 text-blue-400" />}
+          icon={<Waves className="h-3 w-3 text-blue-400" />}
           color="bg-blue-400"
         />
         
@@ -103,7 +103,7 @@ const EQSettings: React.FC = () => {
             soundEffects.playTouchFeedback();
             setEQSettings({ ...eqSettings, mid: value[0] });
           }}
-          icon={<Waveform className="h-3 w-3 text-green-400" />}
+          icon={<Waves className="h-3 w-3 text-green-400" />}
           color="bg-green-400"
         />
         
@@ -114,7 +114,7 @@ const EQSettings: React.FC = () => {
             soundEffects.playTouchFeedback();
             setEQSettings({ ...eqSettings, treble: value[0] });
           }}
-          icon={<Waveform className="h-3 w-3 text-yellow-400" />}
+          icon={<Waves className="h-3 w-3 text-yellow-400" />}
           color="bg-yellow-400"
         />
         
