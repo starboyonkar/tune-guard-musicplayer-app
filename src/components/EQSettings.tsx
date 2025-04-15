@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
@@ -6,7 +7,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { 
-  Waves,  // Replacing WaveformIcon with Waves
+  Waveform, 
   Music3, 
   Volume2, 
   Settings2, 
@@ -91,7 +92,7 @@ const EQSettings: React.FC = () => {
             soundEffects.playTouchFeedback();
             setEQSettings({ ...eqSettings, bass: value[0] });
           }}
-          icon={<Waves className="h-3 w-3 text-blue-400" />}  // Replaced WaveformIcon
+          icon={<Waveform className="h-3 w-3 text-blue-400" />}
           color="bg-blue-400"
         />
         
@@ -102,7 +103,7 @@ const EQSettings: React.FC = () => {
             soundEffects.playTouchFeedback();
             setEQSettings({ ...eqSettings, mid: value[0] });
           }}
-          icon={<Waves className="h-3 w-3 text-green-400" />}
+          icon={<Waveform className="h-3 w-3 text-green-400" />}
           color="bg-green-400"
         />
         
@@ -113,7 +114,7 @@ const EQSettings: React.FC = () => {
             soundEffects.playTouchFeedback();
             setEQSettings({ ...eqSettings, treble: value[0] });
           }}
-          icon={<Waves className="h-3 w-3 text-yellow-400" />}
+          icon={<Waveform className="h-3 w-3 text-yellow-400" />}
           color="bg-yellow-400"
         />
         
