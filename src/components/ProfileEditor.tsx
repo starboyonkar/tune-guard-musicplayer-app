@@ -20,8 +20,7 @@ const ProfileEditor: React.FC = () => {
   const { profile, updateProfile, logout } = useAudio();
   const [name, setName] = useState(profile?.name || '');
   const [age, setAge] = useState(profile?.age.toString() || '');
-  const [dob, setDob] = useState(profile?.dob || '');
-  const [gender, setGender] = useState<'male' | 'female' | 'non-binary' | 'prefer-not-to-say'>(
+  const [gender, setGender] = useState<string>(
     profile?.gender || 'prefer-not-to-say'
   );
   const [open, setOpen] = useState(false);
@@ -34,7 +33,6 @@ const ProfileEditor: React.FC = () => {
     updateProfile({
       name,
       age: parseInt(age),
-      dob,
       gender
     });
     
@@ -92,22 +90,10 @@ const ProfileEditor: React.FC = () => {
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="dob">Date of Birth</Label>
-            <Input
-              id="dob"
-              type="date"
-              value={dob}
-              onChange={(e) => setDob(e.target.value)}
-              className="border-futuristic-border bg-futuristic-bg/30"
-              required
-            />
-          </div>
-          
-          <div className="space-y-2">
             <Label htmlFor="gender">Gender</Label>
             <Select
               value={gender}
-              onValueChange={(val) => setGender(val as any)}
+              onValueChange={(val) => setGender(val)}
             >
               <SelectTrigger className="border-futuristic-border bg-futuristic-bg/30">
                 <SelectValue placeholder="Select gender" />

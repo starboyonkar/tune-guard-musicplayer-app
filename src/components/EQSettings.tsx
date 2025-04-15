@@ -1,198 +1,229 @@
 
-import React, { useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
 import { useAudio } from '@/lib/audioContext';
-import { cn } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge';
-import { InfoIcon } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { 
+  Waveform, 
+  Music3, 
+  Volume2, 
+  Settings2, 
+  Sliders, 
+  RotateCw,
+  BarChart4
+} from 'lucide-react';
+import { soundEffects } from '@/lib/soundEffects';
+
+// Custom slider component for EQ controls
+const EQSlider: React.FC<{
+  label: string;
+  value: number;
+  onChange: (value: number[]) => void;
+  icon?: React.ReactNode;
+  color?: string;
+}> = ({ label, value, onChange, icon, color = 'bg-futuristic-accent1' }) => {
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-2">
+          {icon}
+          <label className="text-sm font-medium">{label}</label>
+        </div>
+        <span className="text-xs text-futuristic-accent2">{value}%</span>
+      </div>
+      <Slider
+        value={[value]}
+        min={0}
+        max={100}
+        step={1}
+        onValueChange={onChange}
+        className={`${color}`}
+      />
+    </div>
+  );
+};
 
 const EQSettings: React.FC = () => {
-  const { eqSettings, setEQSettings, profile, currentSong } = useAudio();
+  const { 
+    eqSettings, 
+    setEQSettings, 
+    visSettings, 
+    setVisSettings,
+    playerState,
+    resetWaveform
+  } = useAudio();
   
-  // Automatically update EQ settings based on profile when song changes
-  useEffect(() => {
-    if (profile && currentSong) {
-      // Dynamically adjust EQ based on profile and current song
-      const bassModifier = profile.age < 30 ? 5 : profile.age > 60 ? -5 : 0;
-      const trebleModifier = profile.age < 30 ? 0 : profile.age > 60 ? 10 : 5;
-      
-      // Gender-based adjustments
-      const genderBassModifier = profile.gender === 'male' ? 3 : -2;
-      const genderMidModifier = profile.gender === 'male' ? -2 : 2;
-      
-      setEQSettings({
-        ...eqSettings,
-        bass: Math.min(100, Math.max(0, eqSettings.bass + bassModifier + genderBassModifier)),
-        mid: Math.min(100, Math.max(0, eqSettings.mid + genderMidModifier)),
-        treble: Math.min(100, Math.max(0, eqSettings.treble + trebleModifier)),
-      });
-    }
-  }, [currentSong?.id]);
+  const [advanced, setAdvanced] = useState(false);
   
-  const handleBassChange = (values: number[]) => {
-    setEQSettings({ ...eqSettings, bass: values[0] });
-  };
-  
-  const handleMidChange = (values: number[]) => {
-    setEQSettings({ ...eqSettings, mid: values[0] });
-  };
-  
-  const handleTrebleChange = (values: number[]) => {
-    setEQSettings({ ...eqSettings, treble: values[0] });
-  };
-  
-  const handlePresenceChange = (values: number[]) => {
-    setEQSettings({ ...eqSettings, presence: values[0] });
-  };
-  
-  const handleClarity = (values: number[]) => {
-    setEQSettings({ ...eqSettings, clarity: values[0] });
-  };
-  
-  const handleWarmth = (values: number[]) => {
-    setEQSettings({ ...eqSettings, warmth: values[0] });
-  };
-  
-  // Get age group label
-  const getAgeGroup = () => {
-    if (!profile) return '';
+  const handleResetEQ = () => {
+    soundEffects.playTouchFeedback();
     
-    if (profile.age < 20) return '10-20';
-    if (profile.age < 40) return '20-40';
-    if (profile.age < 60) return '40-60';
-    return '60+';
+    setEQSettings({
+      bass: 70,
+      mid: 70,
+      treble: 70,
+      volume: playerState.volume,
+      presence: 50,
+      warmth: 50,
+    });
   };
   
+  const handleResetWaveform = () => {
+    soundEffects.playTouchFeedback();
+    resetWaveform();
+  };
+
   return (
-    <Card className="w-full glass border-futuristic-border">
+    <Card className="glass border-futuristic-border">
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm flex justify-between">
-          <span>Enhanced EQ Settings</span>
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="bg-futuristic-accent1/20 text-futuristic-accent1">
-              Auto-Tuned
-            </Badge>
-            <span className="text-futuristic-accent2">
-              {profile ? `${getAgeGroup()} Age Profile` : ''}
-            </span>
-          </div>
+        <CardTitle className="text-md flex items-center">
+          <Sliders className="mr-2 h-4 w-4 text-futuristic-accent1" />
+          Audio Settings
         </CardTitle>
       </CardHeader>
-      <CardContent className="pt-0">
-        <div className="space-y-4">
-          <div className="space-y-1">
-            <div className="flex justify-between text-xs text-futuristic-muted">
-              <span>Bass</span>
-              <span>{eqSettings.bass}%</span>
-            </div>
-            <Slider
-              value={[eqSettings.bass]}
-              max={100}
-              step={1}
-              onValueChange={handleBassChange}
-              className="cursor-pointer"
-            />
-          </div>
-          
-          <div className="space-y-1">
-            <div className="flex justify-between text-xs text-futuristic-muted">
-              <span>Mid</span>
-              <span>{eqSettings.mid}%</span>
-            </div>
-            <Slider
-              value={[eqSettings.mid]}
-              max={100}
-              step={1}
-              onValueChange={handleMidChange}
-              className="cursor-pointer"
-            />
-          </div>
-          
-          <div className="space-y-1">
-            <div className="flex justify-between text-xs text-futuristic-muted">
-              <span>Treble</span>
-              <span>{eqSettings.treble}%</span>
-            </div>
-            <Slider
-              value={[eqSettings.treble]}
-              max={100}
-              step={1}
-              onValueChange={handleTrebleChange}
-              className="cursor-pointer"
-            />
-          </div>
-          
-          {/* New EQ controls */}
-          <div className="space-y-1">
-            <div className="flex justify-between text-xs text-futuristic-muted">
-              <span>Presence</span>
-              <span>{eqSettings.presence || 50}%</span>
-            </div>
-            <Slider
-              value={[eqSettings.presence || 50]}
-              max={100}
-              step={1}
-              onValueChange={handlePresenceChange}
-              className="cursor-pointer"
-            />
-          </div>
-          
-          <div className="space-y-1">
-            <div className="flex justify-between text-xs text-futuristic-muted">
-              <span>Clarity</span>
-              <span>{eqSettings.clarity || 50}%</span>
-            </div>
-            <Slider
-              value={[eqSettings.clarity || 50]}
-              max={100}
-              step={1}
-              onValueChange={handleClarity}
-              className="cursor-pointer"
-            />
-          </div>
-          
-          <div className="space-y-1">
-            <div className="flex justify-between text-xs text-futuristic-muted">
-              <span>Warmth</span>
-              <span>{eqSettings.warmth || 50}%</span>
-            </div>
-            <Slider
-              value={[eqSettings.warmth || 50]}
-              max={100}
-              step={1}
-              onValueChange={handleWarmth}
-              className="cursor-pointer"
-            />
-          </div>
+      <CardContent className="space-y-4">
+        <EQSlider
+          label="Bass"
+          value={eqSettings.bass}
+          onChange={(value) => {
+            soundEffects.playTouchFeedback();
+            setEQSettings({ ...eqSettings, bass: value[0] });
+          }}
+          icon={<Waveform className="h-3 w-3 text-blue-400" />}
+          color="bg-blue-400"
+        />
+        
+        <EQSlider
+          label="Mid"
+          value={eqSettings.mid}
+          onChange={(value) => {
+            soundEffects.playTouchFeedback();
+            setEQSettings({ ...eqSettings, mid: value[0] });
+          }}
+          icon={<Waveform className="h-3 w-3 text-green-400" />}
+          color="bg-green-400"
+        />
+        
+        <EQSlider
+          label="Treble"
+          value={eqSettings.treble}
+          onChange={(value) => {
+            soundEffects.playTouchFeedback();
+            setEQSettings({ ...eqSettings, treble: value[0] });
+          }}
+          icon={<Waveform className="h-3 w-3 text-yellow-400" />}
+          color="bg-yellow-400"
+        />
+        
+        <EQSlider
+          label="Volume"
+          value={eqSettings.volume}
+          onChange={(value) => {
+            soundEffects.playTouchFeedback();
+            setEQSettings({ ...eqSettings, volume: value[0] });
+          }}
+          icon={<Volume2 className="h-3 w-3 text-purple-400" />}
+          color="bg-purple-400"
+        />
+        
+        <div className="flex items-center space-x-2 pt-2">
+          <Switch 
+            id="advanced-eq"
+            checked={advanced}
+            onCheckedChange={(checked) => {
+              soundEffects.playTouchFeedback();
+              setAdvanced(checked);
+            }}
+          />
+          <Label htmlFor="advanced-eq">Advanced Controls</Label>
         </div>
         
-        <div className="mt-4 pt-3 border-t border-futuristic-border">
-          <div className="flex justify-between text-xs">
-            <span className="text-futuristic-muted">Age Optimization:</span>
-            <span className={cn(
-              "font-medium",
-              profile ? "text-futuristic-accent1" : "text-futuristic-muted"
-            )}>
-              {profile ? `${profile.age} years` : 'Not set'}
-            </span>
+        {advanced && (
+          <div className="space-y-4 pt-2">
+            <EQSlider
+              label="Presence"
+              value={eqSettings.presence || 50}
+              onChange={(value) => {
+                soundEffects.playTouchFeedback();
+                setEQSettings({ ...eqSettings, presence: value[0] });
+              }}
+              icon={<Music3 className="h-3 w-3 text-pink-400" />}
+              color="bg-pink-400"
+            />
+            
+            <EQSlider
+              label="Warmth"
+              value={eqSettings.warmth || 50}
+              onChange={(value) => {
+                soundEffects.playTouchFeedback();
+                setEQSettings({ ...eqSettings, warmth: value[0] });
+              }}
+              icon={<Music3 className="h-3 w-3 text-orange-400" />}
+              color="bg-orange-400"
+            />
+            
+            <div className="pt-2 space-y-4">
+              <h4 className="text-sm font-medium flex items-center">
+                <BarChart4 className="h-3 w-3 mr-1 text-futuristic-accent2" />
+                Visualization Settings
+              </h4>
+              
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="vis-scale" className="text-xs">Scale</Label>
+                  <span className="text-xs text-futuristic-accent2">{visSettings.scale.toFixed(1)}x</span>
+                </div>
+                <Slider
+                  id="vis-scale"
+                  value={[visSettings.scale]}
+                  min={0.5}
+                  max={2}
+                  step={0.1}
+                  onValueChange={(value) => setVisSettings({ ...visSettings, scale: value[0] })}
+                  className="bg-futuristic-accent2"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="vis-amplitude" className="text-xs">Amplitude</Label>
+                  <span className="text-xs text-futuristic-accent2">{visSettings.amplitudeScale.toFixed(1)}x</span>
+                </div>
+                <Slider
+                  id="vis-amplitude"
+                  value={[visSettings.amplitudeScale]}
+                  min={0.5}
+                  max={2}
+                  step={0.1}
+                  onValueChange={(value) => setVisSettings({ ...visSettings, amplitudeScale: value[0] })}
+                  className="bg-futuristic-accent2"
+                />
+              </div>
+            </div>
+            
+            <div className="flex justify-between pt-2">
+              <Button 
+                size="sm" 
+                variant="outline" 
+                onClick={handleResetEQ}
+                className="text-xs"
+              >
+                <RotateCw className="h-3 w-3 mr-1" /> Reset EQ
+              </Button>
+              <Button 
+                size="sm" 
+                variant="outline" 
+                onClick={handleResetWaveform}
+                className="text-xs"
+              >
+                <RotateCw className="h-3 w-3 mr-1" /> Reset Waveform
+              </Button>
+            </div>
           </div>
-          
-          <div className="flex justify-between text-xs mt-1">
-            <span className="text-futuristic-muted">Gender Profile:</span>
-            <span className={cn(
-              "font-medium",
-              profile ? "text-futuristic-accent1" : "text-futuristic-muted"
-            )}>
-              {profile ? profile.gender.charAt(0).toUpperCase() + profile.gender.slice(1) : 'Not set'}
-            </span>
-          </div>
-          
-          <div className="text-xs mt-2 text-futuristic-muted flex items-center">
-            <InfoIcon className="h-3 w-3 mr-1 opacity-70" />
-            <span>EQ auto-tunes based on your profile and current song</span>
-          </div>
-        </div>
+        )}
       </CardContent>
     </Card>
   );

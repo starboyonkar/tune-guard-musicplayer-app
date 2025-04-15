@@ -860,14 +860,25 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       audioContextRef.current.resume();
     }
 
-    if (playerState.currentSongId === songId && playerState.isPlaying) {
+    if (playerState.currentSongId === songId) {
       setPlayerState(prevState => ({
         ...prevState,
-        isPlaying: false
+        isPlaying: !prevState.isPlaying
       }));
       
       if (audioRef.current) {
-        audioRef.current.pause();
+        if (playerState.isPlaying) {
+          audioRef.current.pause();
+        } else {
+          audioRef.current.play().catch(error => {
+            console.error("Error playing audio:", error);
+            toast({
+              title: "Playback Error",
+              description: "Failed to play audio",
+              variant: "destructive"
+            });
+          });
+        }
       }
     } else {
       setPlayerState(prevState => ({
@@ -1168,7 +1179,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (playerState.repeatMode === 'one') {
         if (audioRef.current) {
           audioRef.current.currentTime = 0;
-          audioRef.current.play();
+          audioRef.current.play().catch(err => console.error("Error restarting song:", err));
         }
       } else if (playerState.repeatMode === 'all' || playerState.shuffleEnabled) {
         nextSong();

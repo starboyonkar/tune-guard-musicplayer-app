@@ -104,7 +104,7 @@ const PlayerControls: React.FC = () => {
             className={`text-futuristic-muted hover:text-futuristic-accent1 hover:bg-futuristic-bg ${
               shuffleEnabled ? 'text-futuristic-accent1' : ''
             }`}
-            title="Shuffle"
+            title={shuffleEnabled ? "Shuffle Enabled" : "Shuffle Disabled"}
           >
             <Shuffle className={`h-4 w-4 ${shuffleEnabled ? 'neon-glow' : ''}`} />
           </Button>
@@ -135,7 +135,7 @@ const PlayerControls: React.FC = () => {
             <SkipForward className="h-5 w-5" />
           </Button>
 
-          {/* Repeat button */}
+          {/* Repeat button with tooltip */}
           <Button 
             variant="ghost" 
             size="icon"
@@ -143,7 +143,7 @@ const PlayerControls: React.FC = () => {
             className={`text-futuristic-muted hover:text-futuristic-accent1 hover:bg-futuristic-bg ${
               repeatMode !== 'off' ? 'text-futuristic-accent1' : ''
             }`}
-            title={`Repeat ${repeatMode}`}
+            title={`Repeat: ${repeatMode}`}
           >
             {repeatMode === 'one' ? (
               <Repeat1 className="h-4 w-4 neon-glow" />

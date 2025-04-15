@@ -1,3 +1,4 @@
+
 // User Profile Type
 export interface UserProfile {
   name: string;
