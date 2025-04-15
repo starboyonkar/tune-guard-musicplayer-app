@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useAudio } from '@/lib/audioContext';
 import { Button } from '@/components/ui/button';
@@ -178,7 +177,7 @@ const SongsList: React.FC = () => {
                       {currentSong?.id === song.id && playerState.isPlaying ? (
                         <Pause className="h-4 w-4 text-futuristic-accent1" />
                       ) : (
-                        <Play className="h-4 w-4" />
+                        <Play className="h-4 w-4" aria-label="Play" />
                       )}
                     </Button>
                   </div>
