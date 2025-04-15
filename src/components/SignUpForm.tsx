@@ -41,29 +41,25 @@ const SignUpForm: React.FC = () => {
       name: formData.name,
       age: formData.age,
       gender: formData.gender,
-      // Store experience and genre in profile metadata
+      experience: formData.experience,
+      genre: formData.genre,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      // Add metadata to track user preferences that aren't in the UserProfile type
-      metadata: {
-        experience: formData.experience,
-        genre: formData.genre
-      }
     };
     
     setProfile(profile);
   };
   
   return (
-    <div className="w-full max-w-md mx-auto animate-fade-in">
+    <div className="w-full max-w-md mx-auto">
       <div className="text-center mb-8">
         <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-futuristic-accent1 to-futuristic-accent2">
-          Welcome to <span className="animate-pulse">Cognitive Audio Synthesis</span>
+          TUNE <span className="animate-pulse">GUARD</span>
         </h1>
         <p className="text-futuristic-muted">Create your personalized audio profile</p>
         
         <div className="flex justify-center my-4">
-          <AudioWaveform className="w-24 h-24 text-futuristic-accent1 animate-pulse" />
+          <AudioWaveform className="w-16 h-16 text-futuristic-accent1 animate-pulse" />
         </div>
       </div>
       
