@@ -74,7 +74,8 @@ const ProfileEditor: React.FC = () => {
   const handleLogout = () => {
     soundEffects.playNotification();
     setOpen(false);
-    setTimeout(() => logout(), 500);
+    // Immediately invoke logout without any delay
+    logout();
   };
 
   if (!profile) return null;
