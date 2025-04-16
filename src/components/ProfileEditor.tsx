@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   Sheet,
@@ -26,13 +25,11 @@ const ProfileEditor: React.FC = () => {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    // Listen for the custom event to open the profile editor
     const handleOpenProfileEditor = () => {
       soundEffects.playTouchFeedback();
       setOpen(true);
     };
     
-    // Listen for the close event
     const handleCloseActivePanel = () => {
       if (open) {
         setOpen(false);
@@ -49,7 +46,6 @@ const ProfileEditor: React.FC = () => {
   }, [open]);
 
   useEffect(() => {
-    // Set initial state when profile changes
     if (profile) {
       setName(profile.name || '');
       setAge(profile.age ? profile.age.toString() : '');
@@ -74,7 +70,6 @@ const ProfileEditor: React.FC = () => {
   const handleLogout = () => {
     soundEffects.playNotification();
     setOpen(false);
-    // Immediately invoke logout without any delay
     logout();
   };
 

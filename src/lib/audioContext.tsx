@@ -754,8 +754,43 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const logout = () => {
+    // Stop any active audio playback
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      audioRef.current.src = '';
+    }
+    
+    // Disconnect and clean up audio nodes
+    if (sourceNodeRef.current) {
+      try {
+        sourceNodeRef.current.disconnect();
+      } catch (err) {
+        console.log("Error disconnecting source:", err);
+      }
+    }
+    
+    // Close audio context if it exists
+    if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+      try {
+        audioContextRef.current.close();
+      } catch (err) {
+        console.log("Error closing audio context:", err);
+      }
+    }
+    
+    // Reset audio processing flags
+    audioGraphSetup.current = false;
+    
+    // Reset all state
+    setPlayerState({...defaultPlayerState});
+    setEQSettings({bass: 70, mid: 70, treble: 70, volume: 70});
+    setWaveformData(defaultWaveformData);
     setProfileState(null);
     setIsSignedUp(false);
+    setProcessingVoice(false);
+    
+    // Clear local storage
     localStorage.removeItem('audioPersonaProfile');
     
     toast({
