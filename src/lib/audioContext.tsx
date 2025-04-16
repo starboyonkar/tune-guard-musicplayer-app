@@ -937,9 +937,11 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const repeatAllCommands = ['repeat all', 'repeat playlist', 'loop all'];
     const repeatOneCommands = ['repeat one', 'repeat song', 'loop one', 'loop song'];
     const repeatOffCommands = ['repeat off', 'no repeat', 'stop repeating'];
-    const profileCommands = ['profile', 'edit profile', 'account', 'user settings'];
-    const addSongCommands = ['add song', 'upload song', 'new song', 'browse file'];
-    const closeCommands = ['close', 'back', 'return', 'exit', 'dismiss'];
+    const profileCommands = ['profile', 'edit profile', 'edit account', 'user settings', 'account settings'];
+    const addSongCommands = ['add song', 'upload song', 'new song', 'browse file', 'add music'];
+    const closeCommands = ['close', 'back', 'return', 'exit', 'dismiss', 'cancel'];
+    const resetWaveformCommands = ['reset waveform', 'clear waveform', 'restart visualization'];
+    const logoutCommands = ['logout', 'log out', 'sign out', 'exit app', 'end session'];
     
     const bassCommands = ['more bass', 'increase bass', 'boost bass', 'bass up'];
     const lessBassCommands = ['less bass', 'decrease bass', 'reduce bass', 'bass down'];
@@ -1140,18 +1142,53 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       } else {
         toggleVoiceListening();
       }
-    } else if (lowerCommand.includes('logout') || lowerCommand.includes('sign out') || lowerCommand.includes('log out')) {
+    } else if (matchesCommand(lowerCommand, logoutCommands)) {
       commandRecognized = true;
       toast({
         title: "Logging out",
         description: "Signing out of your account..."
       });
       setTimeout(() => logout(), 1000);
+    } else if (matchesCommand(lowerCommand, profileCommands)) {
+      commandRecognized = true;
+      const event = new CustomEvent('open-profile-editor');
+      document.dispatchEvent(event);
+      toast({
+        title: "Profile Editor",
+        description: "Opening profile editor"
+      });
+    } else if (matchesCommand(lowerCommand, addSongCommands)) {
+      commandRecognized = true;
+      const event = new CustomEvent('trigger-file-upload');
+      document.dispatchEvent(event);
+      toast({
+        title: "Add Song",
+        description: "Opening file browser"
+      });
+    } else if (matchesCommand(lowerCommand, closeCommands)) {
+      commandRecognized = true;
+      const event = new CustomEvent('close-active-panel');
+      document.dispatchEvent(event);
+      toast({
+        title: "Closed",
+        description: "Closing current view"
+      });
+    } else if (matchesCommand(lowerCommand, resetWaveformCommands)) {
+      commandRecognized = true;
+      resetWaveform();
     } else if (lowerCommand.includes('eq') || lowerCommand.includes('equalizer')) {
       commandRecognized = true;
       toast({
         title: "Equalizer Settings",
         description: "Try 'more bass', 'less treble' or specific EQ commands"
+      });
+    } else if (lowerCommand.includes('help')) {
+      commandRecognized = true;
+      const event = new CustomEvent('show-command-reference');
+      document.dispatchEvent(event);
+      toast({
+        title: "Help",
+        description: "Showing available commands"
       });
     }
     

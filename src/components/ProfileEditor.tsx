@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Sheet,
   SheetContent,
@@ -24,6 +24,38 @@ const ProfileEditor: React.FC = () => {
     profile?.gender || 'prefer-not-to-say'
   );
   const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    // Listen for the custom event to open the profile editor
+    const handleOpenProfileEditor = () => {
+      soundEffects.playTouchFeedback();
+      setOpen(true);
+    };
+    
+    // Listen for the close event
+    const handleCloseActivePanel = () => {
+      if (open) {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener('open-profile-editor', handleOpenProfileEditor);
+    document.addEventListener('close-active-panel', handleCloseActivePanel);
+    
+    return () => {
+      document.removeEventListener('open-profile-editor', handleOpenProfileEditor);
+      document.removeEventListener('close-active-panel', handleCloseActivePanel);
+    };
+  }, [open]);
+
+  useEffect(() => {
+    // Set initial state when profile changes
+    if (profile) {
+      setName(profile.name || '');
+      setAge(profile.age ? profile.age.toString() : '');
+      setGender(profile.gender || 'prefer-not-to-say');
+    }
+  }, [profile]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

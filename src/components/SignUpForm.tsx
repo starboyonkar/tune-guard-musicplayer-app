@@ -52,6 +52,10 @@ const SignUpForm: React.FC = () => {
         dob,
         gender,
         createdAt: new Date().toISOString(),
+        preferences: {
+          musicExperience: 'casual',
+          favoriteGenre: 'pop'
+        }
       });
       setIsLoading(false);
     }, 1000);
