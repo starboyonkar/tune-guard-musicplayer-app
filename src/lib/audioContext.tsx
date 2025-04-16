@@ -942,6 +942,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const closeCommands = ['close', 'back', 'return', 'exit', 'dismiss', 'cancel'];
     const resetWaveformCommands = ['reset waveform', 'clear waveform', 'restart visualization'];
     const logoutCommands = ['logout', 'log out', 'sign out', 'exit app', 'end session'];
+    const helpCommands = ['help', 'assist', 'assistance', 'commands', 'what can i say', 'show commands'];
     
     const bassCommands = ['more bass', 'increase bass', 'boost bass', 'bass up'];
     const lessBassCommands = ['less bass', 'decrease bass', 'reduce bass', 'bass down'];
@@ -1176,20 +1177,88 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } else if (matchesCommand(lowerCommand, resetWaveformCommands)) {
       commandRecognized = true;
       resetWaveform();
+      toast({
+        title: "Waveform Reset",
+        description: "Visualization has been reset"
+      });
     } else if (lowerCommand.includes('eq') || lowerCommand.includes('equalizer')) {
       commandRecognized = true;
       toast({
         title: "Equalizer Settings",
         description: "Try 'more bass', 'less treble' or specific EQ commands"
       });
-    } else if (lowerCommand.includes('help')) {
+    } else if (matchesCommand(lowerCommand, helpCommands)) {
       commandRecognized = true;
-      const event = new CustomEvent('show-command-reference');
+      const event = new CustomEvent('show-command-reference', { 
+        detail: { open: true }
+      });
       document.dispatchEvent(event);
       toast({
         title: "Help",
         description: "Showing available commands"
       });
+    } else if (matchesCommand(lowerCommand, shuffleOnCommands)) {
+      commandRecognized = true;
+      if (!playerState.shuffleEnabled) {
+        toggleShuffle();
+      } else {
+        toast({
+          title: "Shuffle Already On",
+          description: "Songs are already playing in random order"
+        });
+      }
+    } else if (matchesCommand(lowerCommand, shuffleOffCommands)) {
+      commandRecognized = true;
+      if (playerState.shuffleEnabled) {
+        toggleShuffle();
+      } else {
+        toast({
+          title: "Shuffle Already Off",
+          description: "Songs are already playing in order"
+        });
+      }
+    } else if (matchesCommand(lowerCommand, repeatAllCommands)) {
+      commandRecognized = true;
+      if (playerState.repeatMode !== 'all') {
+        setPlayerState(prev => ({ ...prev, repeatMode: 'all' }));
+        toast({
+          title: "Repeat All",
+          description: "Repeating all songs"
+        });
+      } else {
+        toast({
+          title: "Repeat All Already Active",
+          description: "Already repeating all songs"
+        });
+      }
+    } else if (matchesCommand(lowerCommand, repeatOneCommands)) {
+      commandRecognized = true;
+      if (playerState.repeatMode !== 'one') {
+        setPlayerState(prev => ({ ...prev, repeatMode: 'one' }));
+        toast({
+          title: "Repeat One",
+          description: "Repeating current song"
+        });
+      } else {
+        toast({
+          title: "Repeat One Already Active",
+          description: "Already repeating current song"
+        });
+      }
+    } else if (matchesCommand(lowerCommand, repeatOffCommands)) {
+      commandRecognized = true;
+      if (playerState.repeatMode !== 'off') {
+        setPlayerState(prev => ({ ...prev, repeatMode: 'off' }));
+        toast({
+          title: "Repeat Off",
+          description: "Repeat disabled"
+        });
+      } else {
+        toast({
+          title: "Repeat Already Off",
+          description: "Repeat is already disabled"
+        });
+      }
     }
     
     if (!commandRecognized) {
@@ -1281,7 +1350,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setWaveformData(defaultWaveformData);
     toast({
       title: "Waveform Reset",
-      description: "Waveform visualization has been reset"
+      description: "Visualization has been reset"
     });
   };
 

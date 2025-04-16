@@ -5,7 +5,11 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { useAudio } from '@/lib/audioContext';
-import { Mic, Send, MicOff, Command, Settings, Volume2, VolumeX, User, LogOut, HelpCircle, FileAudio, Shuffle, Repeat, List } from 'lucide-react';
+import { 
+  Mic, Send, Command, Volume2, User, 
+  LogOut, HelpCircle, FileAudio, Shuffle, 
+  Repeat, List, ListCollapse 
+} from 'lucide-react';
 import { soundEffects } from '@/lib/soundEffects';
 import { Label } from '@/components/ui/label';
 import {
@@ -87,7 +91,7 @@ const VoiceCommandPanel: React.FC = () => {
   const playbackCommands = ['Play music', 'Pause', 'Next song', 'Previous song', 'Shuffle on', 'Shuffle off', 'Repeat all', 'Repeat one', 'Repeat off'];
   const volumeCommands = ['Volume up', 'Volume down', 'Mute', 'Unmute'];
   const eqCommands = ['More bass', 'Less bass', 'More treble', 'Less treble'];
-  const systemCommands = ['Edit profile', 'Logout', 'Help', 'Close', 'Add song', 'Browse file'];
+  const systemCommands = ['Edit profile', 'Logout', 'Help', 'Close', 'Add song', 'Browse file', 'Reset waveform'];
   
   return (
     <Card className="w-full glass border-futuristic-border">
@@ -115,8 +119,9 @@ const VoiceCommandPanel: React.FC = () => {
                         size="icon" 
                         className="h-6 w-6 text-futuristic-muted hover:text-futuristic-accent2"
                         onClick={() => soundEffects.playTouchFeedback()}
+                        aria-label="Voice command reference"
                       >
-                        <Command className="h-4 w-4" />
+                        <ListCollapse className="h-4 w-4" />
                       </Button>
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-md glass border-futuristic-accent2">
@@ -154,7 +159,7 @@ const VoiceCommandPanel: React.FC = () => {
                             </ul>
                             
                             <h4 className="mt-4 mb-2 font-semibold text-futuristic-accent2 flex items-center">
-                              <Settings className="h-3 w-3 mr-1" /> Sound
+                              <Command className="h-3 w-3 mr-1" /> Sound
                             </h4>
                             <ul className="space-y-1 text-sm text-futuristic-muted">
                               {eqCommands.map((cmd, i) => (
@@ -168,7 +173,7 @@ const VoiceCommandPanel: React.FC = () => {
                         
                         <div>
                           <h4 className="mb-2 font-semibold text-futuristic-accent2 flex items-center">
-                            <Settings className="h-3 w-3 mr-1" /> System Commands
+                            <Command className="h-3 w-3 mr-1" /> System Commands
                           </h4>
                           <div className="grid grid-cols-2 gap-2 text-sm">
                             {systemCommands.map((cmd, i) => (
