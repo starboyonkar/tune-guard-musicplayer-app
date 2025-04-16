@@ -7,8 +7,7 @@ import { Switch } from '@/components/ui/switch';
 import { useAudio } from '@/lib/audioContext';
 import { 
   Mic, Send, Command, Volume2, User, 
-  LogOut, HelpCircle, FileAudio, Shuffle, 
-  Repeat, List, ListCollapse 
+  LogOut, HelpCircle, FileAudio
 } from 'lucide-react';
 import { soundEffects } from '@/lib/soundEffects';
 import { Label } from '@/components/ui/label';
@@ -41,21 +40,28 @@ const VoiceCommandPanel: React.FC = () => {
   const [inputCommand, setInputCommand] = useState('');
   const [isCommandListOpen, setIsCommandListOpen] = useState(false);
   
-  // Auto-enable voice listening on component mount and maintain it
+  // Auto-enable voice listening on component mount
   useEffect(() => {
     if (!isVoiceListening) {
       toggleVoiceListening();
     }
-    
-    // Re-enable listening if it gets disabled
-    const checkInterval = setInterval(() => {
-      if (!isVoiceListening) {
-        toggleVoiceListening();
-      }
-    }, 5000);
-    
-    return () => clearInterval(checkInterval);
   }, [isVoiceListening, toggleVoiceListening]);
+  
+  useEffect(() => {
+    // Listen for custom event to open command reference
+    const handleShowCommandReference = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail?.open) {
+        setIsCommandListOpen(true);
+      }
+    };
+    
+    document.addEventListener('show-command-reference', handleShowCommandReference);
+    
+    return () => {
+      document.removeEventListener('show-command-reference', handleShowCommandReference);
+    };
+  }, []);
   
   const handleSendCommand = () => {
     if (inputCommand.trim()) {
@@ -87,11 +93,9 @@ const VoiceCommandPanel: React.FC = () => {
     logout();
   };
   
-  // Enhanced command categories with exact phrases that match the audioContext.tsx processVoiceCommand function
-  const playbackCommands = ['Play music', 'Pause', 'Next song', 'Previous song', 'Shuffle on', 'Shuffle off', 'Repeat all', 'Repeat one', 'Repeat off'];
-  const volumeCommands = ['Volume up', 'Volume down', 'Mute', 'Unmute'];
-  const eqCommands = ['More bass', 'Less bass', 'More treble', 'Less treble'];
-  const systemCommands = ['Edit profile', 'Logout', 'Help', 'Close', 'Add song', 'Browse file', 'Reset waveform'];
+  // Specific commands as requested by user
+  const playbackCommands = ['Play music', 'Pause', 'Next song', 'Previous song'];
+  const systemCommands = ['Edit profile', 'Help', 'Close', 'Add song', 'Logout'];
   
   return (
     <Card className="w-full glass border-futuristic-border">
@@ -121,7 +125,7 @@ const VoiceCommandPanel: React.FC = () => {
                         onClick={() => soundEffects.playTouchFeedback()}
                         aria-label="Voice command reference"
                       >
-                        <ListCollapse className="h-4 w-4" />
+                        <HelpCircle className="h-4 w-4" />
                       </Button>
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-md glass border-futuristic-accent2">
@@ -148,39 +152,15 @@ const VoiceCommandPanel: React.FC = () => {
                           
                           <div>
                             <h4 className="mb-2 font-semibold text-futuristic-accent2 flex items-center">
-                              <Volume2 className="h-3 w-3 mr-1" /> Volume
+                              <Command className="h-3 w-3 mr-1" /> System Commands
                             </h4>
                             <ul className="space-y-1 text-sm text-futuristic-muted">
-                              {volumeCommands.map((cmd, i) => (
+                              {systemCommands.map((cmd, i) => (
                                 <li key={i} className="hover:text-white cursor-pointer" onClick={() => handleExecuteCommand(cmd)}>
                                   "{cmd}"
                                 </li>
                               ))}
                             </ul>
-                            
-                            <h4 className="mt-4 mb-2 font-semibold text-futuristic-accent2 flex items-center">
-                              <Command className="h-3 w-3 mr-1" /> Sound
-                            </h4>
-                            <ul className="space-y-1 text-sm text-futuristic-muted">
-                              {eqCommands.map((cmd, i) => (
-                                <li key={i} className="hover:text-white cursor-pointer" onClick={() => handleExecuteCommand(cmd)}>
-                                  "{cmd}"
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        </div>
-                        
-                        <div>
-                          <h4 className="mb-2 font-semibold text-futuristic-accent2 flex items-center">
-                            <Command className="h-3 w-3 mr-1" /> System Commands
-                          </h4>
-                          <div className="grid grid-cols-2 gap-2 text-sm">
-                            {systemCommands.map((cmd, i) => (
-                              <div key={i} className="text-futuristic-muted hover:text-white cursor-pointer" onClick={() => handleExecuteCommand(cmd)}>
-                                "{cmd}"
-                              </div>
-                            ))}
                           </div>
                         </div>
                       </div>
@@ -232,18 +212,9 @@ const VoiceCommandPanel: React.FC = () => {
             variant="outline" 
             size="sm" 
             className="py-1 h-7 text-xs border-futuristic-border bg-futuristic-bg/30 hover:bg-futuristic-accent1/20"
-            onClick={() => handleExecuteCommand("Shuffle on")}
+            onClick={() => handleExecuteCommand("Help")}
           >
-            <Shuffle className="h-3 w-3 mr-1" /> Shuffle
-          </Button>
-          
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="py-1 h-7 text-xs border-futuristic-border bg-futuristic-bg/30 hover:bg-futuristic-accent1/20"
-            onClick={() => handleExecuteCommand("Repeat all")}
-          >
-            <Repeat className="h-3 w-3 mr-1" /> Repeat
+            <HelpCircle className="h-3 w-3 mr-1" /> Help
           </Button>
           
           <Button 

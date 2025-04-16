@@ -923,33 +923,15 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     
     let commandRecognized = false;
     
-    const playCommands = ['play', 'start', 'begin', 'resume'];
+    const playCommands = ['play', 'play music', 'start', 'begin', 'resume'];
     const pauseCommands = ['pause', 'stop', 'halt', 'wait'];
-    const nextCommands = ['next', 'skip', 'forward', 'advance'];
-    const prevCommands = ['previous', 'last', 'back', 'backward', 'earlier', 'return'];
-    const volumeUpCommands = ['volume up', 'louder', 'increase volume', 'turn it up'];
-    const volumeDownCommands = ['volume down', 'lower', 'decrease volume', 'quieter', 'turn it down'];
-    const muteCommands = ['mute', 'silence', 'quiet', 'no sound'];
-    const unmuteCommands = ['unmute', 'sound on', 'enable sound'];
-    const playlistCommands = ['playlist', 'play list', 'list'];
-    const shuffleOnCommands = ['shuffle', 'shuffle on', 'random', 'mix'];
-    const shuffleOffCommands = ['shuffle off', 'no shuffle', 'sequential'];
-    const repeatAllCommands = ['repeat all', 'repeat playlist', 'loop all'];
-    const repeatOneCommands = ['repeat one', 'repeat song', 'loop one', 'loop song'];
-    const repeatOffCommands = ['repeat off', 'no repeat', 'stop repeating'];
-    const profileCommands = ['profile', 'edit profile', 'edit account', 'user settings', 'account settings'];
+    const nextCommands = ['next', 'next song', 'skip', 'forward'];
+    const prevCommands = ['previous', 'previous song', 'back', 'backward'];
+    const profileCommands = ['profile', 'edit profile', 'user settings', 'account settings'];
     const addSongCommands = ['add song', 'upload song', 'new song', 'browse file', 'add music'];
     const closeCommands = ['close', 'back', 'return', 'exit', 'dismiss', 'cancel'];
-    const resetWaveformCommands = ['reset waveform', 'clear waveform', 'restart visualization'];
     const logoutCommands = ['logout', 'log out', 'sign out', 'exit app', 'end session'];
-    const helpCommands = ['help', 'assist', 'assistance', 'commands', 'what can i say', 'show commands'];
-    
-    const bassCommands = ['more bass', 'increase bass', 'boost bass', 'bass up'];
-    const lessBassCommands = ['less bass', 'decrease bass', 'reduce bass', 'bass down'];
-    const trebleCommands = ['more treble', 'increase treble', 'boost treble', 'treble up'];
-    const lessTrebleCommands = ['less treble', 'decrease treble', 'reduce treble', 'treble down'];
-    const presenceCommands = ['more presence', 'increase presence', 'boost presence', 'presence up'];
-    const warmthCommands = ['more warmth', 'increase warmth', 'warmer', 'warmth up'];
+    const helpCommands = ['help', 'assist', 'assistance', 'commands', 'show commands'];
     
     const matchesCommand = (cmd: string, variations: string[]) => {
       return variations.some(variation => cmd.includes(variation));
@@ -958,40 +940,12 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (matchesCommand(lowerCommand, playCommands)) {
       commandRecognized = true;
       
-      if (lowerCommand === 'play' || lowerCommand === 'start' || lowerCommand === 'resume') {
-        setPlayerState(prevState => ({ ...prevState, isPlaying: true }));
-        toast({
-          title: "Playback Started",
-          description: currentSong ? `Playing "${currentSong.title}"` : "Playing music",
-        });
-      } else {
-        const searchTerm = lowerCommand.replace(/play |start |begin /i, '').trim();
-        if (searchTerm) {
-          const foundSong = songs.find(
-            song => song.title.toLowerCase().includes(searchTerm) || 
-                  song.artist.toLowerCase().includes(searchTerm)
-          );
-          
-          if (foundSong) {
-            setPlayerState(prevState => ({ ...prevState, currentSongId: foundSong.id, isPlaying: true, currentTime: 0 }));
-            toast({
-              title: "Playing Song",
-              description: `Now playing "${foundSong.title}" by ${foundSong.artist}`,
-            });
-          } else {
-            const foundPlaylist = playlists.find(pl => pl.name.toLowerCase().includes(searchTerm));
-            if (foundPlaylist && foundPlaylist.songs.length > 0) {
-              playPlaylist(foundPlaylist.id);
-            } else {
-              toast({
-                title: "Not Found",
-                description: `Sorry, I couldn't find "${searchTerm}"`,
-                variant: "destructive"
-              });
-            }
-          }
-        }
-      }
+      setPlayerState(prevState => ({ ...prevState, isPlaying: true }));
+      toast({
+        title: "Playback Started",
+        description: currentSong ? `Playing "${currentSong.title}"` : "Playing music",
+      });
+      
     } else if (matchesCommand(lowerCommand, pauseCommands)) {
       commandRecognized = true;
       setPlayerState(prevState => ({ ...prevState, isPlaying: false }));
@@ -999,6 +953,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         title: "Playback Paused",
         description: "Music paused"
       });
+      
     } else if (matchesCommand(lowerCommand, nextCommands)) {
       commandRecognized = true;
       nextSong();
@@ -1006,6 +961,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         title: "Next Track",
         description: "Playing next song"
       });
+      
     } else if (matchesCommand(lowerCommand, prevCommands)) {
       commandRecognized = true;
       prevSong();
@@ -1013,143 +969,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         title: "Previous Track",
         description: "Playing previous song"
       });
-    } else if (matchesCommand(lowerCommand, volumeUpCommands)) {
-      commandRecognized = true;
-      setVolume(Math.min(playerState.volume + 10, 100));
-      toast({
-        title: "Volume Increased",
-        description: `Volume set to ${Math.min(playerState.volume + 10, 100)}%`
-      });
-    } else if (matchesCommand(lowerCommand, volumeDownCommands)) {
-      commandRecognized = true;
-      setVolume(Math.max(playerState.volume - 10, 0));
-      toast({
-        title: "Volume Decreased",
-        description: `Volume set to ${Math.max(playerState.volume - 10, 0)}%`
-      });
-    } else if (matchesCommand(lowerCommand, muteCommands)) {
-      commandRecognized = true;
-      setPlayerState(prevState => ({ ...prevState, isMuted: true }));
-      toast({
-        title: "Volume Muted",
-        description: "Audio muted"
-      });
-    } else if (matchesCommand(lowerCommand, unmuteCommands)) {
-      commandRecognized = true;
-      setPlayerState(prevState => ({ ...prevState, isMuted: false }));
-      toast({
-        title: "Volume Unmuted",
-        description: "Audio unmuted"
-      });
-    } else if (matchesCommand(lowerCommand, playlistCommands)) {
-      commandRecognized = true;
-      const playlistName = lowerCommand.replace(/playlist |play list |list /i, '').trim();
-      if (playlistName) {
-        const foundPlaylist = playlists.find(pl => pl.name.toLowerCase().includes(playlistName));
-        if (foundPlaylist) {
-          playPlaylist(foundPlaylist.id);
-          toast({
-            title: "Playing Playlist",
-            description: `Playing playlist "${foundPlaylist.name}"`
-          });
-        } else {
-          toast({
-            title: "Playlist Not Found",
-            description: `Couldn't find a playlist named "${playlistName}"`,
-            variant: "destructive"
-          });
-        }
-      } else {
-        const playlistNames = playlists.map(pl => pl.name).join(", ");
-        toast({
-          title: "Available Playlists",
-          description: playlistNames || "No playlists available"
-        });
-      }
-    } else if (matchesCommand(lowerCommand, bassCommands)) {
-      commandRecognized = true;
-      setEQSettings(prevSettings => ({
-        ...prevSettings,
-        bass: Math.min(prevSettings.bass + 10, 100)
-      }));
-      toast({
-        title: "Bass Increased",
-        description: "Bass level increased"
-      });
-    } else if (matchesCommand(lowerCommand, lessBassCommands)) {
-      commandRecognized = true;
-      setEQSettings(prevSettings => ({
-        ...prevSettings,
-        bass: Math.max(prevSettings.bass - 10, 0)
-      }));
-      toast({
-        title: "Bass Decreased",
-        description: "Bass level decreased"
-      });
-    } else if (matchesCommand(lowerCommand, trebleCommands)) {
-      commandRecognized = true;
-      setEQSettings(prevSettings => ({
-        ...prevSettings,
-        treble: Math.min(prevSettings.treble + 10, 100)
-      }));
-      toast({
-        title: "Treble Increased",
-        description: "Treble level increased"
-      });
-    } else if (matchesCommand(lowerCommand, lessTrebleCommands)) {
-      commandRecognized = true;
-      setEQSettings(prevSettings => ({
-        ...prevSettings,
-        treble: Math.max(prevSettings.treble - 10, 0)
-      }));
-      toast({
-        title: "Treble Decreased",
-        description: "Treble level decreased"
-      });
-    } else if (matchesCommand(lowerCommand, presenceCommands)) {
-      commandRecognized = true;
-      setEQSettings(prevSettings => ({
-        ...prevSettings,
-        presence: Math.min((prevSettings.presence || 50) + 10, 100)
-      }));
-      toast({
-        title: "Presence Increased",
-        description: "Audio presence increased"
-      });
-    } else if (matchesCommand(lowerCommand, warmthCommands)) {
-      commandRecognized = true;
-      setEQSettings(prevSettings => ({
-        ...prevSettings,
-        warmth: Math.min((prevSettings.warmth || 50) + 10, 100)
-      }));
-      toast({
-        title: "Warmth Increased",
-        description: "Audio warmth increased"
-      });
-    } else if (lowerCommand.includes('voice') || lowerCommand.includes('listen')) {
-      commandRecognized = true;
-      if (lowerCommand.includes('off') || lowerCommand.includes('disable') || lowerCommand.includes('stop')) {
-        setIsVoiceListening(false);
-        toast({
-          title: "Voice Assistant Deactivated",
-          description: "Voice commands are now disabled"
-        });
-      } else if (lowerCommand.includes('on') || lowerCommand.includes('enable') || lowerCommand.includes('start')) {
-        setIsVoiceListening(true);
-        toast({
-          title: "Voice Assistant Activated", 
-          description: "Listening for commands..."
-        });
-      } else {
-        toggleVoiceListening();
-      }
-    } else if (matchesCommand(lowerCommand, logoutCommands)) {
-      commandRecognized = true;
-      toast({
-        title: "Logging out",
-        description: "Signing out of your account..."
-      });
-      setTimeout(() => logout(), 1000);
+      
     } else if (matchesCommand(lowerCommand, profileCommands)) {
       commandRecognized = true;
       const event = new CustomEvent('open-profile-editor');
@@ -1158,6 +978,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         title: "Profile Editor",
         description: "Opening profile editor"
       });
+      
     } else if (matchesCommand(lowerCommand, addSongCommands)) {
       commandRecognized = true;
       const event = new CustomEvent('trigger-file-upload');
@@ -1166,6 +987,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         title: "Add Song",
         description: "Opening file browser"
       });
+      
     } else if (matchesCommand(lowerCommand, closeCommands)) {
       commandRecognized = true;
       const event = new CustomEvent('close-active-panel');
@@ -1174,19 +996,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         title: "Closed",
         description: "Closing current view"
       });
-    } else if (matchesCommand(lowerCommand, resetWaveformCommands)) {
-      commandRecognized = true;
-      resetWaveform();
-      toast({
-        title: "Waveform Reset",
-        description: "Visualization has been reset"
-      });
-    } else if (lowerCommand.includes('eq') || lowerCommand.includes('equalizer')) {
-      commandRecognized = true;
-      toast({
-        title: "Equalizer Settings",
-        description: "Try 'more bass', 'less treble' or specific EQ commands"
-      });
+      
     } else if (matchesCommand(lowerCommand, helpCommands)) {
       commandRecognized = true;
       const event = new CustomEvent('show-command-reference', { 
@@ -1197,68 +1007,14 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         title: "Help",
         description: "Showing available commands"
       });
-    } else if (matchesCommand(lowerCommand, shuffleOnCommands)) {
+      
+    } else if (matchesCommand(lowerCommand, logoutCommands)) {
       commandRecognized = true;
-      if (!playerState.shuffleEnabled) {
-        toggleShuffle();
-      } else {
-        toast({
-          title: "Shuffle Already On",
-          description: "Songs are already playing in random order"
-        });
-      }
-    } else if (matchesCommand(lowerCommand, shuffleOffCommands)) {
-      commandRecognized = true;
-      if (playerState.shuffleEnabled) {
-        toggleShuffle();
-      } else {
-        toast({
-          title: "Shuffle Already Off",
-          description: "Songs are already playing in order"
-        });
-      }
-    } else if (matchesCommand(lowerCommand, repeatAllCommands)) {
-      commandRecognized = true;
-      if (playerState.repeatMode !== 'all') {
-        setPlayerState(prev => ({ ...prev, repeatMode: 'all' }));
-        toast({
-          title: "Repeat All",
-          description: "Repeating all songs"
-        });
-      } else {
-        toast({
-          title: "Repeat All Already Active",
-          description: "Already repeating all songs"
-        });
-      }
-    } else if (matchesCommand(lowerCommand, repeatOneCommands)) {
-      commandRecognized = true;
-      if (playerState.repeatMode !== 'one') {
-        setPlayerState(prev => ({ ...prev, repeatMode: 'one' }));
-        toast({
-          title: "Repeat One",
-          description: "Repeating current song"
-        });
-      } else {
-        toast({
-          title: "Repeat One Already Active",
-          description: "Already repeating current song"
-        });
-      }
-    } else if (matchesCommand(lowerCommand, repeatOffCommands)) {
-      commandRecognized = true;
-      if (playerState.repeatMode !== 'off') {
-        setPlayerState(prev => ({ ...prev, repeatMode: 'off' }));
-        toast({
-          title: "Repeat Off",
-          description: "Repeat disabled"
-        });
-      } else {
-        toast({
-          title: "Repeat Already Off",
-          description: "Repeat is already disabled"
-        });
-      }
+      toast({
+        title: "Logging out",
+        description: "Signing out of your account..."
+      });
+      setTimeout(() => logout(), 1000);
     }
     
     if (!commandRecognized) {
