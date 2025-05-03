@@ -515,17 +515,19 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const updateProfile = (partialProfile: Partial<UserProfile>) => {
     if (!profile) return;
     
+    let updatedDob = profile.dob;
+    
     // Calculate DOB if age is updated
     if (partialProfile.age !== undefined) {
       const currentDate = new Date();
       const birthYear = currentDate.getFullYear() - partialProfile.age;
-      const dob = `${birthYear}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
-      partialProfile.dob = dob;
+      updatedDob = `${birthYear}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
     }
     
     const updatedProfile = {
       ...profile,
       ...partialProfile,
+      dob: updatedDob,
       updatedAt: new Date().toISOString()
     };
     
