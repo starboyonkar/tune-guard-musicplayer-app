@@ -1,4 +1,4 @@
-# Welcome to My TuneGuard project
+# Welcome to your Lovable project
 
 ## Project info
 

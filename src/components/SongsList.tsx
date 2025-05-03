@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Play, Pause, Plus, Music, Shuffle, Repeat, Repeat1 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { soundEffects } from '@/lib/soundEffects';
-import { formatTime } from '@/lib/utils';
 
 const SongsList: React.FC = () => {
   const { 
@@ -17,6 +16,13 @@ const SongsList: React.FC = () => {
     toggleShuffle,
     toggleRepeat
   } = useAudio();
+
+  // Format duration from seconds to MM:SS
+  const formatDuration = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  };
 
   // Handle file selection for adding new songs
   const handleFileSelect = () => {
@@ -155,7 +161,7 @@ const SongsList: React.FC = () => {
                   
                   <div className="flex items-center">
                     <span className="text-sm text-futuristic-muted mr-3">
-                      {formatTime(song.duration)}
+                      {formatDuration(song.duration)}
                     </span>
                     <Button
                       size="icon"
