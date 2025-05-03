@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useAudio } from '@/lib/audioContext';
 import { Button } from '@/components/ui/button';
@@ -10,7 +11,7 @@ import { soundEffects } from '@/lib/soundEffects';
 import { motion } from 'framer-motion';
 
 const SignUpForm: React.FC = () => {
-  const { signUp, isVoiceListening, toggleVoiceListening } = useAudio();
+  const { user, updateUser, isVoiceListening, toggleVoiceListening } = useAudio();
   const [name, setName] = useState('');
   const [age, setAge] = useState('');
   const [gender, setGender] = useState('prefer-not-to-say');
@@ -20,16 +21,16 @@ const SignUpForm: React.FC = () => {
     e.preventDefault();
     
     if (!name.trim() || !age.trim()) {
-      soundEffects.playError();
+      soundEffects.playTouchFeedback(); // Using available method instead of playError
       return;
     }
     
     setIsSubmitting(true);
-    soundEffects.playSuccess();
+    soundEffects.playTouchFeedback(); // Using available method instead of playSuccess
     
     // Simulate loading for better UX
     setTimeout(() => {
-      signUp({
+      updateUser({
         name: name.trim(),
         age: parseInt(age),
         gender,

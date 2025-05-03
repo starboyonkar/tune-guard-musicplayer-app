@@ -5,15 +5,21 @@ class SoundEffects {
   private static instance: SoundEffects;
   private notificationSound: HTMLAudioElement;
   private touchSound: HTMLAudioElement;
+  private errorSound: HTMLAudioElement;
+  private successSound: HTMLAudioElement;
   private initialized: boolean = false;
 
   private constructor() {
     this.notificationSound = new Audio('https://www.zedge.net/ringtone/13202c7e-4f9a-47ae-8e25-b13eaaacf490');
     this.touchSound = new Audio('/sounds/touch-feedback.mp3');
+    this.errorSound = new Audio('/sounds/error.mp3');
+    this.successSound = new Audio('/sounds/success.mp3');
     
     // Preload sounds
     this.notificationSound.load();
     this.touchSound.load();
+    this.errorSound.load();
+    this.successSound.load();
   }
 
   static getInstance(): SoundEffects {
@@ -54,6 +60,28 @@ class SoundEffects {
       this.touchSound.currentTime = 0;
       this.touchSound.volume = 0.5;
       this.touchSound.play().catch(err => console.error("Error playing touch sound:", err));
+    }
+  }
+  
+  playError() {
+    if (this.initialized) {
+      this.errorSound.currentTime = 0;
+      this.errorSound.volume = 0.7;
+      this.errorSound.play().catch(err => console.error("Error playing error sound:", err));
+    } else {
+      // Fallback if not initialized yet
+      this.playTouchFeedback();
+    }
+  }
+  
+  playSuccess() {
+    if (this.initialized) {
+      this.successSound.currentTime = 0;
+      this.successSound.volume = 0.7;
+      this.successSound.play().catch(err => console.error("Error playing success sound:", err));
+    } else {
+      // Fallback if not initialized yet
+      this.playTouchFeedback();
     }
   }
 }
