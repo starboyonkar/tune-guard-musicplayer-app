@@ -13,8 +13,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAudio } from '@/lib/audioContext';
-import { Settings, User } from 'lucide-react';
+import { User } from 'lucide-react';
 import { soundEffects } from '@/lib/soundEffects';
+import { calculateDOBFromAge, formatDate } from '@/lib/utils';
 
 const ProfileEditor: React.FC = () => {
   const { profile, updateProfile, logout } = useAudio();
@@ -23,6 +24,7 @@ const ProfileEditor: React.FC = () => {
   const [gender, setGender] = useState<string>(
     profile?.gender || 'prefer-not-to-say'
   );
+  const [dob, setDob] = useState('');
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -54,8 +56,25 @@ const ProfileEditor: React.FC = () => {
       setName(profile.name || '');
       setAge(profile.age ? profile.age.toString() : '');
       setGender(profile.gender || 'prefer-not-to-say');
+      
+      // Calculate DOB from age
+      if (profile.age) {
+        const calculatedDOB = calculateDOBFromAge(profile.age);
+        setDob(formatDate(calculatedDOB));
+      }
     }
   }, [profile]);
+  
+  // Auto-calculate DOB when age changes
+  useEffect(() => {
+    if (age) {
+      const ageNumber = parseInt(age);
+      if (!isNaN(ageNumber) && ageNumber > 0 && ageNumber < 120) {
+        const calculatedDOB = calculateDOBFromAge(ageNumber);
+        setDob(formatDate(calculatedDOB));
+      }
+    }
+  }, [age]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,7 +84,8 @@ const ProfileEditor: React.FC = () => {
     updateProfile({
       name,
       age: parseInt(age),
-      gender
+      gender,
+      dob
     });
     
     setOpen(false);
@@ -119,6 +139,17 @@ const ProfileEditor: React.FC = () => {
               min="1"
               max="120"
               required
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="dob">Date of Birth (Calculated)</Label>
+            <Input
+              id="dob"
+              type="date"
+              value={dob}
+              readOnly
+              className="border-futuristic-border bg-futuristic-bg/30 opacity-80"
             />
           </div>
           

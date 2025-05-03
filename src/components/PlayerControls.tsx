@@ -8,12 +8,7 @@ import {
   Volume2, VolumeX, Mic, Shuffle, Repeat, Repeat1
 } from 'lucide-react';
 import { soundEffects } from '@/lib/soundEffects';
-
-const formatTime = (seconds: number): string => {
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.floor(seconds % 60);
-  return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
-};
+import { formatTime } from '@/lib/utils';
 
 const PlayerControls: React.FC = () => {
   const { 
@@ -173,16 +168,20 @@ const PlayerControls: React.FC = () => {
             />
           </div>
           
+          {/* Voice control icon - made more prominent */}
           <Button 
-            variant={isVoiceListening ? "default" : "ghost"}
+            variant={isVoiceListening ? "default" : "outline"}
             size="icon" 
             onClick={handleToggleVoice}
             className={isVoiceListening 
-              ? "bg-futuristic-accent1 text-white hover:bg-futuristic-accent1/90" 
-              : "text-futuristic-muted hover:text-futuristic-accent1 hover:bg-futuristic-bg"}
-            title={isVoiceListening ? "Voice Assistant Active" : "Enable Voice Assistant"}
+              ? "bg-futuristic-accent1 text-white hover:bg-futuristic-accent1/90 relative" 
+              : "text-futuristic-muted hover:text-futuristic-accent1 hover:bg-futuristic-accent1/20 border-futuristic-accent2"}
+            title={isVoiceListening ? "Voice Control Active" : "Enable Voice Control"}
           >
             <Mic className={isVoiceListening ? "animate-pulse" : ""} />
+            {isVoiceListening && (
+              <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full animate-ping"></span>
+            )}
           </Button>
         </div>
       </div>

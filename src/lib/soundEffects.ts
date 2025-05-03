@@ -1,61 +1,59 @@
-
-// Sound effects utility for app interaction feedback
-
 class SoundEffects {
-  private static instance: SoundEffects;
-  private notificationSound: HTMLAudioElement;
-  private touchSound: HTMLAudioElement;
-  private initialized: boolean = false;
-
-  private constructor() {
-    this.notificationSound = new Audio('https://www.zedge.net/ringtone/13202c7e-4f9a-47ae-8e25-b13eaaacf490');
-    this.touchSound = new Audio('/sounds/touch-feedback.mp3');
-    
-    // Preload sounds
-    this.notificationSound.load();
-    this.touchSound.load();
-  }
-
-  static getInstance(): SoundEffects {
-    if (!SoundEffects.instance) {
-      SoundEffects.instance = new SoundEffects();
-    }
-    return SoundEffects.instance;
-  }
+  private touchSound: HTMLAudioElement | null = null;
+  private notificationSound: HTMLAudioElement | null = null;
+  private errorSound: HTMLAudioElement | null = null;
+  private successSound: HTMLAudioElement | null = null;
 
   initialize() {
-    if (!this.initialized) {
-      // Create dummy user interaction to allow audio to play later
-      document.addEventListener('click', () => {
-        if (!this.initialized) {
-          this.initialized = true;
-          // Play and immediately pause to initialize audio context
-          const silentPlay = () => {
-            this.notificationSound.volume = 0;
-            this.notificationSound.play().catch(() => {});
-            setTimeout(() => this.notificationSound.pause(), 1);
-          };
-          silentPlay();
-        }
-      }, { once: true });
-    }
-  }
+    // Only initialize if audio is supported
+    if (typeof Audio === 'undefined') return;
 
-  playNotification() {
-    if (this.initialized) {
-      this.notificationSound.currentTime = 0;
-      this.notificationSound.volume = 1;
-      this.notificationSound.play().catch(err => console.error("Error playing notification sound:", err));
-    }
+    // Initialize on user interaction to avoid autoplay restrictions
+    this.touchSound = new Audio('/audio/touch.mp3');
+    this.notificationSound = new Audio('/audio/notification.mp3');
+    this.errorSound = new Audio('/audio/error.mp3');
+    this.successSound = new Audio('/audio/success.mp3');
+
+    // Preload sounds
+    this.touchSound.preload = 'auto';
+    this.notificationSound.preload = 'auto';
+    this.errorSound.preload = 'auto';
+    this.successSound.preload = 'auto';
   }
 
   playTouchFeedback() {
-    if (this.initialized) {
-      this.touchSound.currentTime = 0;
-      this.touchSound.volume = 0.5;
-      this.touchSound.play().catch(err => console.error("Error playing touch sound:", err));
+    this.playSafely(this.touchSound);
+  }
+
+  playNotification() {
+    this.playSafely(this.notificationSound);
+  }
+
+  playError() {
+    this.playSafely(this.errorSound);
+  }
+
+  playSuccess() {
+    this.playSafely(this.successSound);
+  }
+
+  private playSafely(audio: HTMLAudioElement | null) {
+    if (!audio) return;
+
+    try {
+      // Reset the playback position and play
+      audio.currentTime = 0;
+      const playPromise = audio.play();
+      
+      if (playPromise) {
+        playPromise.catch(error => {
+          console.error(`Error playing ${audio.src ? audio.src.split('/').pop() : 'sound'}: `, error);
+        });
+      }
+    } catch (error) {
+      console.error(`Error playing ${audio.src ? audio.src.split('/').pop() : 'sound'}: `, error);
     }
   }
 }
 
-export const soundEffects = SoundEffects.getInstance();
+export const soundEffects = new SoundEffects();

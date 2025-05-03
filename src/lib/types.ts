@@ -1,12 +1,12 @@
-
 // User Profile Type
 export interface UserProfile {
   name: string;
   age: number;
   gender: string;
-  preferences: string[];
+  preferences?: string[];
   createdAt: string;
   updatedAt?: string;
+  dob?: string; // Add DOB field
 }
 
 // EQ Settings based on age profile
