@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { soundEffects } from '@/lib/soundEffects';
 import { formatTime } from '@/lib/utils';
+import SirenDetector from './SirenDetector';
 
 const PlayerControls: React.FC = () => {
   const { 
@@ -99,7 +100,7 @@ const PlayerControls: React.FC = () => {
             className={`text-futuristic-muted hover:text-futuristic-accent1 hover:bg-futuristic-bg ${
               shuffleEnabled ? 'text-futuristic-accent1' : ''
             }`}
-            title={shuffleEnabled ? "Shuffle Enabled" : "Shuffle Disabled"}
+            aria-label={shuffleEnabled ? "Shuffle Enabled" : "Shuffle Disabled"}
           >
             <Shuffle className={`h-4 w-4 ${shuffleEnabled ? 'neon-glow' : ''}`} />
           </Button>
@@ -109,6 +110,7 @@ const PlayerControls: React.FC = () => {
             size="icon" 
             onClick={handlePrev}
             className="text-futuristic-accent2 hover:text-futuristic-accent1 hover:bg-futuristic-bg"
+            aria-label="Previous track"
           >
             <SkipBack className="h-5 w-5" />
           </Button>
@@ -117,6 +119,7 @@ const PlayerControls: React.FC = () => {
             onClick={handlePlayPause}
             size="icon"
             className="rounded-full bg-gradient-to-r from-futuristic-accent1 to-futuristic-accent2 hover:opacity-90 animate-glow h-12 w-12"
+            aria-label={isPlaying ? "Pause" : "Play"}
           >
             {isPlaying ? <Pause fill="white" className="h-5 w-5" /> : <Play fill="white" className="ml-1 h-5 w-5" />}
           </Button>
@@ -126,11 +129,12 @@ const PlayerControls: React.FC = () => {
             size="icon"
             onClick={handleNext}
             className="text-futuristic-accent2 hover:text-futuristic-accent1 hover:bg-futuristic-bg"
+            aria-label="Next track"
           >
             <SkipForward className="h-5 w-5" />
           </Button>
 
-          {/* Repeat button with tooltip */}
+          {/* Repeat button */}
           <Button 
             variant="ghost" 
             size="icon"
@@ -138,7 +142,7 @@ const PlayerControls: React.FC = () => {
             className={`text-futuristic-muted hover:text-futuristic-accent1 hover:bg-futuristic-bg ${
               repeatMode !== 'off' ? 'text-futuristic-accent1' : ''
             }`}
-            title={`Repeat: ${repeatMode}`}
+            aria-label={`Repeat: ${repeatMode}`}
           >
             {repeatMode === 'one' ? (
               <Repeat1 className="h-4 w-4 neon-glow" />
@@ -149,11 +153,17 @@ const PlayerControls: React.FC = () => {
         </div>
         
         <div className="flex items-center">
+          {/* Siren detector indicator */}
+          <div className="mr-2">
+            <SirenDetector />
+          </div>
+          
           <Button 
             variant="ghost" 
             size="icon"
             onClick={handleToggleMute}
             className="text-futuristic-muted hover:text-futuristic-accent1 hover:bg-futuristic-bg"
+            aria-label={isMuted ? "Unmute" : "Mute"}
           >
             {isMuted ? <VolumeX /> : <Volume2 />}
           </Button>
@@ -168,7 +178,7 @@ const PlayerControls: React.FC = () => {
             />
           </div>
           
-          {/* Voice control icon - made more prominent */}
+          {/* Voice control icon */}
           <Button 
             variant={isVoiceListening ? "default" : "outline"}
             size="icon" 
@@ -176,7 +186,7 @@ const PlayerControls: React.FC = () => {
             className={isVoiceListening 
               ? "bg-futuristic-accent1 text-white hover:bg-futuristic-accent1/90 relative" 
               : "text-futuristic-muted hover:text-futuristic-accent1 hover:bg-futuristic-accent1/20 border-futuristic-accent2"}
-            title={isVoiceListening ? "Voice Control Active" : "Enable Voice Control"}
+            aria-label={isVoiceListening ? "Voice Control Active" : "Enable Voice Control"}
           >
             <Mic className={isVoiceListening ? "animate-pulse" : ""} />
             {isVoiceListening && (

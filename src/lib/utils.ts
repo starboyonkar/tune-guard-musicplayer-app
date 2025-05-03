@@ -49,3 +49,57 @@ export function matchesVoiceCommand(input: string, commandVariations: string[]):
   
   return false;
 }
+
+// Audio analysis utilities for siren detection
+export function calculateFrequencyDominance(frequencyData: Uint8Array, lowerBin: number, upperBin: number): number {
+  // Calculate energy in the specified frequency band
+  let energyInBand = 0;
+  let totalEnergy = 0;
+  
+  for (let i = 0; i < frequencyData.length; i++) {
+    if (i >= lowerBin && i <= upperBin) {
+      energyInBand += frequencyData[i];
+    }
+    totalEnergy += frequencyData[i];
+  }
+  
+  // Return the ratio of energy in band to total energy
+  return totalEnergy > 0 ? energyInBand / totalEnergy : 0;
+}
+
+// Detect oscillating patterns in audio (like sirens)
+export function detectOscillationPattern(
+  timeData: Float32Array,
+  sampleRate: number,
+  minFreq: number = 0.5, // Minimum oscillations per second
+  maxFreq: number = 4    // Maximum oscillations per second
+): number {
+  // This is a simplified algorithm to detect oscillating patterns
+  // A real implementation would use techniques like autocorrelation or FFT
+  
+  // We're looking for zero-crossings at the right frequency
+  let zeroCrossings = 0;
+  for (let i = 1; i < timeData.length; i++) {
+    if ((timeData[i] >= 0 && timeData[i - 1] < 0) || 
+        (timeData[i] < 0 && timeData[i - 1] >= 0)) {
+      zeroCrossings++;
+    }
+  }
+  
+  // Calculate oscillations per second
+  const duration = timeData.length / sampleRate;
+  const oscillationsPerSecond = zeroCrossings / (2 * duration);
+  
+  // Calculate how well this matches our target range (0-1 score)
+  if (oscillationsPerSecond < minFreq || oscillationsPerSecond > maxFreq) {
+    return 0;
+  }
+  
+  // Linear score where 1.0 is perfect match to expected oscillation rate
+  const range = maxFreq - minFreq;
+  const midpoint = minFreq + range / 2;
+  const distance = Math.abs(oscillationsPerSecond - midpoint);
+  const normalizedScore = 1 - (distance / (range / 2));
+  
+  return Math.max(0, normalizedScore);
+}

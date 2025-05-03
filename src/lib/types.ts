@@ -1,3 +1,4 @@
+
 // User Profile Type
 export interface UserProfile {
   name: string;
@@ -73,4 +74,13 @@ export interface VisSettings {
   showProcessed: boolean;
   showOriginal: boolean;
   overlay: boolean;
+}
+
+// Siren Detection State
+export interface SirenDetectionState {
+  isDetecting: boolean;
+  isDetected: boolean;
+  confidence: number;
+  lastDetected: string | null;
+  wasPlayingBeforeSiren: boolean;
 }
