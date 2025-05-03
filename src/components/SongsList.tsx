@@ -1,193 +1,260 @@
 
-import React from 'react';
-import { useAudio } from '@/lib/audioContext';
+import React, { useState } from 'react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Play, Pause, Plus, Music, Shuffle, Repeat, Repeat1 } from 'lucide-react';
-import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useAudio } from '@/lib/audioContext';
+import { 
+  MoreHorizontal, Play, Pause, Plus, Search, 
+  Music, Clock, Heart, HeartOff, ListMusic, UserCircle
+} from 'lucide-react';
+import PlaylistManager from '@/components/PlaylistManager';
 import { soundEffects } from '@/lib/soundEffects';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
+// A utility function to format time in mm:ss
+const formatTime = (seconds: number): string => {
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+};
 
 const SongsList: React.FC = () => {
   const { 
     songs, 
     playerState, 
-    playSong,
-    currentSong,
-    addSong,
-    toggleShuffle,
-    toggleRepeat
+    playSong, 
+    playlists, 
+    playPlaylist, 
+    addToPlaylist,
+    profile
   } = useAudio();
+  const [searchTerm, setSearchTerm] = useState('');
 
-  // Format duration from seconds to MM:SS
-  const formatDuration = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  const [showPlaylistManager, setShowPlaylistManager] = useState(false);
+
+  const filteredSongs = songs.filter(song => 
+    song.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    song.artist.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const handlePlaySong = (songId: string) => {
+    soundEffects.playTouchFeedback();
+    playSong(songId);
   };
 
-  // Handle file selection for adding new songs
-  const handleFileSelect = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'audio/mpeg, .mp3';
-    input.multiple = true;
-    
-    input.onchange = (e: Event) => {
-      const target = e.target as HTMLInputElement;
-      const files = target.files;
-      
-      if (files && files.length > 0) {
-        Array.from(files).forEach(file => {
-          if (file.type === 'audio/mpeg' || file.name.toLowerCase().endsWith('.mp3')) {
-            addSong(file);
-          }
-        });
-      }
-    };
-    
+  const handlePlaylistClick = (playlistId: string) => {
     soundEffects.playTouchFeedback();
-    input.click();
+    playPlaylist(playlistId);
   };
 
-  // Enhanced song click handler to toggle play/pause
-  const handleSongClick = (songId: string) => {
+  const handleAddToPlaylist = (songId: string, playlistId: string) => {
     soundEffects.playTouchFeedback();
-    
-    // If the song is already playing, pause it; if it's paused, resume it; otherwise play a new song
-    if (currentSong?.id === songId) {
-      playSong(songId); // This will toggle play/pause for the current song
-    } else {
-      // Play a new song
-      playSong(songId);
-    }
+    addToPlaylist(playlistId, songId);
+  };
+
+  const togglePlaylistManager = () => {
+    soundEffects.playTouchFeedback();
+    setShowPlaylistManager(prev => !prev);
   };
 
   return (
-    <div className="space-y-4 relative glass-panel">
-      {/* Animated scan line effect */}
-      <div className="scan-line absolute"></div>
-      
-      <div className="flex justify-between items-center backdrop-blur-sm">
-        <div className="flex items-center">
-          <h3 className="text-lg font-bold neon-text">TUNE GUARD Songs</h3>
-          
-          {/* Shuffle & Repeat controls */}
-          <div className="ml-4 flex items-center space-x-2">
-            <Button 
-              variant="ghost" 
-              size="icon"
-              onClick={toggleShuffle}
-              className={`h-8 w-8 rounded-full transition-colors ${
-                playerState.shuffleEnabled ? 'text-futuristic-accent1 hover:bg-futuristic-accent1/20' : 'text-futuristic-muted hover:bg-futuristic-bg/30'
-              }`}
-              title={playerState.shuffleEnabled ? "Shuffle Enabled" : "Shuffle Disabled"}
-            >
-              <Shuffle className={`h-4 w-4 ${playerState.shuffleEnabled ? 'neon-glow' : ''}`} />
-            </Button>
-            
-            <Button 
-              variant="ghost" 
-              size="icon"
-              onClick={toggleRepeat}
-              className={`h-8 w-8 rounded-full transition-colors ${
-                playerState.repeatMode !== 'off' ? 'text-futuristic-accent1 hover:bg-futuristic-accent1/20' : 'text-futuristic-muted hover:bg-futuristic-bg/30'
-              }`}
-              title={`Repeat: ${playerState.repeatMode}`}
-            >
-              {playerState.repeatMode === 'one' ? (
-                <Repeat1 className="h-4 w-4 neon-glow" title="Repeat One" />
-              ) : (
-                <Repeat className={`h-4 w-4 ${playerState.repeatMode === 'all' ? 'neon-glow' : ''}`} title={`Repeat ${playerState.repeatMode === 'all' ? 'All' : 'Off'}`} />
-              )}
-            </Button>
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-bold text-futuristic-accent1">My Music</h2>
+        <div className="flex gap-2">
+          <div className="relative max-w-sm">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-futuristic-muted" />
+            <Input
+              type="search"
+              placeholder="Search music..."
+              className="pl-8 border-futuristic-border bg-futuristic-bg/30"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
           </div>
+          <Button 
+            variant="outline"
+            size="icon"
+            className="border-futuristic-border bg-futuristic-bg/30"
+            onClick={togglePlaylistManager}
+            aria-label="Manage playlists"
+          >
+            <ListMusic className="h-4 w-4" />
+          </Button>
         </div>
-        
-        <Button 
-          variant="outline"
-          className="border-futuristic-border text-futuristic-accent1 hover:bg-futuristic-bg/50 animate-pulse-slow"
-          onClick={handleFileSelect}
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Add Songs
-        </Button>
       </div>
 
-      <div className="max-h-80 overflow-y-auto custom-scrollbar">
-        {songs.length === 0 ? (
-          <div className="flex flex-col items-center justify-center p-8 text-center text-futuristic-muted glass-panel rounded-lg">
-            <Music className="h-12 w-12 mb-2 opacity-50 animate-pulse-slow" />
-            <p className="font-bold">No songs added yet. Add your first song to get started!</p>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {songs.map((song) => (
-              <Card 
-                key={song.id} 
-                className={`p-2 transition-all duration-300 cursor-pointer glass-element ${
-                  currentSong?.id === song.id 
-                    ? 'border-futuristic-accent1 bg-futuristic-bg/30 neon-border' 
-                    : 'hover:bg-futuristic-bg/20 hover:scale-[1.02]'
-                }`}
-                onClick={() => handleSongClick(song.id)}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center flex-1 min-w-0">
-                    <div className={`h-10 w-10 rounded overflow-hidden mr-3 flex-shrink-0 ${
-                      currentSong?.id === song.id && playerState.isPlaying ? 'animate-pulse-slow animate-glow' : ''
-                    }`}>
-                      <img 
-                        src={song.albumArt || "/lovable-uploads/d4fe6f3e-e72d-4760-93e5-5f71a12f2238.png"} 
-                        alt="TUNE GUARD"
-                        className="h-full w-full object-cover" 
-                      />
-                    </div>
-                    <div className="overflow-hidden">
-                      <p className={`font-bold truncate ${currentSong?.id === song.id ? 'neon-text' : ''}`}>
-                        {song.title}
-                      </p>
-                      <p className="text-sm text-futuristic-muted truncate">{song.artist}</p>
-                      
-                      {/* Progress bar for currently playing song */}
-                      {currentSong?.id === song.id && (
-                        <div className="w-full bg-futuristic-bg/30 h-1 rounded-full mt-1">
-                          <div 
-                            className="h-1 bg-gradient-to-r from-futuristic-accent1 to-futuristic-accent2 rounded-full" 
-                            style={{ width: `${(playerState.currentTime / (currentSong?.duration || 1)) * 100}%` }}
-                          ></div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center">
-                    <span className="text-sm text-futuristic-muted mr-3">
-                      {formatDuration(song.duration)}
-                    </span>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className={`h-8 w-8 rounded-full transition-colors ${
-                        currentSong?.id === song.id ? 'hover:bg-futuristic-accent1/40' : 'hover:bg-futuristic-accent2/20'
-                      }`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        soundEffects.playTouchFeedback();
-                        playSong(song.id);
-                      }}
+      <Tabs defaultValue="songs">
+        <TabsList className="mb-4">
+          <TabsTrigger value="songs" className="data-[state=active]:bg-futuristic-accent1">
+            <Music className="h-4 w-4 mr-2" />
+            Songs
+          </TabsTrigger>
+          <TabsTrigger value="playlists" className="data-[state=active]:bg-futuristic-accent1">
+            <ListMusic className="h-4 w-4 mr-2" />
+            Playlists
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="songs">
+          <div className="rounded-md border border-futuristic-border overflow-hidden">
+            <Table>
+              <TableHeader className="bg-futuristic-bg/30">
+                <TableRow>
+                  <TableHead className="w-12">#</TableHead>
+                  <TableHead>Title</TableHead>
+                  <TableHead>Artist</TableHead>
+                  <TableHead className="text-right"><Clock className="h-4 w-4 inline" aria-label="Duration" /></TableHead>
+                  <TableHead className="w-10"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredSongs.length > 0 ? (
+                  filteredSongs.map((song, index) => (
+                    <TableRow 
+                      key={song.id}
+                      className={playerState.currentSongId === song.id ? 
+                        'bg-futuristic-accent1/10 hover:bg-futuristic-accent1/20' : 
+                        'hover:bg-futuristic-bg/20'
+                      }
                     >
-                      {currentSong?.id === song.id && playerState.isPlaying ? (
-                        <Pause className="h-4 w-4 text-futuristic-accent1" />
-                      ) : (
-                        <Play className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              </Card>
-            ))}
+                      <TableCell className="text-center">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 p-0"
+                          onClick={() => handlePlaySong(song.id)}
+                        >
+                          {playerState.currentSongId === song.id && playerState.isPlaying ? 
+                            <Pause className="h-4 w-4" aria-label="Pause" /> : 
+                            <Play className="h-4 w-4" aria-label="Play" />
+                          }
+                        </Button>
+                      </TableCell>
+                      <TableCell 
+                        className={`font-medium ${playerState.currentSongId === song.id ? 'text-futuristic-accent1' : ''}`}
+                      >
+                        {song.title}
+                      </TableCell>
+                      <TableCell>{song.artist}</TableCell>
+                      <TableCell className="text-right">{formatTime(song.duration)}</TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8 p-0"
+                              onClick={() => soundEffects.playTouchFeedback()}
+                            >
+                              <MoreHorizontal className="h-4 w-4" aria-label="More options" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="bg-futuristic-bg border-futuristic-border">
+                            <DropdownMenuLabel>Options</DropdownMenuLabel>
+                            <DropdownMenuSeparator className="bg-futuristic-border" />
+                            <DropdownMenuItem 
+                              onClick={() => handlePlaySong(song.id)}
+                              className="cursor-pointer"
+                            >
+                              <Play className="h-4 w-4 mr-2" aria-label="Play" />
+                              Play
+                            </DropdownMenuItem>
+                            
+                            {playlists.length > 0 && (
+                              <>
+                                <DropdownMenuSeparator className="bg-futuristic-border" />
+                                <DropdownMenuLabel>Add to Playlist</DropdownMenuLabel>
+                                {playlists.map(playlist => (
+                                  <DropdownMenuItem
+                                    key={playlist.id}
+                                    onClick={() => handleAddToPlaylist(song.id, playlist.id)}
+                                    className="cursor-pointer"
+                                  >
+                                    <Plus className="h-4 w-4 mr-2" aria-label="Add to playlist" />
+                                    {playlist.name}
+                                  </DropdownMenuItem>
+                                ))}
+                              </>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-4 text-futuristic-muted">
+                      No songs found. Try another search term.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
           </div>
-        )}
-      </div>
+        </TabsContent>
+
+        <TabsContent value="playlists">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {playlists.length > 0 ? (
+              playlists.map(playlist => (
+                <Card 
+                  key={playlist.id} 
+                  className="border-futuristic-border bg-futuristic-bg/30 hover:bg-futuristic-bg/50 cursor-pointer transition-colors"
+                  onClick={() => handlePlaylistClick(playlist.id)}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="font-medium text-futuristic-accent1">{playlist.name}</h3>
+                        <p className="text-xs text-futuristic-muted">{playlist.songs.length} songs</p>
+                      </div>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handlePlaylistClick(playlist.id);
+                        }}
+                      >
+                        <Play className="h-5 w-5" aria-label="Play playlist" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              <div className="col-span-full text-center py-8 text-futuristic-muted">
+                <ListMusic className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                <p>No playlists yet. Create one to get started.</p>
+                <Button 
+                  variant="outline" 
+                  className="mt-4 border-futuristic-border"
+                  onClick={togglePlaylistManager}
+                >
+                  <Plus className="h-4 w-4 mr-2" /> Create Playlist
+                </Button>
+              </div>
+            )}
+          </div>
+        </TabsContent>
+      </Tabs>
+
+      {showPlaylistManager && (
+        <PlaylistManager onClose={togglePlaylistManager} />
+      )}
     </div>
   );
 };
