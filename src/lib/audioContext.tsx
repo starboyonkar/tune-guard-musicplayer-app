@@ -10,7 +10,6 @@ import {
   VisSettings
 } from './types';
 import { toast } from '@/components/ui/use-toast';
-import { matchVoiceCommand, VOICE_COMMANDS } from './voiceCommands';
 
 const SAMPLE_SONGS: Song[] = [
   {
@@ -515,19 +514,9 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const updateProfile = (partialProfile: Partial<UserProfile>) => {
     if (!profile) return;
     
-    let updatedDob = profile.dob;
-    
-    // Calculate DOB if age is updated
-    if (partialProfile.age !== undefined) {
-      const currentDate = new Date();
-      const birthYear = currentDate.getFullYear() - partialProfile.age;
-      updatedDob = `${birthYear}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
-    }
-    
     const updatedProfile = {
       ...profile,
       ...partialProfile,
-      dob: updatedDob,
       updatedAt: new Date().toISOString()
     };
     
@@ -930,88 +919,108 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const processVoiceCommand = (command: string) => {
-    const matchedCommand = matchVoiceCommand(command);
+    const lowerCommand = command.toLowerCase();
+    
     let commandRecognized = false;
     
-    if (matchedCommand) {
+    const playCommands = ['play', 'play music', 'start', 'begin', 'resume'];
+    const pauseCommands = ['pause', 'stop', 'halt', 'wait'];
+    const nextCommands = ['next', 'next song', 'skip', 'forward'];
+    const prevCommands = ['previous', 'previous song', 'back', 'backward'];
+    const profileCommands = ['profile', 'edit profile', 'user settings', 'account settings'];
+    const addSongCommands = ['add song', 'upload song', 'new song', 'browse file', 'add music'];
+    const closeCommands = ['close', 'back', 'return', 'exit', 'dismiss', 'cancel'];
+    const logoutCommands = ['logout', 'log out', 'sign out', 'exit app', 'end session'];
+    const helpCommands = ['help', 'assist', 'assistance', 'commands', 'show commands'];
+    
+    const matchesCommand = (cmd: string, variations: string[]) => {
+      return variations.some(variation => cmd.includes(variation));
+    };
+    
+    if (matchesCommand(lowerCommand, playCommands)) {
       commandRecognized = true;
       
-      switch (matchedCommand) {
-        case 'PLAY':
-          setPlayerState(prevState => ({ ...prevState, isPlaying: true }));
-          toast({
-            title: "Playback Started",
-            description: currentSong ? `Playing "${currentSong.title}"` : "Playing music",
-          });
-          break;
-          
-        case 'PAUSE':
-          setPlayerState(prevState => ({ ...prevState, isPlaying: false }));
-          toast({
-            title: "Playback Paused",
-            description: "Music paused"
-          });
-          break;
-          
-        case 'NEXT':
-          nextSong();
-          toast({
-            title: "Next Track",
-            description: "Playing next song"
-          });
-          break;
-          
-        case 'PREVIOUS':
-          prevSong();
-          toast({
-            title: "Previous Track",
-            description: "Playing previous song"
-          });
-          break;
-          
-        case 'LOGOUT':
-          toast({
-            title: "Logging out",
-            description: "Signing out of your account..."
-          });
-          setTimeout(() => logout(), 1000);
-          break;
-          
-        case 'HELP':
-          const event = new CustomEvent('show-command-reference', { 
-            detail: { open: true }
-          });
-          document.dispatchEvent(event);
-          toast({
-            title: "Help",
-            description: "Showing available commands"
-          });
-          break;
-          
-        case 'EDIT_PROFILE':
-          const profileEvent = new CustomEvent('open-profile-editor');
-          document.dispatchEvent(profileEvent);
-          toast({
-            title: "Profile Editor",
-            description: "Opening profile editor"
-          });
-          break;
-          
-        case 'CLOSE':
-          const closeEvent = new CustomEvent('close-active-panel');
-          document.dispatchEvent(closeEvent);
-          toast({
-            title: "Closed",
-            description: "Closing current view"
-          });
-          break;
-      }
+      setPlayerState(prevState => ({ ...prevState, isPlaying: true }));
+      toast({
+        title: "Playback Started",
+        description: currentSong ? `Playing "${currentSong.title}"` : "Playing music",
+      });
+      
+    } else if (matchesCommand(lowerCommand, pauseCommands)) {
+      commandRecognized = true;
+      setPlayerState(prevState => ({ ...prevState, isPlaying: false }));
+      toast({
+        title: "Playback Paused",
+        description: "Music paused"
+      });
+      
+    } else if (matchesCommand(lowerCommand, nextCommands)) {
+      commandRecognized = true;
+      nextSong();
+      toast({
+        title: "Next Track",
+        description: "Playing next song"
+      });
+      
+    } else if (matchesCommand(lowerCommand, prevCommands)) {
+      commandRecognized = true;
+      prevSong();
+      toast({
+        title: "Previous Track",
+        description: "Playing previous song"
+      });
+      
+    } else if (matchesCommand(lowerCommand, profileCommands)) {
+      commandRecognized = true;
+      const event = new CustomEvent('open-profile-editor');
+      document.dispatchEvent(event);
+      toast({
+        title: "Profile Editor",
+        description: "Opening profile editor"
+      });
+      
+    } else if (matchesCommand(lowerCommand, addSongCommands)) {
+      commandRecognized = true;
+      const event = new CustomEvent('trigger-file-upload');
+      document.dispatchEvent(event);
+      toast({
+        title: "Add Song",
+        description: "Opening file browser"
+      });
+      
+    } else if (matchesCommand(lowerCommand, closeCommands)) {
+      commandRecognized = true;
+      const event = new CustomEvent('close-active-panel');
+      document.dispatchEvent(event);
+      toast({
+        title: "Closed",
+        description: "Closing current view"
+      });
+      
+    } else if (matchesCommand(lowerCommand, helpCommands)) {
+      commandRecognized = true;
+      const event = new CustomEvent('show-command-reference', { 
+        detail: { open: true }
+      });
+      document.dispatchEvent(event);
+      toast({
+        title: "Help",
+        description: "Showing available commands"
+      });
+      
+    } else if (matchesCommand(lowerCommand, logoutCommands)) {
+      commandRecognized = true;
+      toast({
+        title: "Logging out",
+        description: "Signing out of your account..."
+      });
+      setTimeout(() => logout(), 1000);
     }
     
     if (!commandRecognized) {
       toast({
         title: "Command Not Recognized",
-        description: "Please use one of the supported voice commands",
+        description: "I didn't understand that command",
         variant: "destructive"
       });
     }

@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAudio } from '@/lib/audioContext';
-import { Settings, User } from 'lucide-react';
+import { User } from 'lucide-react';
 import { soundEffects } from '@/lib/soundEffects';
 
 const ProfileEditor: React.FC = () => {
@@ -74,8 +74,7 @@ const ProfileEditor: React.FC = () => {
   const handleLogout = () => {
     soundEffects.playNotification();
     setOpen(false);
-    // Immediately invoke logout without any delay
-    logout();
+    setTimeout(() => logout(), 500);
   };
 
   if (!profile) return null;
