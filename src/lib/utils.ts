@@ -13,16 +13,6 @@ export function formatTime(seconds: number): string {
   return `${mins}:${secs.toString().padStart(2, "0")}`;
 }
 
-export function formatDate(dateString: string): string {
-  if (!dateString) return '';
-  
-  const date = new Date(dateString);
-  if (isNaN(date.getTime())) return '';
-  
-  // Format as YYYY-MM-DD for input type="date"
-  return date.toISOString().split('T')[0];
-}
-
 export function matchesVoiceCommand(input: string, commands: string[]): boolean {
   if (!input) return false;
   

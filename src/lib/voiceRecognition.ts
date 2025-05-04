@@ -9,14 +9,6 @@
 import { VOICE_COMMANDS } from './voiceCommands';
 import { matchesVoiceCommand } from './utils';
 
-// Add type definitions for the Web Speech API
-declare global {
-  interface Window {
-    SpeechRecognition: typeof SpeechRecognition;
-    webkitSpeechRecognition: typeof SpeechRecognition;
-  }
-}
-
 type VoiceRecognitionCallback = (command: string) => void;
 
 class VoiceRecognitionService {
@@ -40,8 +32,8 @@ class VoiceRecognitionService {
       return;
     }
 
-    const SpeechRecognitionImpl = window.SpeechRecognition || window.webkitSpeechRecognition;
-    this.recognition = new SpeechRecognitionImpl();
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    this.recognition = new SpeechRecognition();
     
     // Configure recognition settings
     this.recognition.continuous = true;
