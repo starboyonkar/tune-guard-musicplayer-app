@@ -1,22 +1,22 @@
 
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router } from 'react-router-dom';
 import App from './App.tsx';
 import './index.css';
-import NotFound from './pages/NotFound.tsx';
 import { initializeVoiceControl } from '@/lib/voiceInitializer';
+import SoundEffectsInitializer from '@/components/SoundEffectsInitializer';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <Router>
-      <Routes>
-        <Route path="*" element={<NotFound />} />
-        <Route path="/" element={<App />} />
-      </Routes>
+      <SoundEffectsInitializer />
+      <App />
     </Router>
   </React.StrictMode>,
 );
 
 // Initialize voice control after the app is mounted
-initializeVoiceControl();
+document.addEventListener('DOMContentLoaded', () => {
+  setTimeout(initializeVoiceControl, 1000); // Slight delay to ensure app is initialized
+});

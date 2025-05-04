@@ -6,20 +6,19 @@ import VoiceCommandHelp from '@/components/VoiceCommandPanel';
 
 const VoiceControlProvider: React.FC = () => {
   const { 
-    play, 
-    pause, 
+    togglePlayPause,
     nextSong, 
-    previousSong, 
+    prevSong, 
     logout,
-    isLoggedIn
+    profile
   } = useAudio();
   
   // Set up global event listeners for voice commands
   useEffect(() => {
-    const handlePlay = () => play();
-    const handlePause = () => pause();
+    const handlePlay = () => togglePlayPause();
+    const handlePause = () => togglePlayPause();
     const handleNext = () => nextSong();
-    const handlePrevious = () => previousSong();
+    const handlePrevious = () => prevSong();
     const handleLogout = () => logout();
     
     // Add event listeners
@@ -37,10 +36,10 @@ const VoiceControlProvider: React.FC = () => {
       document.removeEventListener('previous-track', handlePrevious);
       document.removeEventListener('user-logout', handleLogout);
     };
-  }, [play, pause, nextSong, previousSong, logout]);
+  }, [togglePlayPause, nextSong, prevSong, logout]);
   
-  // Only show when logged in
-  if (!isLoggedIn) {
+  // Only show when logged in (user has a profile)
+  if (!profile) {
     return null;
   }
   

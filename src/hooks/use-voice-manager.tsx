@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 import { useAudio } from '@/lib/audioContext';
 
 export function useVoiceManager() {
-  const { isLoggedIn } = useAudio();
+  const { profile } = useAudio();
 
   useEffect(() => {
     // Initialize voice-related events setup
@@ -12,10 +12,10 @@ export function useVoiceManager() {
       // happens in the VoiceControlProvider component
     };
 
-    if (isLoggedIn) {
+    if (profile) {
       setupVoiceEvents();
     }
-  }, [isLoggedIn]);
+  }, [profile]);
 
   return null;
 }
