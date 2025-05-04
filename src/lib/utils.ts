@@ -49,3 +49,35 @@ export function matchesVoiceCommand(input: string, commandVariations: string[]):
   
   return false;
 }
+
+// Enhanced voice command recognition with threshold-based confidence
+export function recognizeVoiceCommand(input: string, commandVariations: string[], threshold: number = 0.7): boolean {
+  if (!input || input.trim().length === 0) return false;
+  
+  const normalizedInput = input.toLowerCase().trim();
+  
+  // Check for exact matches first (highest confidence)
+  if (commandVariations.some(cmd => cmd.toLowerCase() === normalizedInput)) {
+    return true;
+  }
+  
+  // Calculate similarity based on word overlap
+  const inputWords = normalizedInput.split(/\s+/);
+  
+  for (const variation of commandVariations) {
+    const variationWords = variation.toLowerCase().split(/\s+/);
+    
+    // Calculate word overlap
+    const matchingWords = inputWords.filter(word => 
+      variationWords.some(vWord => vWord.includes(word) || word.includes(vWord))
+    );
+    
+    const overlapScore = matchingWords.length / Math.max(inputWords.length, 1);
+    
+    if (overlapScore >= threshold) {
+      return true;
+    }
+  }
+  
+  return false;
+}

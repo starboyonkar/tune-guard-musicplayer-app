@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useAudio } from '@/lib/audioContext';
-import { Mic, Command } from 'lucide-react';
+import { Mic, Command, Volume2, Play, Pause, SkipBack, SkipForward, LogOut } from 'lucide-react';
 import { soundEffects } from '@/lib/soundEffects';
 import { COMMAND_GROUPS } from '@/lib/voiceCommands';
 
@@ -47,9 +47,15 @@ const VoiceCommandHelp: React.FC = () => {
             <div className="grid grid-cols-2 gap-2">
               {COMMAND_GROUPS.playback.map((cmd, i) => (
                 <div key={i} className="text-futuristic-muted text-sm">
-                  <span className="font-medium">{cmd.name}</span>
+                  <span className="font-medium flex items-center">
+                    {cmd.name === "Play" && <Play className="h-3 w-3 mr-1" />}
+                    {cmd.name === "Pause" && <Pause className="h-3 w-3 mr-1" />}
+                    {cmd.name === "Next Song" && <SkipForward className="h-3 w-3 mr-1" />}
+                    {cmd.name === "Previous Song" && <SkipBack className="h-3 w-3 mr-1" />}
+                    {cmd.name}
+                  </span>
                   <div className="text-xs opacity-75">
-                    "{cmd.variations[0]}"
+                    "{cmd.variations[0]}", "{cmd.variations.length > 1 ? cmd.variations[1] : ''}"
                   </div>
                 </div>
               ))}
@@ -64,9 +70,12 @@ const VoiceCommandHelp: React.FC = () => {
             <div className="grid grid-cols-2 gap-2">
               {COMMAND_GROUPS.account.map((cmd, i) => (
                 <div key={i} className="text-futuristic-muted text-sm">
-                  <span className="font-medium">{cmd.name}</span>
+                  <span className="font-medium flex items-center">
+                    {cmd.name === "Logout" && <LogOut className="h-3 w-3 mr-1" />}
+                    {cmd.name}
+                  </span>
                   <div className="text-xs opacity-75">
-                    "{cmd.variations[0]}"
+                    "{cmd.variations[0]}", "{cmd.variations.length > 1 ? cmd.variations[1] : ''}"
                   </div>
                 </div>
               ))}
@@ -83,7 +92,7 @@ const VoiceCommandHelp: React.FC = () => {
                 <div key={i} className="text-futuristic-muted text-sm">
                   <span className="font-medium">{cmd.name}</span>
                   <div className="text-xs opacity-75">
-                    "{cmd.variations[0]}"
+                    "{cmd.variations[0]}", "{cmd.variations.length > 1 ? cmd.variations[1] : ''}"
                   </div>
                 </div>
               ))}
