@@ -185,7 +185,6 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const gainNodeRef = useRef<GainNode | null>(null);
   const eqNodesRef = useRef<BiquadFilterNode[]>([]);
   const audioGraphSetup = useRef<boolean>(false);
-  const voiceRecognitionActive = useRef<boolean>(false);
 
   const songs = [...SAMPLE_SONGS, ...customSongs];
   
@@ -757,12 +756,6 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const logout = () => {
-    // Stop playback immediately when logging out
-    if (audioRef.current && playerState.isPlaying) {
-      audioRef.current.pause();
-    }
-    
-    setPlayerState({...defaultPlayerState, isPlaying: false});
     setProfileState(null);
     setIsSignedUp(false);
     localStorage.removeItem('audioPersonaProfile');
@@ -914,30 +907,15 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setTimeout(() => {
       processVoiceCommand(command);
       setProcessingVoice(false);
-    }, 300); // Reduced delay for faster response
+    }, 1000);
   };
 
   const toggleVoiceListening = () => {
-    const newState = !isVoiceListening;
-    setIsVoiceListening(newState);
-    voiceRecognitionActive.current = newState;
-    
-    if (newState) {
+    setIsVoiceListening(prev => !prev);
+    if (!isVoiceListening) {
       toast({
         title: "Voice Assistant Activated",
         description: "Listening for commands...",
-      });
-      
-      // Trigger a welcome event
-      setTimeout(() => {
-        const event = new CustomEvent('voice-assistant-activated');
-        document.dispatchEvent(event);
-        soundEffects.playNotification();
-      }, 500);
-    } else {
-      toast({
-        title: "Voice Assistant Deactivated",
-        description: "Voice commands turned off",
       });
     }
   };
@@ -950,13 +928,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     // PLAY command handling
     if (matchesVoiceCommand(lowerCommand, VOICE_COMMANDS.PLAY)) {
       commandRecognized = true;
-      soundEffects.playTouchFeedback();
       setPlayerState(prevState => ({ ...prevState, isPlaying: true }));
-      
-      if (audioRef.current && audioRef.current.paused) {
-        audioRef.current.play().catch(e => console.error("Error playing audio:", e));
-      }
-      
       toast({
         title: "Playback Started",
         description: currentSong ? `Playing "${currentSong.title}"` : "Playing music",
@@ -965,12 +937,6 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     // PAUSE command handling
     else if (matchesVoiceCommand(lowerCommand, VOICE_COMMANDS.PAUSE)) {
       commandRecognized = true;
-      soundEffects.playTouchFeedback();
-      
-      if (audioRef.current && !audioRef.current.paused) {
-        audioRef.current.pause();
-      }
-      
       setPlayerState(prevState => ({ ...prevState, isPlaying: false }));
       toast({
         title: "Playback Paused",
@@ -980,7 +946,6 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     // NEXT command handling
     else if (matchesVoiceCommand(lowerCommand, VOICE_COMMANDS.NEXT)) {
       commandRecognized = true;
-      soundEffects.playTouchFeedback();
       nextSong();
       toast({
         title: "Next Track",
@@ -990,7 +955,6 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     // PREVIOUS command handling
     else if (matchesVoiceCommand(lowerCommand, VOICE_COMMANDS.PREVIOUS)) {
       commandRecognized = true;
-      soundEffects.playTouchFeedback();
       prevSong();
       toast({
         title: "Previous Track",
@@ -1000,7 +964,6 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     // LOGOUT command handling
     else if (matchesVoiceCommand(lowerCommand, VOICE_COMMANDS.LOGOUT)) {
       commandRecognized = true;
-      soundEffects.playNotification();
       toast({
         title: "Logging out",
         description: "Signing out of your account..."
@@ -1010,7 +973,6 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     // EDIT_PROFILE command handling
     else if (matchesVoiceCommand(lowerCommand, VOICE_COMMANDS.EDIT_PROFILE)) {
       commandRecognized = true;
-      soundEffects.playTouchFeedback();
       const event = new CustomEvent('open-profile-editor');
       document.dispatchEvent(event);
       toast({
@@ -1021,7 +983,6 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     // CLOSE command handling
     else if (matchesVoiceCommand(lowerCommand, VOICE_COMMANDS.CLOSE)) {
       commandRecognized = true;
-      soundEffects.playTouchFeedback();
       const event = new CustomEvent('close-active-panel');
       document.dispatchEvent(event);
       toast({
@@ -1032,7 +993,6 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     // HELP command handling
     else if (matchesVoiceCommand(lowerCommand, VOICE_COMMANDS.HELP)) {
       commandRecognized = true;
-      soundEffects.playTouchFeedback();
       const event = new CustomEvent('show-command-reference');
       document.dispatchEvent(event);
       toast({
@@ -1041,11 +1001,10 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       });
     }
     
-    if (!commandRecognized && command.trim().length > 0) {
-      console.log("Command not recognized:", command);
+    if (!commandRecognized) {
       toast({
         title: "Command Not Recognized",
-        description: "Try saying 'Help' for a list of commands",
+        description: "Only supported voice commands are accepted",
         variant: "destructive"
       });
     }
