@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card } from '@/components/ui/card';
 import PlayerControls from './PlayerControls';
@@ -6,7 +7,7 @@ import Waveform from './Waveform';
 import WaveformAnalyzer from './WaveformAnalyzer';
 import EQSettings from './EQSettings';
 import VoiceCommandPanel from './VoiceCommandPanel';
-import VoiceCommandHelp from './VoiceCommandPanel';
+import VoiceCommandHelp from './VoiceCommandHelp';
 import FileUploader from './FileUploader';
 import ProfileEditor from './ProfileEditor';
 import SongsList from './SongsList';

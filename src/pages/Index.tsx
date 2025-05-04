@@ -8,14 +8,19 @@ import { soundEffects } from '@/lib/soundEffects';
 import { Button } from '@/components/ui/button';
 import { Mic, MicOff } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { voiceRecognition } from '@/lib/voiceRecognition';
 
 const Index = () => {
   const { isSignedUp, isVoiceListening, toggleVoiceListening } = useAudio();
   const [showControls, setShowControls] = useState(false);
+  const [voiceSupported, setVoiceSupported] = useState(true);
   
   useEffect(() => {
     // Initialize sound effects
     soundEffects.initialize();
+    
+    // Check if voice recognition is supported
+    setVoiceSupported(voiceRecognition.isSupported());
     
     // Set up the dynamic background gradient
     const root = document.documentElement;
@@ -65,7 +70,7 @@ const Index = () => {
       </div>
       
       {/* Voice control toggle before login */}
-      {!isSignedUp && showControls && (
+      {!isSignedUp && showControls && voiceSupported && (
         <div className="absolute top-4 right-4 z-10">
           <TooltipProvider>
             <Tooltip>

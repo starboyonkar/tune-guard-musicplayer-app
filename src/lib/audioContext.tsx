@@ -7,11 +7,14 @@ import {
   VoiceCommand, 
   Playlist,
   WaveformData,
-  VisSettings
+  VisSettings,
+  SirenDetectionState
 } from './types';
 import { toast } from '@/components/ui/use-toast';
-import { matchesVoiceCommand } from '@/lib/utils';
+import { matchesVoiceCommand, calculateDOBFromAge } from '@/lib/utils';
 import { VOICE_COMMANDS } from '@/lib/voiceCommands';
+import { voiceRecognition } from './voiceRecognition';
+import { soundEffects } from './soundEffects';
 
 const SAMPLE_SONGS: Song[] = [
   {
@@ -156,6 +159,14 @@ const defaultVisSettings: VisSettings = {
   overlay: true
 };
 
+const defaultSirenState: SirenDetectionState = {
+  isDetecting: false,
+  isDetected: false,
+  confidence: 0,
+  lastDetected: null,
+  wasPlayingBeforeSiren: false
+};
+
 const AudioContext = createContext<AudioContextType | undefined>(undefined);
 
 export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -177,6 +188,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [playlists, setPlaylists] = useState<Playlist[]>(SAMPLE_PLAYLISTS);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [visSettings, setVisSettings] = useState<VisSettings>(defaultVisSettings);
+  const [sirenDetection, setSirenDetection] = useState<SirenDetectionState>(defaultSirenState);
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -522,6 +534,11 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       updatedAt: new Date().toISOString()
     };
     
+    // If age is updated, calculate and set DOB automatically
+    if (partialProfile.age !== undefined) {
+      updatedProfile.dob = calculateDOBFromAge(partialProfile.age);
+    }
+    
     setProfileState(updatedProfile);
     
     if (partialProfile.age !== undefined || partialProfile.gender !== undefined) {
@@ -756,9 +773,27 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const logout = () => {
+    // Stop playback before logout
+    if (audioRef.current && playerState.isPlaying) {
+      audioRef.current.pause();
+    }
+    
+    // Update player state
+    setPlayerState(prevState => ({
+      ...prevState,
+      isPlaying: false,
+      currentTime: 0
+    }));
+    
+    // Reset profile and sign-up state
     setProfileState(null);
     setIsSignedUp(false);
     localStorage.removeItem('audioPersonaProfile');
+    
+    // Stop voice recognition if active
+    if (isVoiceListening) {
+      voiceRecognition.stop();
+    }
     
     toast({
       title: "Logged Out",
@@ -907,15 +942,28 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setTimeout(() => {
       processVoiceCommand(command);
       setProcessingVoice(false);
-    }, 1000);
+    }, 300); // Reduced delay to make commands feel more responsive
   };
 
   const toggleVoiceListening = () => {
-    setIsVoiceListening(prev => !prev);
-    if (!isVoiceListening) {
+    const newState = !isVoiceListening;
+    setIsVoiceListening(newState);
+    
+    if (newState) {
+      // Start voice recognition with our command processor
+      voiceRecognition.start(setVoiceCommand);
+      
       toast({
         title: "Voice Assistant Activated",
         description: "Listening for commands...",
+      });
+    } else {
+      // Stop voice recognition
+      voiceRecognition.stop();
+      
+      toast({
+        title: "Voice Assistant Deactivated",
+        description: "Voice commands are now off.",
       });
     }
   };
@@ -928,7 +976,19 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     // PLAY command handling
     if (matchesVoiceCommand(lowerCommand, VOICE_COMMANDS.PLAY)) {
       commandRecognized = true;
+      // If song is at beginning or paused, just play it
+      if (audioRef.current) {
+        if (playerState.currentTime <= 3) {
+          // If we're at the beginning, ensure we start from the very beginning
+          audioRef.current.currentTime = 0;
+        }
+      }
+      
       setPlayerState(prevState => ({ ...prevState, isPlaying: true }));
+      
+      // Play sound feedback
+      soundEffects.playTouchFeedback();
+      
       toast({
         title: "Playback Started",
         description: currentSong ? `Playing "${currentSong.title}"` : "Playing music",
@@ -938,6 +998,10 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     else if (matchesVoiceCommand(lowerCommand, VOICE_COMMANDS.PAUSE)) {
       commandRecognized = true;
       setPlayerState(prevState => ({ ...prevState, isPlaying: false }));
+      
+      // Play sound feedback
+      soundEffects.playTouchFeedback();
+      
       toast({
         title: "Playback Paused",
         description: "Music paused"
@@ -947,6 +1011,10 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     else if (matchesVoiceCommand(lowerCommand, VOICE_COMMANDS.NEXT)) {
       commandRecognized = true;
       nextSong();
+      
+      // Play sound feedback
+      soundEffects.playTouchFeedback();
+      
       toast({
         title: "Next Track",
         description: "Playing next song"
@@ -956,6 +1024,10 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     else if (matchesVoiceCommand(lowerCommand, VOICE_COMMANDS.PREVIOUS)) {
       commandRecognized = true;
       prevSong();
+      
+      // Play sound feedback
+      soundEffects.playTouchFeedback();
+      
       toast({
         title: "Previous Track",
         description: "Playing previous song"
@@ -964,17 +1036,27 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     // LOGOUT command handling
     else if (matchesVoiceCommand(lowerCommand, VOICE_COMMANDS.LOGOUT)) {
       commandRecognized = true;
+      
+      // Play sound notification
+      soundEffects.playNotification();
+      
       toast({
         title: "Logging out",
         description: "Signing out of your account..."
       });
-      setTimeout(() => logout(), 300); // Quick logout
+      
+      // Immediate logout with no delay
+      logout();
     }
     // EDIT_PROFILE command handling
     else if (matchesVoiceCommand(lowerCommand, VOICE_COMMANDS.EDIT_PROFILE)) {
       commandRecognized = true;
       const event = new CustomEvent('open-profile-editor');
       document.dispatchEvent(event);
+      
+      // Play sound feedback
+      soundEffects.playTouchFeedback();
+      
       toast({
         title: "Profile Editor",
         description: "Opening profile editor"
@@ -985,6 +1067,10 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       commandRecognized = true;
       const event = new CustomEvent('close-active-panel');
       document.dispatchEvent(event);
+      
+      // Play sound feedback
+      soundEffects.playTouchFeedback();
+      
       toast({
         title: "Closed",
         description: "Closing current view"
@@ -995,13 +1081,18 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       commandRecognized = true;
       const event = new CustomEvent('show-command-reference');
       document.dispatchEvent(event);
+      
+      // Play sound feedback
+      soundEffects.playTouchFeedback();
+      
       toast({
         title: "Help",
         description: "Showing available commands"
       });
     }
     
-    if (!commandRecognized) {
+    if (!commandRecognized && command.trim() !== '') {
+      // Only show toast for non-empty commands that weren't recognized
       toast({
         title: "Command Not Recognized",
         description: "Only supported voice commands are accepted",
@@ -1018,6 +1109,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     });
   };
 
+  // Effect for audio processing and waveform updates
   useEffect(() => {
     if (!audioRef.current) return;
     
@@ -1093,6 +1185,18 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       description: "Visualization has been reset"
     });
   };
+
+  // Handle auto-activation of voice recognition on startup if previously enabled
+  useEffect(() => {
+    if (isVoiceListening) {
+      // Delay slightly to ensure the component is fully mounted
+      const timer = setTimeout(() => {
+        voiceRecognition.start(setVoiceCommand);
+      }, 1000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isSignedUp]);
 
   return (
     <AudioContext.Provider value={{
