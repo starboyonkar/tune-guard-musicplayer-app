@@ -1,19 +1,20 @@
 
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useAudio } from '@/lib/audioContext';
 import { Mic, Command } from 'lucide-react';
 import { soundEffects } from '@/lib/soundEffects';
 import { COMMAND_GROUPS } from '@/lib/voiceCommands';
 
-const VoiceCommandPanel: React.FC = () => {
+const VoiceCommandHelp: React.FC = () => {
   const [open, setOpen] = useState(false);
+  const { isVoiceListening } = useAudio();
   
   // Listen for the help command
   useEffect(() => {
     const handleShowCommandHelp = (e: CustomEvent) => {
-      soundEffects.playTouchFeedback();
+      soundEffects.playNotification();
       setOpen(true);
     };
     
@@ -23,10 +24,6 @@ const VoiceCommandPanel: React.FC = () => {
       document.removeEventListener('show-command-reference', handleShowCommandHelp as EventListener);
     };
   }, []);
-
-  const { isVoiceListening } = useAudio();
-  
-  if (!isVoiceListening) return null;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -107,4 +104,4 @@ const VoiceCommandPanel: React.FC = () => {
   );
 };
 
-export default VoiceCommandPanel;
+export default VoiceCommandHelp;
