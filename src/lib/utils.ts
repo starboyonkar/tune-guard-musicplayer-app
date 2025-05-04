@@ -12,6 +12,16 @@ export function formatTime(seconds: number): string {
   return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
 }
 
+export function formatDate(date: Date): string {
+  return date.toISOString().split('T')[0]; // Returns YYYY-MM-DD format
+}
+
+export function calculateDOBFromAge(age: number): Date {
+  const today = new Date();
+  const birthYear = today.getFullYear() - age;
+  return new Date(birthYear, today.getMonth(), today.getDate());
+}
+
 export function matchesVoiceCommand(input: string, commandVariations: string[]): boolean {
   const normalizedInput = input.toLowerCase().trim();
   
