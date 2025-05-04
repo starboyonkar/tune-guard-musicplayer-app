@@ -4,7 +4,6 @@ import { VoiceRecognitionService } from '../lib/voiceCommands';
 import { toast } from '@/components/ui/use-toast';
 import { recognizeVoiceCommand } from '@/lib/utils';
 import { VOICE_COMMANDS } from '@/lib/voiceCommands';
-import { soundEffects } from '@/lib/soundEffects';
 
 interface UseVoiceRecognitionProps {
   onCommand: (command: string) => void;
@@ -52,12 +51,6 @@ export function useVoiceRecognition({ onCommand, enabled }: UseVoiceRecognitionP
         description: "Listening for commands...",
         duration: 2000,
       });
-      
-      try {
-        soundEffects.playNotification();
-      } catch (error) {
-        console.error("Error playing notification sound:", error);
-      }
       
       return true;
     }

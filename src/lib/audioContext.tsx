@@ -12,7 +12,6 @@ import {
 import { toast } from '@/components/ui/use-toast';
 import { matchesVoiceCommand } from '@/lib/utils';
 import { VOICE_COMMANDS } from '@/lib/voiceCommands';
-import { soundEffects } from '@/lib/soundEffects';
 
 const SAMPLE_SONGS: Song[] = [
   {
