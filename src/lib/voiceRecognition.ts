@@ -9,6 +9,14 @@
 import { VOICE_COMMANDS } from './voiceCommands';
 import { matchesVoiceCommand } from './utils';
 
+// Add type declarations for Web Speech API
+declare global {
+  interface Window {
+    SpeechRecognition: typeof SpeechRecognition;
+    webkitSpeechRecognition: typeof SpeechRecognition;
+  }
+}
+
 type VoiceRecognitionCallback = (command: string) => void;
 
 class VoiceRecognitionService {

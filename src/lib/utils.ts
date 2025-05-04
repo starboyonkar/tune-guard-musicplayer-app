@@ -47,6 +47,20 @@ export function matchesVoiceCommand(input: string, commands: string[]): boolean 
   });
 }
 
+// Add the missing formatDate function
+export function formatDate(dateString: string): string {
+  if (!dateString) return '';
+  
+  // Create a date object from the input string
+  const date = new Date(dateString);
+  
+  // Check if the date is valid
+  if (isNaN(date.getTime())) return '';
+  
+  // Format the date as YYYY-MM-DD (ISO format for input type="date")
+  return date.toISOString().split('T')[0];
+}
+
 export function calculateDOBFromAge(age: number): string {
   const today = new Date();
   const birthYear = today.getFullYear() - age;
