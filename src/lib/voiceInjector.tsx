@@ -2,6 +2,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import VoiceManager from '@/components/VoiceManager';
+import { AudioProvider } from '@/lib/audioContext';
 
 // This function injects the voice control UI into the DOM
 // without modifying any existing components
@@ -12,10 +13,13 @@ export function injectVoiceControl() {
   document.body.appendChild(voiceControlContainer);
   
   // Render the voice control UI into the container
+  // Wrap with AudioProvider to ensure hooks can access the context
   const root = ReactDOM.createRoot(voiceControlContainer);
   root.render(
     <React.StrictMode>
-      <VoiceManager />
+      <AudioProvider>
+        <VoiceManager />
+      </AudioProvider>
     </React.StrictMode>
   );
 }
