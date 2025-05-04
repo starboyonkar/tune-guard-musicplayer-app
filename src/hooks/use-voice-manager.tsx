@@ -10,6 +10,7 @@ export function useVoiceManager() {
     const setupVoiceEvents = () => {
       // This is intentionally left empty as the actual implementation
       // happens in the VoiceControlProvider component
+      console.log('Voice events initialized for profile:', profile?.name);
     };
 
     if (profile) {
