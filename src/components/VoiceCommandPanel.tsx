@@ -7,7 +7,7 @@ import { Mic, Command } from 'lucide-react';
 import { soundEffects } from '@/lib/soundEffects';
 import { COMMAND_GROUPS } from '@/lib/voiceCommands';
 
-const VoiceCommandPanel: React.FC = () => {
+const VoiceCommandHelp: React.FC = () => {
   const [open, setOpen] = useState(false);
   
   // Listen for the help command
@@ -107,4 +107,4 @@ const VoiceCommandPanel: React.FC = () => {
   );
 };
 
-export default VoiceCommandPanel;
+export default VoiceCommandHelp;
