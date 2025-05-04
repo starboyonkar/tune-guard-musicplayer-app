@@ -1,3 +1,4 @@
+
 // User Profile Type
 export interface UserProfile {
   name: string;
@@ -73,4 +74,12 @@ export interface VisSettings {
   showProcessed: boolean;
   showOriginal: boolean;
   overlay: boolean;
+}
+
+// Siren Detection Settings
+export interface SirenDetectionSettings {
+  enabled: boolean;
+  sensitivity: number;
+  autoResume: boolean;
+  pauseDuration: number; // additional seconds to wait after siren ends before resuming
 }

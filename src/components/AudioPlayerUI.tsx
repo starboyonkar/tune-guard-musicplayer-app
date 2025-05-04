@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card } from '@/components/ui/card';
 import PlayerControls from './PlayerControls';
@@ -10,8 +11,9 @@ import VoiceCommandHelp from './VoiceCommandPanel';
 import FileUploader from './FileUploader';
 import ProfileEditor from './ProfileEditor';
 import SongsList from './SongsList';
+import SirenDetectionControl from './SirenDetectionControl';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { AudioWaveform, Settings, Music, LogOut } from 'lucide-react';
+import { AudioWaveform, Settings, Music, LogOut, Siren } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAudio } from '@/lib/audioContext';
 import { Avatar } from '@/components/ui/avatar';
@@ -56,12 +58,15 @@ const AudioPlayerUI: React.FC = () => {
         {/* Side panels for smaller screens */}
         <div className="flex flex-col sm:flex-row gap-4 mt-4">
           <Tabs defaultValue="eq" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="eq">
                 <Settings className="mr-1 h-4 w-4" /> EQ
               </TabsTrigger>
               <TabsTrigger value="voice">
                 <AudioWaveform className="mr-1 h-4 w-4" /> Voice
+              </TabsTrigger>
+              <TabsTrigger value="siren">
+                <Siren className="mr-1 h-4 w-4" /> Siren
               </TabsTrigger>
             </TabsList>
             <TabsContent value="eq">
@@ -72,6 +77,11 @@ const AudioPlayerUI: React.FC = () => {
             <TabsContent value="voice">
               <Card>
                 <VoiceCommandPanel />
+              </Card>
+            </TabsContent>
+            <TabsContent value="siren">
+              <Card>
+                <SirenDetectionControl />
               </Card>
             </TabsContent>
           </Tabs>
