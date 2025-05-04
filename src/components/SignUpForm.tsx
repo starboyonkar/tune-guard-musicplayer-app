@@ -1,135 +1,162 @@
 
-import { useState } from 'react';
-import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { useAudio } from '@/lib/audioContext';
-import { calculateDOBFromAge } from '@/lib/utils';
-import { Card } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useAudio } from '@/lib/audioContext';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { soundEffects } from '@/lib/soundEffects';
 
-const formSchema = z.object({
-  username: z.string().min(2, {
-    message: "Username must be at least 2 characters.",
-  }),
-  age: z.string().transform((val) => parseInt(val, 10)).refine((val) => !isNaN(val) && val >= 13 && val <= 120, {
-    message: "Age must be between 13 and 120",
-  }),
-  preferences: z.array(z.string()).default([]),
-});
+const SignUpForm: React.FC = () => {
+  const { setProfile } = useAudio();
+  const [name, setName] = useState('');
+  const [age, setAge] = useState('');
+  const [dob, setDob] = useState('');
+  const [gender, setGender] = useState<'male' | 'female' | 'non-binary' | 'prefer-not-to-say'>('prefer-not-to-say');
+  const [isLoading, setIsLoading] = useState(false);
 
-const SignUpForm = () => {
-  const { signUp } = useAudio();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  // Form definition with Zod schema
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      username: "",
-      age: "25",
-      preferences: [],
-    },
-  });
-
-  // Handle form submission
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    setIsSubmitting(true);
+  useEffect(() => {
+    soundEffects.initialize();
     
-    try {
-      // Calculate DOB from age
-      const dob = calculateDOBFromAge(values.age);
-      
-      // Call signUp from AudioContext
-      await signUp({
-        username: values.username,
-        dateOfBirth: dob,
-        preferences: values.preferences,
+    // Initialize blinking gradient background
+    const root = document.documentElement;
+    const updateGradient = () => {
+      const hue1 = Math.floor(Math.random() * 20) + 200; // Blue range
+      const hue2 = Math.floor(Math.random() * 20) + 180; // Blue-cyan range
+      root.style.setProperty(
+        '--dynamic-gradient', 
+        `linear-gradient(135deg, hsla(${hue1}, 80%, 70%, 0.8), hsla(${hue2}, 70%, 80%, 0.9))`
+      );
+    };
+    
+    updateGradient();
+    const interval = setInterval(updateGradient, 3000);
+    
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    
+    // Play notification sound
+    soundEffects.playNotification();
+    
+    setTimeout(() => {
+      setProfile({
+        id: `user-${Date.now()}`,
+        name,
+        age: parseInt(age),
+        dob,
+        gender,
+        createdAt: new Date().toISOString(),
+        preferences: {
+          musicExperience: 'casual',
+          favoriteGenre: 'pop'
+        }
       });
-    } catch (error) {
-      console.error("Sign up failed:", error);
-    } finally {
-      setIsSubmitting(false);
-    }
+      setIsLoading(false);
+    }, 1000);
   };
 
   return (
-    <Card className="glass-card w-full max-w-md p-6 space-y-8 animate-fadeIn">
-      <div className="space-y-2 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight neon-text">Welcome to TUNE GUARD</h1>
-        <p className="text-sm text-muted-foreground">Create your profile to get started</p>
+    <div className="w-full max-w-md mx-auto p-6 animate-fade-in">
+      <div className="flex justify-center mb-8">
+        <Avatar className="h-32 w-32 border-4 border-white/20 shadow-lg animate-pulse-slow">
+          <AvatarImage 
+            src="/lovable-uploads/d4fe6f3e-e72d-4760-93e5-5f71a12f2238.png" 
+            alt="TUNE GUARD" 
+            className="object-cover"
+          />
+          <AvatarFallback className="text-3xl font-bold text-white">TG</AvatarFallback>
+        </Avatar>
       </div>
       
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <FormField
-            control={form.control}
-            name="username"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Username</FormLabel>
-                <FormControl>
-                  <Input placeholder="Enter your username" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <FormField
-            control={form.control}
-            name="age"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Age</FormLabel>
-                <FormControl>
-                  <Input type="number" placeholder="25" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <FormField
-            control={form.control}
-            name="preferences"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Music Experience</FormLabel>
-                <Select 
-                  onValueChange={(value) => field.onChange([value])}
-                  defaultValue={field.value[0]}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select your experience level" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="beginner">Beginner</SelectItem>
-                    <SelectItem value="intermediate">Intermediate</SelectItem>
-                    <SelectItem value="advanced">Advanced</SelectItem>
-                    <SelectItem value="professional">Professional</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <Button 
-            type="submit" 
-            className="w-full bg-futuristic-accent1 hover:bg-futuristic-accent1/90 transition-all" 
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? "Creating Profile..." : "Create Profile"}
-          </Button>
-        </form>
-      </Form>
-    </Card>
+      <h1 className="text-3xl md:text-5xl font-bold text-center mb-8 neon-text">
+        Welcome to Cognitive Audio Synthesis
+      </h1>
+      
+      <Card className="glass border-futuristic-border backdrop-blur-xl bg-white/5">
+        <CardHeader className="border-b border-futuristic-border">
+          <CardTitle className="text-xl text-center text-futuristic-accent1 neon-text">Create Your Audio Profile</CardTitle>
+        </CardHeader>
+        <CardContent className="pt-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="name" className="text-white/90">Your Name</Label>
+              <Input
+                id="name"
+                placeholder="Enter your name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="border-futuristic-border bg-white/5 backdrop-blur-sm focus:border-futuristic-accent1"
+                required
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="age" className="text-white/90">Age</Label>
+              <Input
+                id="age"
+                type="number"
+                placeholder="Enter your age"
+                value={age}
+                onChange={(e) => setAge(e.target.value)}
+                className="border-futuristic-border bg-white/5 backdrop-blur-sm focus:border-futuristic-accent1"
+                min="1"
+                max="120"
+                required
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="dob" className="text-white/90">Date of Birth</Label>
+              <Input
+                id="dob"
+                type="date"
+                value={dob}
+                onChange={(e) => setDob(e.target.value)}
+                className="border-futuristic-border bg-white/5 backdrop-blur-sm focus:border-futuristic-accent1"
+                required
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="gender" className="text-white/90">Gender</Label>
+              <Select
+                value={gender}
+                onValueChange={(val) => setGender(val as any)}
+              >
+                <SelectTrigger className="border-futuristic-border bg-white/5 backdrop-blur-sm">
+                  <SelectValue placeholder="Select gender" />
+                </SelectTrigger>
+                <SelectContent className="bg-futuristic-bg border-futuristic-border">
+                  <SelectItem value="male">Male</SelectItem>
+                  <SelectItem value="female">Female</SelectItem>
+                  <SelectItem value="non-binary">Non-binary</SelectItem>
+                  <SelectItem value="prefer-not-to-say">Prefer not to say</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <Button 
+              type="submit" 
+              disabled={isLoading}
+              className="w-full bg-gradient-to-r from-futuristic-accent1 to-futuristic-accent2 hover:opacity-90 transition-all animate-glow"
+              onClick={() => soundEffects.playTouchFeedback()}
+            >
+              {isLoading ? "Creating Profile..." : "Create Profile"}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+      
+      <div className="text-center mt-6 text-futuristic-muted text-sm">
+        TUNE GUARD - Cognitive Audio Synthesis
+      </div>
+    </div>
   );
 };
 
