@@ -95,6 +95,7 @@ interface AudioContextType {
   setEQSettings: (settings: EQSettings) => void;
   songs: Song[];
   addSong: (file: File) => void;
+  deleteSong: (songId: string) => void;
   playerState: PlayerState;
   voiceCommand: string;
   setVoiceCommand: (command: string) => void;
@@ -173,7 +174,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [isSignedUp, setIsSignedUp] = useState<boolean>(false);
   const [processingVoice, setProcessingVoice] = useState<boolean>(false);
   const [customSongs, setCustomSongs] = useState<Song[]>([]);
-  const [playlists, setPlaylists] = useState<Playlist[]>(SAMPLE_PLAYLISTS);
+  const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [visSettings, setVisSettings] = useState<VisSettings>(defaultVisSettings);
   
@@ -190,6 +191,54 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const currentSong = playerState.currentSongId 
     ? songs.find(song => song.id === playerState.currentSongId) 
     : null;
+
+  // Initialize custom songs from localStorage
+  useEffect(() => {
+    try {
+      const savedCustomSongs = localStorage.getItem('tuneGuardCustomSongs');
+      if (savedCustomSongs) {
+        const parsedSongs = JSON.parse(savedCustomSongs);
+        if (Array.isArray(parsedSongs)) {
+          setCustomSongs(parsedSongs);
+          console.log('Loaded saved songs from localStorage:', parsedSongs.length);
+        }
+      }
+      
+      const savedPlaylists = localStorage.getItem('audioPersonaPlaylists');
+      if (savedPlaylists) {
+        try {
+          const parsedPlaylists = JSON.parse(savedPlaylists);
+          if (Array.isArray(parsedPlaylists)) {
+            setPlaylists(parsedPlaylists);
+          }
+        } catch (error) {
+          console.error("Error loading playlists:", error);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading songs from localStorage:', error);
+    }
+  }, []);
+
+  // Save custom songs to localStorage whenever they change
+  useEffect(() => {
+    if (customSongs.length > 0) {
+      // Before saving, convert file URLs to persistent references if needed
+      const persistableSongs = customSongs.map(song => {
+        // If this is a newly added song with a blob URL that we want to persist
+        // We need to save relevant properties but not the actual blob URL
+        // as those are temporary and won't survive a refresh
+        return {
+          ...song,
+          // For File objects, we can only save metadata - the actual file data would be lost
+          // during localStorage serialization, so users would need to re-upload on refresh
+        };
+      });
+      
+      localStorage.setItem('tuneGuardCustomSongs', JSON.stringify(persistableSongs));
+      console.log('Saved custom songs to localStorage:', persistableSongs.length);
+    }
+  }, [customSongs]);
 
   const initializeAudioContext = () => {
     if (!audioContextRef.current) {
@@ -410,6 +459,67 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const deleteSong = (songId: string) => {
+    // First check if this is a sample song (which should not be deletable)
+    if (SAMPLE_SONGS.some(song => song.id === songId)) {
+      toast({
+        title: "Cannot Delete Demo Song",
+        description: "Sample songs cannot be removed from the library",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Check if song is currently playing
+    if (playerState.currentSongId === songId) {
+      // Stop playback or switch to another song
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+      
+      // Find next available song
+      const songsArray = [...songs];
+      const currentIndex = songsArray.findIndex(song => song.id === songId);
+      let nextSongId = null;
+      
+      if (songsArray.length > 1) {
+        const nextIndex = currentIndex === songsArray.length - 1 ? 0 : currentIndex + 1;
+        nextSongId = songsArray[nextIndex].id;
+      }
+      
+      setPlayerState(prevState => ({
+        ...prevState,
+        currentSongId: nextSongId,
+        isPlaying: false,
+        currentTime: 0
+      }));
+    }
+    
+    // Remove song from custom songs
+    setCustomSongs(prevSongs => prevSongs.filter(song => song.id !== songId));
+    
+    // Also remove from playlists
+    setPlaylists(prevPlaylists => 
+      prevPlaylists.map(playlist => ({
+        ...playlist,
+        songs: playlist.songs.filter(id => id !== songId)
+      }))
+    );
+    
+    // Update localStorage for playlists
+    localStorage.setItem('audioPersonaPlaylists', JSON.stringify(
+      playlists.map(playlist => ({
+        ...playlist,
+        songs: playlist.songs.filter(id => id !== songId)
+      }))
+    ));
+    
+    toast({
+      title: "Song Deleted",
+      description: "The song has been removed from your library"
+    });
   };
 
   useEffect(() => {
@@ -1043,6 +1153,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setEQSettings,
       songs,
       addSong,
+      deleteSong,
       playerState,
       voiceCommand,
       setVoiceCommand,
