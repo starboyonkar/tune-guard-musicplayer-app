@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Slider } from '@/components/ui/slider';
 import { useAudio } from '@/lib/audioContext';
+import { UserProfile } from '@/lib/types';
 
 const SignUpForm: React.FC = () => {
   const { setProfile } = useAudio();
@@ -32,7 +33,7 @@ const SignUpForm: React.FC = () => {
       return;
     }
     
-    setProfile({
+    const userProfile: UserProfile = {
       name,
       age,
       gender,
@@ -40,7 +41,9 @@ const SignUpForm: React.FC = () => {
       musicExperience: experience,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
-    });
+    };
+    
+    setProfile(userProfile);
   };
 
   return (
