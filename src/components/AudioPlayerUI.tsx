@@ -6,17 +6,14 @@ import SongInfo from './SongInfo';
 import Waveform from './Waveform';
 import WaveformAnalyzer from './WaveformAnalyzer';
 import EQSettings from './EQSettings';
-import VoiceCommandPanel from './VoiceCommandPanel';
-import VoiceCommandHelp from './VoiceCommandPanel';
 import FileUploader from './FileUploader';
 import ProfileEditor from './ProfileEditor';
 import SongsList from './SongsList';
 import SirenDetectionControl from './SirenDetectionControl';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { AudioWaveform, Settings, Music, LogOut, Siren } from 'lucide-react';
+import { Settings, Music, LogOut, Siren } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAudio } from '@/lib/audioContext';
-import { Avatar } from '@/components/ui/avatar';
 
 const AudioPlayerUI: React.FC = () => {
   const { logout, profile } = useAudio();
@@ -58,12 +55,9 @@ const AudioPlayerUI: React.FC = () => {
         {/* Side panels for smaller screens */}
         <div className="flex flex-col sm:flex-row gap-4 mt-4">
           <Tabs defaultValue="eq" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="eq">
                 <Settings className="mr-1 h-4 w-4" /> EQ
-              </TabsTrigger>
-              <TabsTrigger value="voice">
-                <AudioWaveform className="mr-1 h-4 w-4" /> Voice
               </TabsTrigger>
               <TabsTrigger value="siren">
                 <Siren className="mr-1 h-4 w-4" /> Siren
@@ -74,11 +68,6 @@ const AudioPlayerUI: React.FC = () => {
                 <EQSettings />
               </Card>
             </TabsContent>
-            <TabsContent value="voice">
-              <Card>
-                <VoiceCommandPanel />
-              </Card>
-            </TabsContent>
             <TabsContent value="siren">
               <Card>
                 <SirenDetectionControl />
@@ -87,7 +76,6 @@ const AudioPlayerUI: React.FC = () => {
           </Tabs>
         </div>
       </div>
-      <VoiceCommandHelp />
     </div>
   );
 };

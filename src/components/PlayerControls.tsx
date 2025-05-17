@@ -5,7 +5,7 @@ import { Slider } from '@/components/ui/slider';
 import { useAudio } from '@/lib/audioContext';
 import { 
   Play, Pause, SkipBack, SkipForward, 
-  Volume2, VolumeX, Mic, Shuffle, Repeat, Repeat1
+  Volume2, VolumeX, Shuffle, Repeat, Repeat1
 } from 'lucide-react';
 import { soundEffects } from '@/lib/soundEffects';
 import { formatTime } from '@/lib/utils';
@@ -20,8 +20,6 @@ const PlayerControls: React.FC = () => {
     setVolume, 
     toggleMute,
     currentSong,
-    isVoiceListening,
-    toggleVoiceListening,
     toggleShuffle,
     toggleRepeat
   } = useAudio();
@@ -54,11 +52,6 @@ const PlayerControls: React.FC = () => {
   const handleToggleMute = () => {
     soundEffects.playTouchFeedback();
     toggleMute();
-  };
-
-  const handleToggleVoice = () => {
-    soundEffects.playNotification();
-    toggleVoiceListening();
   };
 
   const handleToggleShuffle = () => {
@@ -167,22 +160,6 @@ const PlayerControls: React.FC = () => {
               className="cursor-pointer"
             />
           </div>
-          
-          {/* Voice control icon - made more prominent */}
-          <Button 
-            variant={isVoiceListening ? "default" : "outline"}
-            size="icon" 
-            onClick={handleToggleVoice}
-            className={isVoiceListening 
-              ? "bg-futuristic-accent1 text-white hover:bg-futuristic-accent1/90 relative" 
-              : "text-futuristic-muted hover:text-futuristic-accent1 hover:bg-futuristic-accent1/20 border-futuristic-accent2"}
-            title={isVoiceListening ? "Voice Control Active" : "Enable Voice Control"}
-          >
-            <Mic className={isVoiceListening ? "animate-pulse" : ""} />
-            {isVoiceListening && (
-              <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full animate-ping"></span>
-            )}
-          </Button>
         </div>
       </div>
     </div>

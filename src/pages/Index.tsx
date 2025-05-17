@@ -5,12 +5,9 @@ import SignUpForm from '@/components/SignUpForm';
 import AudioPlayerUI from '@/components/AudioPlayerUI';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { soundEffects } from '@/lib/soundEffects';
-import { Button } from '@/components/ui/button';
-import { Mic, MicOff } from 'lucide-react';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const Index = () => {
-  const { isSignedUp, isVoiceListening, toggleVoiceListening } = useAudio();
+  const { isSignedUp } = useAudio();
   const [showControls, setShowControls] = useState(false);
   
   useEffect(() => {
@@ -40,11 +37,6 @@ const Index = () => {
     };
   }, []);
 
-  const handleToggleVoice = () => {
-    soundEffects.playTouchFeedback();
-    toggleVoiceListening();
-  };
-
   return (
     <div className="min-h-screen w-full bg-futuristic-bg overflow-hidden relative">
       {/* Background gradient elements */}
@@ -63,31 +55,6 @@ const Index = () => {
         </Avatar>
         <span className="text-lg font-semibold neon-text">TUNE GUARD</span>
       </div>
-      
-      {/* Voice control toggle before login */}
-      {!isSignedUp && showControls && (
-        <div className="absolute top-4 right-4 z-10">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant={isVoiceListening ? "default" : "secondary"}
-                  size="icon" 
-                  onClick={handleToggleVoice}
-                  className={isVoiceListening 
-                    ? "bg-futuristic-accent1 text-white hover:bg-futuristic-accent1/90 animate-pulse-slow" 
-                    : "bg-futuristic-bg/50 text-futuristic-muted border border-futuristic-border"}
-                >
-                  {isVoiceListening ? <Mic /> : <MicOff />}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{isVoiceListening ? "Voice Control Active" : "Enable Voice Control"}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
-      )}
       
       {/* Main content */}
       <div className="container mx-auto min-h-screen flex items-center">
