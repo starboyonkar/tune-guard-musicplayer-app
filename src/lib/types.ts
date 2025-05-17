@@ -1,4 +1,3 @@
-
 // User Profile Type
 export interface UserProfile {
   name: string;
@@ -9,6 +8,7 @@ export interface UserProfile {
   updatedAt?: string;
   dob?: string; // Add DOB field
   musicExperience?: string; // Music experience level
+  id?: string; // Add optional id field
 }
 
 // EQ Settings based on age profile

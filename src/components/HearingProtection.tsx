@@ -1,9 +1,8 @@
-
 import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 import { useAudio } from '@/lib/audioContext';
-import { HeadphonesOff, ShieldCheck, Shield } from 'lucide-react';
+import { HeadphoneOff, ShieldCheck, Shield } from 'lucide-react';
 import { 
   ChartContainer, 
   ChartTooltip, 
