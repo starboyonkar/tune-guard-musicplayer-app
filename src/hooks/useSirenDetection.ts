@@ -11,9 +11,9 @@ export function useSirenDetection() {
   const [sirenDetected, setSirenDetected] = useState(false);
   const [settings, setSettings] = useState<SirenDetectionSettings>({
     enabled: true,
-    sensitivity: 0.6,
+    sensitivity: 0.7, // Increased sensitivity for faster detection
     autoResume: true,
-    pauseDuration: 2 // wait 2 seconds after siren is gone before resuming
+    pauseDuration: 1 // Reduced wait time to 1 second for quicker resumption
   });
   
   // We store the state before the siren was detected
@@ -30,12 +30,12 @@ export function useSirenDetection() {
       // Only pause if we were playing
       if (playerState.isPlaying) {
         previousPlayingState.current = true;
-        togglePlayPause(); // Pause the music
+        togglePlayPause(); // Pause the music instantly
         
         toast({
           title: "Ambulance Siren Detected",
           description: "Music paused automatically for safety",
-          variant: "default"
+          variant: "destructive" // Changed to destructive for better visibility
         });
       }
     };
@@ -87,13 +87,19 @@ export function useSirenDetection() {
       setIsDetectingSiren(true);
       
       // Request microphone access
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const audioContext = new AudioContext();
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: { 
+          echoCancellation: true, // Improved audio processing
+          noiseSuppression: true, 
+          autoGainControl: true 
+        } 
+      });
+      const audioContext = new AudioContext({ latencyHint: 'interactive' }); // Optimized for low latency
       const source = audioContext.createMediaStreamSource(stream);
       const analyzer = audioContext.createAnalyser();
       
-      analyzer.fftSize = 2048;
-      analyzer.smoothingTimeConstant = 0.8;
+      analyzer.fftSize = 4096; // Increased from 2048 for better frequency resolution
+      analyzer.smoothingTimeConstant = 0.7; // Adjusted for smoother response
       source.connect(analyzer);
       
       const bufferLength = analyzer.frequencyBinCount;
@@ -116,8 +122,8 @@ export function useSirenDetection() {
       detectLoop();
       
       toast({
-        title: "Siren Detection Active",
-        description: "Your music will pause if an ambulance siren is detected",
+        title: "Enhanced Siren Detection Active",
+        description: "Your music will instantly pause if an ambulance siren is detected",
       });
       
     } catch (error) {

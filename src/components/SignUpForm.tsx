@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -52,10 +51,7 @@ const SignUpForm: React.FC = () => {
         dob,
         gender,
         createdAt: new Date().toISOString(),
-        preferences: {
-          musicExperience: 'casual',
-          favoriteGenre: 'pop'
-        }
+        preferences: ['casual-listening', 'workout']
       });
       setIsLoading(false);
     }, 1000);

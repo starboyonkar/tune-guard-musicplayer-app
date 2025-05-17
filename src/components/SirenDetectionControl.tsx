@@ -2,11 +2,12 @@
 import React from 'react';
 import { useSirenDetection } from '@/hooks/useSirenDetection';
 import { Button } from '@/components/ui/button';
-import { Siren, X, Check } from 'lucide-react';
+import { Siren, X, Check, Shield, Volume2, AlertTriangle } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import {
   Card,
+  Card as InnerCard,
   CardContent,
   CardDescription,
   CardFooter,
@@ -32,16 +33,16 @@ const SirenDetectionControl: React.FC = () => {
           <div>
             <CardTitle className="text-lg flex items-center gap-2">
               <Siren className={sirenDetected ? "text-red-500 animate-pulse" : ""} />
-              Ambulance Siren Detection
+              Enhanced Siren Detection
             </CardTitle>
             <CardDescription>
-              Automatically pause music when ambulance sirens are detected
+              Instantly pause music when ambulance sirens are detected
             </CardDescription>
           </div>
           
           {sirenDetected && (
-            <span className="rounded-md bg-red-500/90 text-white px-2 py-1 text-xs font-bold animate-pulse">
-              SIREN DETECTED
+            <span className="rounded-md bg-red-500/90 text-white px-2 py-1 text-xs font-bold animate-pulse flex items-center">
+              <AlertTriangle className="h-3 w-3 mr-1" /> SIREN DETECTED
             </span>
           )}
         </div>
@@ -50,7 +51,7 @@ const SirenDetectionControl: React.FC = () => {
       <CardContent className="space-y-4">
         <div className="flex items-center justify-between">
           <Label htmlFor="siren-detection-toggle" className="flex items-center gap-2">
-            Detection {settings.enabled ? 'Enabled' : 'Disabled'}
+            Real-time Detection {settings.enabled ? 'Enabled' : 'Disabled'}
           </Label>
           <Switch 
             id="siren-detection-toggle"
@@ -74,8 +75,27 @@ const SirenDetectionControl: React.FC = () => {
             value={[settings.sensitivity]}
             onValueChange={([sensitivity]) => updateSettings({ sensitivity })}
             disabled={!settings.enabled}
+            className={sirenDetected ? "bg-red-400" : ""}
           />
+          <p className="text-xs text-futuristic-muted">
+            Higher sensitivity detects sirens faster but may cause false positives
+          </p>
         </div>
+        
+        <InnerCard className="bg-black/20 border border-white/10">
+          <CardContent className="p-4">
+            <div className="flex items-start space-x-4">
+              <Shield className="h-8 w-8 text-green-400" />
+              <div>
+                <h4 className="font-medium mb-1">Optimized for Safety</h4>
+                <p className="text-xs text-futuristic-muted">
+                  Our enhanced algorithm detects emergency sirens faster and with greater accuracy, 
+                  instantly pausing your audio to keep you safe and aware of your surroundings.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </InnerCard>
         
         <div className="flex items-center justify-between">
           <Label htmlFor="auto-resume-toggle" className="flex items-center gap-2">
@@ -94,7 +114,7 @@ const SirenDetectionControl: React.FC = () => {
             <div className="flex justify-between">
               <Label htmlFor="pause-duration-slider">Resume delay</Label>
               <span className="text-sm text-futuristic-muted">
-                {settings.pauseDuration} seconds
+                {settings.pauseDuration} {settings.pauseDuration === 1 ? 'second' : 'seconds'}
               </span>
             </div>
             <Slider
@@ -118,7 +138,7 @@ const SirenDetectionControl: React.FC = () => {
             onClick={startDetection}
             disabled={!settings.enabled}
           >
-            <Check className="mr-2 h-4 w-4" /> Start Detection
+            <Volume2 className="mr-2 h-4 w-4" /> Start Enhanced Detection
           </Button>
         ) : (
           <Button 

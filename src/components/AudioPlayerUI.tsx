@@ -10,8 +10,9 @@ import FileUploader from './FileUploader';
 import ProfileEditor from './ProfileEditor';
 import SongsList from './SongsList';
 import SirenDetectionControl from './SirenDetectionControl';
+import HearingProtection from './HearingProtection'; // Added import for new component
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Settings, Music, LogOut, Siren } from 'lucide-react';
+import { Settings, Music, LogOut, Siren, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAudio } from '@/lib/audioContext';
 
@@ -42,6 +43,11 @@ const AudioPlayerUI: React.FC = () => {
           <PlayerControls />
         </Card>
         
+        {/* Hearing Protection Visual Feedback Panel */}
+        <Card className="mb-4">
+          <HearingProtection />
+        </Card>
+        
         {/* Songs List */}
         <Card className="p-4 mb-4">
           <SongsList />
@@ -55,12 +61,15 @@ const AudioPlayerUI: React.FC = () => {
         {/* Side panels for smaller screens */}
         <div className="flex flex-col sm:flex-row gap-4 mt-4">
           <Tabs defaultValue="eq" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="eq">
                 <Settings className="mr-1 h-4 w-4" /> EQ
               </TabsTrigger>
               <TabsTrigger value="siren">
                 <Siren className="mr-1 h-4 w-4" /> Siren
+              </TabsTrigger>
+              <TabsTrigger value="hearing">
+                <ShieldCheck className="mr-1 h-4 w-4" /> Protection
               </TabsTrigger>
             </TabsList>
             <TabsContent value="eq">
@@ -71,6 +80,11 @@ const AudioPlayerUI: React.FC = () => {
             <TabsContent value="siren">
               <Card>
                 <SirenDetectionControl />
+              </Card>
+            </TabsContent>
+            <TabsContent value="hearing">
+              <Card>
+                <HearingProtection />
               </Card>
             </TabsContent>
           </Tabs>

@@ -79,7 +79,7 @@ const SongsList: React.FC = () => {
               className={`h-8 w-8 rounded-full transition-colors ${
                 playerState.shuffleEnabled ? 'text-futuristic-accent1 hover:bg-futuristic-accent1/20' : 'text-futuristic-muted hover:bg-futuristic-bg/30'
               }`}
-              title={playerState.shuffleEnabled ? "Shuffle Enabled" : "Shuffle Disabled"}
+              aria-label={playerState.shuffleEnabled ? "Shuffle Enabled" : "Shuffle Disabled"}
             >
               <Shuffle className={`h-4 w-4 ${playerState.shuffleEnabled ? 'neon-glow' : ''}`} />
             </Button>
@@ -91,7 +91,7 @@ const SongsList: React.FC = () => {
               className={`h-8 w-8 rounded-full transition-colors ${
                 playerState.repeatMode !== 'off' ? 'text-futuristic-accent1 hover:bg-futuristic-accent1/20' : 'text-futuristic-muted hover:bg-futuristic-bg/30'
               }`}
-              title={`Repeat: ${playerState.repeatMode}`}
+              aria-label={`Repeat: ${playerState.repeatMode}`}
             >
               {playerState.repeatMode === 'one' ? (
                 <Repeat1 className="h-4 w-4 neon-glow" aria-label="Repeat One" />
@@ -174,6 +174,7 @@ const SongsList: React.FC = () => {
                         soundEffects.playTouchFeedback();
                         playSong(song.id);
                       }}
+                      aria-label={currentSong?.id === song.id && playerState.isPlaying ? "Pause" : "Play"}
                     >
                       {currentSong?.id === song.id && playerState.isPlaying ? (
                         <Pause className="h-4 w-4 text-futuristic-accent1" />
