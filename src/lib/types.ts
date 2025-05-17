@@ -8,7 +8,6 @@ export interface UserProfile {
   createdAt: string;
   updatedAt?: string;
   dob?: string; // Add DOB field
-  musicExperience?: number;
 }
 
 // EQ Settings based on age profile

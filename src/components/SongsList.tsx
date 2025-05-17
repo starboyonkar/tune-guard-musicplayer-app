@@ -2,10 +2,9 @@
 import React from 'react';
 import { useAudio } from '@/lib/audioContext';
 import { Button } from '@/components/ui/button';
-import { Play, Pause, Plus, Music, Shuffle, Repeat, Repeat1, Trash2, MoreVertical } from 'lucide-react';
+import { Play, Pause, Plus, Music, Shuffle, Repeat, Repeat1 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { soundEffects } from '@/lib/soundEffects';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 const SongsList: React.FC = () => {
   const { 
@@ -15,8 +14,7 @@ const SongsList: React.FC = () => {
     currentSong,
     addSong,
     toggleShuffle,
-    toggleRepeat,
-    deleteSong
+    toggleRepeat
   } = useAudio();
 
   // Format duration from seconds to MM:SS
@@ -61,13 +59,6 @@ const SongsList: React.FC = () => {
       // Play a new song
       playSong(songId);
     }
-  };
-
-  // Handle song deletion
-  const handleDeleteSong = (songId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    soundEffects.playTouchFeedback();
-    deleteSong(songId);
   };
 
   return (
@@ -172,7 +163,6 @@ const SongsList: React.FC = () => {
                     <span className="text-sm text-futuristic-muted mr-3">
                       {formatDuration(song.duration)}
                     </span>
-                    
                     <Button
                       size="icon"
                       variant="ghost"
@@ -192,31 +182,6 @@ const SongsList: React.FC = () => {
                         <Play className="h-4 w-4" />
                       )}
                     </Button>
-                    
-                    {/* Only show delete option for custom songs (not sample songs) */}
-                    {!song.id.startsWith('playlist') && !['1', '2', '3', '4'].includes(song.id) && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-8 w-8 rounded-full transition-colors hover:bg-futuristic-accent2/20"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem 
-                            className="text-destructive flex items-center cursor-pointer"
-                            onClick={(e) => handleDeleteSong(song.id, e)}
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete song
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
                   </div>
                 </div>
               </Card>
