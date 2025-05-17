@@ -185,11 +185,10 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const gainNodeRef = useRef<GainNode | null>(null);
   const eqNodesRef = useRef<BiquadFilterNode[]>([]);
   const audioGraphSetup = useRef<boolean>(false);
+  const songBufferCache = useRef<Map<string, ArrayBuffer>>(new Map());
   
-  // Combine sample songs with custom songs
   const songs = [...SAMPLE_SONGS, ...customSongs];
   
-  // Get current playing song
   const currentSong = playerState.currentSongId 
     ? songs.find(song => song.id === playerState.currentSongId) 
     : null;
@@ -222,6 +221,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         eqNodesRef.current = [bassFilter, midFilter, trebleFilter];
         
         console.log("Audio context initialized successfully");
+        return true;
       } catch (error) {
         console.error('Error initializing Web Audio API:', error);
         toast({
@@ -229,8 +229,10 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           description: 'Failed to initialize audio processing.',
           variant: 'destructive'
         });
+        return false;
       }
     }
+    return true;
   };
 
   const updateEQSettings = () => {
@@ -266,7 +268,6 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }
         
         sourceNodeRef.current = audioContextRef.current.createMediaElementSource(audioRef.current);
-        console.log("Source node created:", sourceNodeRef.current);
         
         const [bassFilter, midFilter, trebleFilter] = eqNodesRef.current;
         
@@ -287,9 +288,19 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       console.error('Error creating audio graph:', error);
       toast({
         title: "Audio Setup Error",
-        description: "There was a problem setting up audio processing.",
+        description: "There was a problem setting up audio processing. Trying to recover...",
         variant: "destructive"
       });
+
+      setTimeout(() => {
+        try {
+          audioGraphSetup.current = false;
+          setupAudioGraph();
+        } catch (e) {
+          console.error("Recovery attempt failed:", e);
+        }
+      }, 1000);
+      
       return false;
     }
   };
@@ -345,16 +356,23 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   useEffect(() => {
     let animationFrameId: number;
+    let lastFrameTime = 0;
+    const frameRate = 30; // Target 30fps for visualization updates
+    const frameInterval = 1000 / frameRate;
     
-    const updateAudioData = () => {
+    const updateAudioData = (timestamp: number) => {
       if (playerState.isPlaying && audioContextRef.current && analyserNodeRef.current) {
-        processAudioFrame();
+        // Only update visualization at the target frame rate
+        if (timestamp - lastFrameTime >= frameInterval) {
+          processAudioFrame();
+          lastFrameTime = timestamp;
+        }
       }
       animationFrameId = requestAnimationFrame(updateAudioData);
     };
     
     if (playerState.isPlaying) {
-      updateAudioData();
+      animationFrameId = requestAnimationFrame(updateAudioData);
     }
     
     return () => {
@@ -362,44 +380,124 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
   }, [playerState.isPlaying, eqSettings]);
 
-  // Modified to persist custom songs to localStorage
   const addSong = async (file: File) => {
     try {
       setIsLoading(true);
       
-      const fileUrl = URL.createObjectURL(file);
+      const fileReader = new FileReader();
+      
+      const fileLoadPromise = new Promise<ArrayBuffer>((resolve, reject) => {
+        fileReader.onload = () => {
+          if (fileReader.result instanceof ArrayBuffer) {
+            resolve(fileReader.result);
+          } else {
+            reject(new Error('Failed to read file as ArrayBuffer'));
+          }
+        };
+        fileReader.onerror = () => reject(fileReader.error);
+      });
+      
+      fileReader.readAsArrayBuffer(file);
+      
+      const arrayBuffer = await fileLoadPromise;
+      
+      const blob = new Blob([arrayBuffer], { type: file.type });
+      const fileUrl = URL.createObjectURL(blob);
       
       const audio = new Audio(fileUrl);
       
       await new Promise<void>((resolve, reject) => {
-        audio.addEventListener('loadedmetadata', () => resolve());
-        audio.addEventListener('error', (e) => {
-          console.error("Error loading audio metadata for file:", file.name, e);
-          reject(e);
+        const timeoutId = setTimeout(() => resolve(), 3000);
+        
+        audio.addEventListener('loadedmetadata', () => {
+          clearTimeout(timeoutId);
+          resolve();
         });
         
-        // Timeout to prevent hanging if metadata doesn't load
-        setTimeout(() => resolve(), 5000);
+        audio.addEventListener('error', (e) => {
+          clearTimeout(timeoutId);
+          console.error("Error loading audio metadata:", e);
+          reject(e);
+        });
       });
       
+      const songId = `song-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      
       const newSong: Song = {
-        id: `local-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        id: songId,
         title: file.name.replace(/\.[^/.]+$/, ""),
-        artist: 'TUNE GUARD',
+        artist: 'Unknown Artist',
         albumArt: '/lovable-uploads/b26c60f6-26f9-4e3b-afb1-ba0d0a2e076d.png',
         duration: Math.round(audio.duration) || 180,
-        source: fileUrl
+        source: fileUrl,
+        originalFileName: file.name
+      };
+      
+      const songForStorage = {
+        ...newSong,
+        source: null,
+        fileName: file.name,
+        fileType: file.type,
+        fileSize: file.size,
+        lastModified: file.lastModified
       };
       
       const updatedCustomSongs = [...customSongs, newSong];
       setCustomSongs(updatedCustomSongs);
       
-      // Save to localStorage - we can only save metadata, not the actual file blob
-      localStorage.setItem('tuneGuardCustomSongs', JSON.stringify(updatedCustomSongs.map(song => ({
-        ...song,
-        // Don't store the blob URL as it won't persist across sessions
-        originalFileName: file.name,
-      }))));
+      try {
+        const existingMetadata = localStorage.getItem('tuneGuardSongMetadata') || '[]';
+        const songMetadata = JSON.parse(existingMetadata);
+        
+        songMetadata.push(songForStorage);
+        
+        localStorage.setItem('tuneGuardSongMetadata', JSON.stringify(songMetadata));
+      } catch (error) {
+        console.error("Error saving song metadata to localStorage:", error);
+      }
+      
+      try {
+        songBufferCache.current.set(songId, arrayBuffer);
+        
+        const dbRequest = indexedDB.open('TuneGuardSongs', 1);
+        
+        dbRequest.onupgradeneeded = (event) => {
+          const db = (event.target as IDBOpenDBRequest).result;
+          if (!db.objectStoreNames.contains('songs')) {
+            db.createObjectStore('songs', { keyPath: 'id' });
+          }
+        };
+        
+        dbRequest.onsuccess = (event) => {
+          const db = (event.target as IDBOpenDBRequest).result;
+          const transaction = db.transaction(['songs'], 'readwrite');
+          const objectStore = transaction.objectStore('songs');
+          
+          const songData = {
+            id: songId,
+            audioData: arrayBuffer,
+            fileName: file.name,
+            fileType: file.type,
+            dateAdded: new Date().toISOString()
+          };
+          
+          const request = objectStore.add(songData);
+          
+          request.onsuccess = () => {
+            console.log("Song audio data stored successfully in IndexedDB");
+          };
+          
+          request.onerror = (e) => {
+            console.error("Error storing song in IndexedDB:", e);
+          };
+        };
+        
+        dbRequest.onerror = (event) => {
+          console.error("IndexedDB error:", event);
+        };
+      } catch (dbError) {
+        console.error("Error accessing IndexedDB:", dbError);
+      }
       
       setPlayerState(prevState => ({
         ...prevState,
@@ -409,15 +507,15 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }));
       
       toast({
-        title: "Song Added",
-        description: `Added and saved "${newSong.title}" to your library`,
+        title: "Song Added Successfully",
+        description: `"${newSong.title}" has been added to your library and saved for future sessions.`,
       });
       
     } catch (error) {
       console.error("Error adding song:", error);
       toast({
-        title: "Error",
-        description: "Failed to add song. Please try again.",
+        title: "Error Adding Song",
+        description: "There was a problem adding your song. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -425,11 +523,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
   
-  // Remove song function to allow deletion
   const removeSong = (songId: string) => {
-    // Check if song is currently playing
     if (playerState.currentSongId === songId) {
-      // Either play next song or stop playback
       if (songs.length > 1) {
         nextSong();
       } else {
@@ -441,55 +536,185 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
     }
     
-    // Remove from custom songs
+    const songToRemove = customSongs.find(song => song.id === songId);
+    if (!songToRemove) return;
+    
+    if (songBufferCache.current.has(songId)) {
+      songBufferCache.current.delete(songId);
+    }
+    
+    if (songToRemove.source && songToRemove.source.startsWith('blob:')) {
+      URL.revokeObjectURL(songToRemove.source);
+    }
+    
     const updatedCustomSongs = customSongs.filter(song => song.id !== songId);
     setCustomSongs(updatedCustomSongs);
     
-    // Remove from playlists
     const updatedPlaylists = playlists.map(playlist => ({
       ...playlist,
       songs: playlist.songs.filter(id => id !== songId)
     }));
     setPlaylists(updatedPlaylists);
     
-    // Update localStorage
-    localStorage.setItem('tuneGuardCustomSongs', JSON.stringify(updatedCustomSongs.map(song => ({
-      ...song,
-    }))));
-    localStorage.setItem('audioPersonaPlaylists', JSON.stringify(updatedPlaylists));
+    try {
+      const existingMetadata = localStorage.getItem('tuneGuardSongMetadata') || '[]';
+      let songMetadata = JSON.parse(existingMetadata);
+      songMetadata = songMetadata.filter((song: any) => song.id !== songId);
+      localStorage.setItem('tuneGuardSongMetadata', JSON.stringify(songMetadata));
+      
+      const dbRequest = indexedDB.open('TuneGuardSongs', 1);
+      
+      dbRequest.onsuccess = (event) => {
+        const db = (event.target as IDBOpenDBRequest).result;
+        const transaction = db.transaction(['songs'], 'readwrite');
+        const objectStore = transaction.objectStore('songs');
+        
+        const request = objectStore.delete(songId);
+        
+        request.onsuccess = () => {
+          console.log("Song removed from IndexedDB successfully");
+        };
+        
+        request.onerror = (e) => {
+          console.error("Error removing song from IndexedDB:", e);
+        };
+      };
+    } catch (error) {
+      console.error("Error updating localStorage or IndexedDB:", error);
+    }
+    
+    localStorage.setItem('tuneGuardPlaylists', JSON.stringify(updatedPlaylists));
     
     toast({
       title: "Song Removed",
-      description: "The song has been removed from your library"
+      description: `"${songToRemove.title}" has been removed from your library.`
     });
   };
 
   useEffect(() => {
     audioRef.current = new Audio();
+    audioRef.current.preload = 'auto';
+    
     initializeAudioContext();
     
-    // Load saved custom songs from localStorage
-    try {
-      const savedSongs = localStorage.getItem('tuneGuardCustomSongs');
-      if (savedSongs) {
-        const parsedSongs = JSON.parse(savedSongs);
-        
-        // Note: We cannot restore the actual audio data from localStorage
-        // so we inform the user that their songs need to be re-added after browser restart
-        if (parsedSongs && Array.isArray(parsedSongs) && parsedSongs.length > 0) {
-          toast({
-            title: "Song Library",
-            description: `${parsedSongs.length} song(s) from your library loaded.`
-          });
+    const loadSavedSongs = async () => {
+      try {
+        const savedMetadata = localStorage.getItem('tuneGuardSongMetadata');
+        if (savedMetadata) {
+          const parsedMetadata = JSON.parse(savedMetadata);
           
-          // Only set customSongs for UI reference - they won't be playable
-          // but user can see their song lists
-          setCustomSongs(parsedSongs);
+          if (Array.isArray(parsedMetadata) && parsedMetadata.length > 0) {
+            const dbRequest = indexedDB.open('TuneGuardSongs', 1);
+            
+            dbRequest.onupgradeneeded = (event) => {
+              const db = (event.target as IDBOpenDBRequest).result;
+              if (!db.objectStoreNames.contains('songs')) {
+                db.createObjectStore('songs', { keyPath: 'id' });
+              }
+            };
+            
+            dbRequest.onsuccess = async (event) => {
+              const db = (event.target as IDBOpenDBRequest).result;
+              const recoveredSongs: Song[] = [];
+              let loadedCount = 0;
+              let errorCount = 0;
+              
+              for (const songMeta of parsedMetadata) {
+                try {
+                  const transaction = db.transaction(['songs'], 'readonly');
+                  const objectStore = transaction.objectStore('songs');
+                  const request = objectStore.get(songMeta.id);
+                  
+                  request.onsuccess = (e) => {
+                    const songData = request.result;
+                    
+                    if (songData && songData.audioData) {
+                      const blob = new Blob([songData.audioData], { type: songData.fileType || 'audio/mpeg' });
+                      const url = URL.createObjectURL(blob);
+                      
+                      songBufferCache.current.set(songMeta.id, songData.audioData);
+                      
+                      const recoveredSong: Song = {
+                        id: songMeta.id,
+                        title: songMeta.title || songData.fileName.replace(/\.[^/.]+$/, ""),
+                        artist: songMeta.artist || 'Unknown Artist',
+                        albumArt: songMeta.albumArt || '/lovable-uploads/b26c60f6-26f9-4e3b-afb1-ba0d0a2e076d.png',
+                        duration: songMeta.duration || 0,
+                        source: url,
+                        originalFileName: songData.fileName
+                      };
+                      
+                      recoveredSongs.push(recoveredSong);
+                      loadedCount++;
+                      
+                      if (loadedCount + errorCount === parsedMetadata.length) {
+                        setCustomSongs(recoveredSongs);
+                        
+                        if (loadedCount > 0) {
+                          toast({
+                            title: "Library Loaded",
+                            description: `Successfully loaded ${loadedCount} song${loadedCount !== 1 ? 's' : ''} from your library.`
+                          });
+                        }
+                        
+                        if (errorCount > 0) {
+                          toast({
+                            title: "Some Songs Not Loaded",
+                            description: `${errorCount} song${errorCount !== 1 ? 's' : ''} could not be loaded from your library.`,
+                            variant: "destructive"
+                          });
+                        }
+                      }
+                    } else {
+                      errorCount++;
+                      console.error("Song data not found in IndexedDB:", songMeta.id);
+                    }
+                  };
+                  
+                  request.onerror = (e) => {
+                    errorCount++;
+                    console.error("Error loading song from IndexedDB:", e);
+                    
+                    if (loadedCount + errorCount === parsedMetadata.length) {
+                      setCustomSongs(recoveredSongs);
+                    }
+                  };
+                } catch (error) {
+                  errorCount++;
+                  console.error("Error processing song:", error);
+                }
+              }
+              
+              if (parsedMetadata.length > 0 && recoveredSongs.length === 0) {
+                toast({
+                  title: "Unable to Load Songs",
+                  description: "Your saved songs could not be loaded. Please add them again.",
+                  variant: "destructive"
+                });
+              }
+            };
+            
+            dbRequest.onerror = (event) => {
+              console.error("Error opening IndexedDB:", event);
+              toast({
+                title: "Library Error",
+                description: "There was a problem loading your song library.",
+                variant: "destructive"
+              });
+            };
+          }
         }
+      } catch (error) {
+        console.error("Error loading saved songs:", error);
+        toast({
+          title: "Error Loading Library",
+          description: "There was a problem loading your song library.",
+          variant: "destructive"
+        });
       }
-    } catch (error) {
-      console.error("Error loading saved songs:", error);
-    }
+    };
+    
+    loadSavedSongs();
     
     const onEnded = () => {
       nextSong();
@@ -505,19 +730,49 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
     
     const onLoadedMetadata = () => {
-      if (audioRef.current) {
+      if (audioRef.current && currentSong) {
         const duration = Math.floor(audioRef.current.duration);
-        if (currentSong) {
+        
+        if (duration && duration !== currentSong.duration) {
           const updatedSongs = songs.map(song => 
             song.id === currentSong.id ? { ...song, duration } : song
           );
+          
           if (customSongs.some(song => song.id === currentSong.id)) {
             setCustomSongs(customSongs.map(song => 
               song.id === currentSong.id ? { ...song, duration } : song
             ));
+            
+            try {
+              const existingMetadata = localStorage.getItem('tuneGuardSongMetadata') || '[]';
+              let songMetadata = JSON.parse(existingMetadata);
+              songMetadata = songMetadata.map((song: any) => 
+                song.id === currentSong.id ? { ...song, duration } : song
+              );
+              localStorage.setItem('tuneGuardSongMetadata', JSON.stringify(songMetadata));
+            } catch (error) {
+              console.error("Error updating song metadata in localStorage:", error);
+            }
           }
         }
       }
+    };
+    
+    const onError = (e: Event) => {
+      console.error("Audio element error:", e);
+      const currentSongId = playerState.currentSongId;
+      
+      toast({
+        title: "Playback Error",
+        description: "There was an error playing this song. Trying to recover...",
+        variant: "destructive"
+      });
+      
+      setTimeout(() => {
+        if (currentSongId === playerState.currentSongId) {
+          nextSong();
+        }
+      }, 1000);
     };
     
     const onPlaySong = (e: Event) => {
@@ -536,22 +791,12 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     audio.addEventListener('ended', onEnded);
     audio.addEventListener('timeupdate', onTimeUpdate);
     audio.addEventListener('loadedmetadata', onLoadedMetadata);
-    audio.addEventListener('error', (e) => {
-      console.error("Audio element error:", e);
-      toast({
-        title: "Audio Error",
-        description: "Error playing audio file. Trying next song...",
-        variant: "destructive"
-      });
-      setTimeout(() => nextSong(), 1000);
-    });
-    
+    audio.addEventListener('error', onError);
     document.addEventListener('play-song', onPlaySong);
     
     setIsVoiceListening(true);
     
-    // Load playlists from localStorage
-    const savedPlaylists = localStorage.getItem('audioPersonaPlaylists');
+    const savedPlaylists = localStorage.getItem('tuneGuardPlaylists');
     if (savedPlaylists) {
       try {
         const parsedPlaylists = JSON.parse(savedPlaylists);
@@ -561,18 +806,23 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       } catch (error) {
         console.error("Error loading playlists:", error);
       }
-    } else {
-      // Set default playlists if none exist
-      setPlaylists(SAMPLE_PLAYLISTS);
     }
     
     return () => {
       audio.removeEventListener('ended', onEnded);
       audio.removeEventListener('timeupdate', onTimeUpdate);
       audio.removeEventListener('loadedmetadata', onLoadedMetadata);
+      audio.removeEventListener('error', onError);
       document.removeEventListener('play-song', onPlaySong);
+      
       audio.pause();
       audio.src = '';
+      
+      customSongs.forEach(song => {
+        if (song.source && song.source.startsWith('blob:')) {
+          URL.revokeObjectURL(song.source);
+        }
+      });
       
       if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
         audioContextRef.current.close();
@@ -625,20 +875,31 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     
     console.log("Current song changed:", currentSong);
     
-    if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
-      audioContextRef.current.resume().then(() => {
-        console.log("AudioContext resumed successfully");
-      }).catch(err => {
-        console.error("Failed to resume AudioContext:", err);
-      });
+    const resumeAudioContext = async () => {
+      if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
+        try {
+          await audioContextRef.current.resume();
+          console.log("AudioContext resumed successfully");
+        } catch (err) {
+          console.error("Failed to resume AudioContext:", err);
+          
+          audioContextRef.current = null;
+          initializeAudioContext();
+        }
+      }
+    };
+    
+    resumeAudioContext();
+    
+    if (!audioGraphSetup.current) {
+      console.log("Setting up audio graph for the first time");
+      setupAudioGraph();
     }
     
-    // Improved error handling for song source changes
     try {
       if (audioRef.current.src !== currentSong.source) {
         console.log("Setting audio source to:", currentSong.source);
         
-        // Use try/catch to handle invalid sources gracefully
         try {
           audioRef.current.src = currentSong.source;
           audioRef.current.load();
@@ -651,11 +912,6 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           });
           return;
         }
-        
-        if (!audioGraphSetup.current) {
-          console.log("Setting up audio graph for the first time");
-          setupAudioGraph();
-        }
       }
       
       audioRef.current.oncanplaythrough = () => {
@@ -666,15 +922,19 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           const playPromise = audioRef.current!.play();
           
           if (playPromise !== undefined) {
-            playPromise.catch(error => {
-              console.error("Audio play error:", error);
-              setPlayerState(prevState => ({ ...prevState, isPlaying: false }));
-              toast({
-                title: "Playback Error",
-                description: "There was an error playing this song.",
-                variant: "destructive"
+            playPromise
+              .then(() => {
+                console.log("Playback started successfully");
+              })
+              .catch(error => {
+                console.error("Audio play error:", error);
+                setPlayerState(prevState => ({ ...prevState, isPlaying: false }));
+                toast({
+                  title: "Playback Error",
+                  description: "There was an error playing this song. Please try again.",
+                  variant: "destructive"
+                });
               });
-            });
           }
         } else {
           audioRef.current!.pause();
@@ -684,7 +944,6 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       };
     } catch (error) {
       console.error("Error updating current song:", error);
-      // Fall back to next song on error
       setTimeout(() => nextSong(), 1000);
     }
   }, [currentSong, playerState.isPlaying]);
@@ -692,10 +951,12 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     if (!audioRef.current) return;
     
-    audioRef.current.volume = playerState.isMuted ? 0 : playerState.volume / 100;
+    const effectiveVolume = playerState.isMuted ? 0 : playerState.volume / 100;
+    
+    audioRef.current.volume = effectiveVolume;
     
     if (gainNodeRef.current) {
-      gainNodeRef.current.gain.value = playerState.isMuted ? 0 : playerState.volume / 100;
+      gainNodeRef.current.gain.value = effectiveVolume;
     }
   }, [playerState.volume, playerState.isMuted]);
 
@@ -719,7 +980,9 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const togglePlayPause = () => {
     if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
-      audioContextRef.current.resume();
+      audioContextRef.current.resume().catch(err => {
+        console.error("Failed to resume AudioContext:", err);
+      });
     }
     
     setPlayerState(prevState => {
@@ -727,15 +990,19 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       
       if (audioRef.current) {
         if (newIsPlaying) {
-          audioRef.current.play().catch(error => {
-            console.error("Error playing audio:", error);
-            toast({
-              title: "Playback Error",
-              description: "There was an error playing this song.",
-              variant: "destructive"
+          const playPromise = audioRef.current.play();
+          
+          if (playPromise !== undefined) {
+            playPromise.catch(error => {
+              console.error("Error playing audio:", error);
+              toast({
+                title: "Playback Error",
+                description: "There was an error playing this song. Please try again.",
+                variant: "destructive"
+              });
+              return prevState;
             });
-            return prevState; // Don't update state if play fails
-          });
+          }
         } else {
           audioRef.current.pause();
         }
@@ -874,7 +1141,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const updatedPlaylists = [...playlists, newPlaylist];
     setPlaylists(updatedPlaylists);
     
-    localStorage.setItem('audioPersonaPlaylists', JSON.stringify(updatedPlaylists));
+    localStorage.setItem('tuneGuardPlaylists', JSON.stringify(updatedPlaylists));
     
     toast({
       title: "Playlist Created",
@@ -897,7 +1164,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     });
     
     setPlaylists(updatedPlaylists);
-    localStorage.setItem('audioPersonaPlaylists', JSON.stringify(updatedPlaylists));
+    localStorage.setItem('tuneGuardPlaylists', JSON.stringify(updatedPlaylists));
   };
 
   const removeFromPlaylist = (playlistId: string, songId: string) => {
@@ -913,13 +1180,13 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     });
     
     setPlaylists(updatedPlaylists);
-    localStorage.setItem('audioPersonaPlaylists', JSON.stringify(updatedPlaylists));
+    localStorage.setItem('tuneGuardPlaylists', JSON.stringify(updatedPlaylists));
   };
 
   const deletePlaylist = (playlistId: string) => {
     const updatedPlaylists = playlists.filter(playlist => playlist.id !== playlistId);
     setPlaylists(updatedPlaylists);
-    localStorage.setItem('audioPersonaPlaylists', JSON.stringify(updatedPlaylists));
+    localStorage.setItem('tuneGuardPlaylists', JSON.stringify(updatedPlaylists));
     
     if (playerState.currentPlaylistId === playlistId) {
       setPlayerState(prev => ({
@@ -956,37 +1223,22 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const playSong = (songId: string) => {
     if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
-      audioContextRef.current.resume();
+      audioContextRef.current.resume().catch(console.error);
     }
 
     if (playerState.currentSongId === songId) {
-      setPlayerState(prevState => ({
-        ...prevState,
-        isPlaying: !prevState.isPlaying
-      }));
-      
-      if (audioRef.current) {
-        if (playerState.isPlaying) {
-          audioRef.current.pause();
-        } else {
-          audioRef.current.play().catch(error => {
-            console.error("Error playing audio:", error);
-            toast({
-              title: "Playback Error",
-              description: "Failed to play audio",
-              variant: "destructive"
-            });
-          });
-        }
-      }
-    } else {
-      setPlayerState(prevState => ({
-        ...prevState,
-        currentSongId: songId,
-        currentTime: 0,
-        isPlaying: true
-      }));
+      togglePlayPause();
+      return;
     }
+    
+    setPlayerState(prevState => ({
+      ...prevState,
+      currentSongId: songId,
+      currentTime: 0,
+      isPlaying: true
+    }));
+    
+    setWaveformData(defaultWaveformData);
   };
 
   const setVoiceCommand = (command: string) => {
@@ -1022,7 +1274,6 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     
     let commandRecognized = false;
     
-    // Simplified dummy voice command processing
     if (matchesVoiceCommand(lowerCommand, ["play"])) {
       commandRecognized = true;
       setPlayerState(prevState => ({ ...prevState, isPlaying: true }));
@@ -1064,7 +1315,15 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (playerState.repeatMode === 'one') {
         if (audioRef.current) {
           audioRef.current.currentTime = 0;
-          audioRef.current.play().catch(err => console.error("Error restarting song:", err));
+          audioRef.current.play().catch(err => {
+            console.error("Error restarting song:", err);
+            toast({
+              title: "Playback Error",
+              description: "Failed to repeat the song. Playing next song instead.",
+              variant: "destructive"
+            });
+            nextSong();
+          });
         }
       } else if (playerState.repeatMode === 'all' || playerState.shuffleEnabled) {
         nextSong();
@@ -1078,6 +1337,11 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           if (audioRef.current) {
             audioRef.current.currentTime = 0;
           }
+          
+          toast({
+            title: "Playback Complete",
+            description: "Reached the end of your songs."
+          });
         }
       }
     };
