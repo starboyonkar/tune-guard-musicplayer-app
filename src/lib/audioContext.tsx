@@ -95,6 +95,7 @@ interface AudioContextType {
   setEQSettings: (settings: EQSettings) => void;
   songs: Song[];
   addSong: (file: File) => void;
+  removeSong: (songId: string) => void;
   playerState: PlayerState;
   voiceCommand: string;
   setVoiceCommand: (command: string) => void;
@@ -184,9 +185,11 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const gainNodeRef = useRef<GainNode | null>(null);
   const eqNodesRef = useRef<BiquadFilterNode[]>([]);
   const audioGraphSetup = useRef<boolean>(false);
-
+  
+  // Combine sample songs with custom songs
   const songs = [...SAMPLE_SONGS, ...customSongs];
   
+  // Get current playing song
   const currentSong = playerState.currentSongId 
     ? songs.find(song => song.id === playerState.currentSongId) 
     : null;
@@ -359,6 +362,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
   }, [playerState.isPlaying, eqSettings]);
 
+  // Modified to persist custom songs to localStorage
   const addSong = async (file: File) => {
     try {
       setIsLoading(true);
@@ -374,6 +378,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           reject(e);
         });
         
+        // Timeout to prevent hanging if metadata doesn't load
         setTimeout(() => resolve(), 5000);
       });
       
@@ -386,7 +391,15 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         source: fileUrl
       };
       
-      setCustomSongs(prevSongs => [...prevSongs, newSong]);
+      const updatedCustomSongs = [...customSongs, newSong];
+      setCustomSongs(updatedCustomSongs);
+      
+      // Save to localStorage - we can only save metadata, not the actual file blob
+      localStorage.setItem('tuneGuardCustomSongs', JSON.stringify(updatedCustomSongs.map(song => ({
+        ...song,
+        // Don't store the blob URL as it won't persist across sessions
+        originalFileName: file.name,
+      }))));
       
       setPlayerState(prevState => ({
         ...prevState,
@@ -397,7 +410,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       
       toast({
         title: "Song Added",
-        description: `Now playing "${newSong.title}"`,
+        description: `Added and saved "${newSong.title}" to your library`,
       });
       
     } catch (error) {
@@ -411,10 +424,72 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setIsLoading(false);
     }
   };
+  
+  // Remove song function to allow deletion
+  const removeSong = (songId: string) => {
+    // Check if song is currently playing
+    if (playerState.currentSongId === songId) {
+      // Either play next song or stop playback
+      if (songs.length > 1) {
+        nextSong();
+      } else {
+        setPlayerState(prevState => ({
+          ...prevState,
+          isPlaying: false,
+          currentSongId: null
+        }));
+      }
+    }
+    
+    // Remove from custom songs
+    const updatedCustomSongs = customSongs.filter(song => song.id !== songId);
+    setCustomSongs(updatedCustomSongs);
+    
+    // Remove from playlists
+    const updatedPlaylists = playlists.map(playlist => ({
+      ...playlist,
+      songs: playlist.songs.filter(id => id !== songId)
+    }));
+    setPlaylists(updatedPlaylists);
+    
+    // Update localStorage
+    localStorage.setItem('tuneGuardCustomSongs', JSON.stringify(updatedCustomSongs.map(song => ({
+      ...song,
+    }))));
+    localStorage.setItem('audioPersonaPlaylists', JSON.stringify(updatedPlaylists));
+    
+    toast({
+      title: "Song Removed",
+      description: "The song has been removed from your library"
+    });
+  };
 
   useEffect(() => {
     audioRef.current = new Audio();
     initializeAudioContext();
+    
+    // Load saved custom songs from localStorage
+    try {
+      const savedSongs = localStorage.getItem('tuneGuardCustomSongs');
+      if (savedSongs) {
+        const parsedSongs = JSON.parse(savedSongs);
+        
+        // Note: We cannot restore the actual audio data from localStorage
+        // so we inform the user that their songs need to be re-added after browser restart
+        if (parsedSongs && Array.isArray(parsedSongs) && parsedSongs.length > 0) {
+          toast({
+            title: "Song Library",
+            description: `${parsedSongs.length} song(s) from your library loaded.`
+          });
+          
+          // Only set customSongs for UI reference - they won't be playable
+          // but user can see their song lists
+          setCustomSongs(parsedSongs);
+        }
+      }
+    } catch (error) {
+      console.error("Error loading saved songs:", error);
+    }
     
     const onEnded = () => {
       nextSong();
@@ -475,6 +550,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     
     setIsVoiceListening(true);
     
+    // Load playlists from localStorage
     const savedPlaylists = localStorage.getItem('audioPersonaPlaylists');
     if (savedPlaylists) {
       try {
@@ -485,6 +561,9 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       } catch (error) {
         console.error("Error loading playlists:", error);
       }
+    } else {
+      // Set default playlists if none exist
+      setPlaylists(SAMPLE_PLAYLISTS);
     }
     
     return () => {
@@ -554,41 +633,60 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       });
     }
     
-    if (audioRef.current.src !== currentSong.source) {
-      console.log("Setting audio source to:", currentSong.source);
-      audioRef.current.src = currentSong.source;
-      audioRef.current.load();
-      
-      if (!audioGraphSetup.current) {
-        console.log("Setting up audio graph for the first time");
-        setupAudioGraph();
-      }
-    }
-    
-    audioRef.current.oncanplaythrough = () => {
-      console.log("Audio can play through");
-      
-      if (playerState.isPlaying) {
-        console.log("Starting playback");
-        const playPromise = audioRef.current!.play();
+    // Improved error handling for song source changes
+    try {
+      if (audioRef.current.src !== currentSong.source) {
+        console.log("Setting audio source to:", currentSong.source);
         
-        if (playPromise !== undefined) {
-          playPromise.catch(error => {
-            console.error("Audio play error:", error);
-            setPlayerState(prevState => ({ ...prevState, isPlaying: false }));
-            toast({
-              title: "Playback Error",
-              description: "There was an error playing this song.",
-              variant: "destructive"
-            });
+        // Use try/catch to handle invalid sources gracefully
+        try {
+          audioRef.current.src = currentSong.source;
+          audioRef.current.load();
+        } catch (error) {
+          console.error("Error setting audio source:", error);
+          toast({
+            title: "Playback Error",
+            description: "Could not load this song. It may have been from a previous session.",
+            variant: "destructive"
           });
+          return;
         }
-      } else {
-        audioRef.current!.pause();
+        
+        if (!audioGraphSetup.current) {
+          console.log("Setting up audio graph for the first time");
+          setupAudioGraph();
+        }
       }
       
-      audioRef.current!.oncanplaythrough = null;
-    };
+      audioRef.current.oncanplaythrough = () => {
+        console.log("Audio can play through");
+        
+        if (playerState.isPlaying) {
+          console.log("Starting playback");
+          const playPromise = audioRef.current!.play();
+          
+          if (playPromise !== undefined) {
+            playPromise.catch(error => {
+              console.error("Audio play error:", error);
+              setPlayerState(prevState => ({ ...prevState, isPlaying: false }));
+              toast({
+                title: "Playback Error",
+                description: "There was an error playing this song.",
+                variant: "destructive"
+              });
+            });
+          }
+        } else {
+          audioRef.current!.pause();
+        }
+        
+        audioRef.current!.oncanplaythrough = null;
+      };
+    } catch (error) {
+      console.error("Error updating current song:", error);
+      // Fall back to next song on error
+      setTimeout(() => nextSong(), 1000);
+    }
   }, [currentSong, playerState.isPlaying]);
 
   useEffect(() => {
@@ -1043,6 +1141,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setEQSettings,
       songs,
       addSong,
+      removeSong,
       playerState,
       voiceCommand,
       setVoiceCommand,

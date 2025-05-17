@@ -2,9 +2,20 @@
 import React from 'react';
 import { useAudio } from '@/lib/audioContext';
 import { Button } from '@/components/ui/button';
-import { Play, Pause, Plus, Music, Shuffle, Repeat, Repeat1 } from 'lucide-react';
+import { Play, Pause, Plus, Music, Shuffle, Repeat, Repeat1, Trash } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { soundEffects } from '@/lib/soundEffects';
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const SongsList: React.FC = () => {
   const { 
@@ -13,6 +24,7 @@ const SongsList: React.FC = () => {
     playSong,
     currentSong,
     addSong,
+    removeSong,
     toggleShuffle,
     toggleRepeat
   } = useAudio();
@@ -59,6 +71,17 @@ const SongsList: React.FC = () => {
       // Play a new song
       playSong(songId);
     }
+  };
+  
+  // Handle song deletion after confirmation
+  const handleDeleteSong = (songId: string) => {
+    soundEffects.playTouchFeedback();
+    removeSong(songId);
+  };
+
+  // Determine if a song is part of the sample songs (should not be deletable)
+  const isSampleSong = (songId: string): boolean => {
+    return songId.length < 10; // Sample songs have short IDs like '1', '2', etc.
   };
 
   return (
@@ -182,6 +205,43 @@ const SongsList: React.FC = () => {
                         <Play className="h-4 w-4" />
                       )}
                     </Button>
+                    
+                    {/* Delete button - only show for user-added songs */}
+                    {!isSampleSong(song.id) && (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 rounded-full text-destructive/70 hover:bg-destructive/10 hover:text-destructive"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              soundEffects.playTouchFeedback();
+                            }}
+                            aria-label="Delete Song"
+                          >
+                            <Trash className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent className="glass-panel border-futuristic-border">
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Song</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to remove "{song.title}" from your library? This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction 
+                              onClick={() => handleDeleteSong(song.id)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
                   </div>
                 </div>
               </Card>
