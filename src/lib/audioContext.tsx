@@ -11,7 +11,6 @@ import {
 } from './types';
 import { toast } from '@/components/ui/use-toast';
 import { matchesVoiceCommand } from '@/lib/utils';
-import { VOICE_COMMANDS } from '@/lib/voiceCommands';
 
 const SAMPLE_SONGS: Song[] = [
   {
@@ -925,8 +924,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     
     let commandRecognized = false;
     
-    // PLAY command handling
-    if (matchesVoiceCommand(lowerCommand, VOICE_COMMANDS.PLAY)) {
+    // Simplified dummy voice command processing
+    if (matchesVoiceCommand(lowerCommand, ["play"])) {
       commandRecognized = true;
       setPlayerState(prevState => ({ ...prevState, isPlaying: true }));
       toast({
@@ -934,8 +933,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         description: currentSong ? `Playing "${currentSong.title}"` : "Playing music",
       });
     } 
-    // PAUSE command handling
-    else if (matchesVoiceCommand(lowerCommand, VOICE_COMMANDS.PAUSE)) {
+    else if (matchesVoiceCommand(lowerCommand, ["pause"])) {
       commandRecognized = true;
       setPlayerState(prevState => ({ ...prevState, isPlaying: false }));
       toast({
@@ -943,63 +941,6 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         description: "Music paused"
       });
     } 
-    // NEXT command handling
-    else if (matchesVoiceCommand(lowerCommand, VOICE_COMMANDS.NEXT)) {
-      commandRecognized = true;
-      nextSong();
-      toast({
-        title: "Next Track",
-        description: "Playing next song"
-      });
-    }
-    // PREVIOUS command handling
-    else if (matchesVoiceCommand(lowerCommand, VOICE_COMMANDS.PREVIOUS)) {
-      commandRecognized = true;
-      prevSong();
-      toast({
-        title: "Previous Track",
-        description: "Playing previous song"
-      });
-    }
-    // LOGOUT command handling
-    else if (matchesVoiceCommand(lowerCommand, VOICE_COMMANDS.LOGOUT)) {
-      commandRecognized = true;
-      toast({
-        title: "Logging out",
-        description: "Signing out of your account..."
-      });
-      setTimeout(() => logout(), 300); // Quick logout
-    }
-    // EDIT_PROFILE command handling
-    else if (matchesVoiceCommand(lowerCommand, VOICE_COMMANDS.EDIT_PROFILE)) {
-      commandRecognized = true;
-      const event = new CustomEvent('open-profile-editor');
-      document.dispatchEvent(event);
-      toast({
-        title: "Profile Editor",
-        description: "Opening profile editor"
-      });
-    }
-    // CLOSE command handling
-    else if (matchesVoiceCommand(lowerCommand, VOICE_COMMANDS.CLOSE)) {
-      commandRecognized = true;
-      const event = new CustomEvent('close-active-panel');
-      document.dispatchEvent(event);
-      toast({
-        title: "Closed",
-        description: "Closing current view"
-      });
-    }
-    // HELP command handling
-    else if (matchesVoiceCommand(lowerCommand, VOICE_COMMANDS.HELP)) {
-      commandRecognized = true;
-      const event = new CustomEvent('show-command-reference');
-      document.dispatchEvent(event);
-      toast({
-        title: "Help",
-        description: "Showing available commands"
-      });
-    }
     
     if (!commandRecognized) {
       toast({

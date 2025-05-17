@@ -94,9 +94,9 @@ const SongsList: React.FC = () => {
               title={`Repeat: ${playerState.repeatMode}`}
             >
               {playerState.repeatMode === 'one' ? (
-                <Repeat1 className="h-4 w-4 neon-glow" title="Repeat One" />
+                <Repeat1 className="h-4 w-4 neon-glow" aria-label="Repeat One" />
               ) : (
-                <Repeat className={`h-4 w-4 ${playerState.repeatMode === 'all' ? 'neon-glow' : ''}`} title={`Repeat ${playerState.repeatMode === 'all' ? 'All' : 'Off'}`} />
+                <Repeat className={`h-4 w-4 ${playerState.repeatMode === 'all' ? 'neon-glow' : ''}`} aria-label={`Repeat ${playerState.repeatMode === 'all' ? 'All' : 'Off'}`} />
               )}
             </Button>
           </div>
