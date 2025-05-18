@@ -1,157 +1,123 @@
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import React, { useState } from 'react';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useAudio } from '@/lib/audioContext';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { soundEffects } from '@/lib/soundEffects';
+import { UserProfile } from '@/lib/types';
+import { toast } from '@/hooks/use-toast';
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import VoiceCommandManager from './VoiceCommandManager';
 
 const SignUpForm: React.FC = () => {
-  const { setProfile } = useAudio();
-  const [name, setName] = useState('');
-  const [age, setAge] = useState('');
-  const [dob, setDob] = useState('');
-  const [gender, setGender] = useState<'male' | 'female' | 'non-binary' | 'prefer-not-to-say'>('prefer-not-to-say');
-  const [isLoading, setIsLoading] = useState(false);
+  const { signUp } = useAudio();
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
-  useEffect(() => {
-    soundEffects.initialize();
-    
-    // Initialize blinking gradient background
-    const root = document.documentElement;
-    const updateGradient = () => {
-      const hue1 = Math.floor(Math.random() * 20) + 200; // Blue range
-      const hue2 = Math.floor(Math.random() * 20) + 180; // Blue-cyan range
-      root.style.setProperty(
-        '--dynamic-gradient', 
-        `linear-gradient(135deg, hsla(${hue1}, 80%, 70%, 0.8), hsla(${hue2}, 70%, 80%, 0.9))`
-      );
-    };
-    
-    updateGradient();
-    const interval = setInterval(updateGradient, 3000);
-    
-    return () => clearInterval(interval);
-  }, []);
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files && e.target.files[0];
+    if (file) {
+      setAvatarFile(file);
+      setAvatarPreview(URL.createObjectURL(file));
+    }
+  };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    
-    // Play notification sound
-    soundEffects.playNotification();
-    
-    setTimeout(() => {
-      setProfile({
-        id: `user-${Date.now()}`,
-        name,
-        age: parseInt(age),
-        dob,
-        gender,
-        createdAt: new Date().toISOString(),
-        preferences: ['casual-listening', 'workout']
+
+    if (!username || !email || !password) {
+      toast({
+        title: "Missing fields",
+        description: "Please fill in all fields.",
+        variant: "destructive",
       });
-      setIsLoading(false);
-    }, 1000);
+      return;
+    }
+
+    const newUser: UserProfile = {
+      username,
+      email,
+      password,
+      avatar: avatarPreview || undefined,
+    };
+
+    try {
+      await signUp(newUser, avatarFile);
+      toast({
+        title: "Sign up successful",
+        description: "You are now signed up.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Sign up failed",
+        description: error.message || "Failed to sign up. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
-    <div className="w-full max-w-md mx-auto p-6 animate-fade-in">
-      <div className="flex justify-center mb-8">
-        <Avatar className="h-32 w-32 border-4 border-white/20 shadow-lg animate-pulse-slow">
-          <AvatarImage 
-            src="/lovable-uploads/d4fe6f3e-e72d-4760-93e5-5f71a12f2238.png" 
-            alt="TUNE GUARD" 
-            className="object-cover"
-          />
-          <AvatarFallback className="text-3xl font-bold text-white">TG</AvatarFallback>
+    <div className="max-w-md w-full mx-auto p-6 relative">
+      <div className="absolute top-4 right-4">
+        <VoiceCommandManager />
+      </div>
+      
+      <div className="text-center mb-6">
+        <Avatar className="h-24 w-24 mx-auto border border-white/10 animate-pulse-slow">
+          {avatarPreview ? (
+            <AvatarImage src={avatarPreview} alt="Avatar" />
+          ) : (
+            <AvatarFallback>UN</AvatarFallback>
+          )}
         </Avatar>
+        <Label htmlFor="avatar" className="mt-2 text-sm text-futuristic-muted hover:text-futuristic-accent1 cursor-pointer">
+          Change Avatar
+        </Label>
+        <Input
+          type="file"
+          id="avatar"
+          accept="image/*"
+          className="hidden"
+          onChange={handleAvatarChange}
+        />
       </div>
-      
-      <h1 className="text-3xl md:text-5xl font-bold text-center mb-8 neon-text">
-        Welcome to Cognitive Audio Synthesis
-      </h1>
-      
-      <Card className="glass border-futuristic-border backdrop-blur-xl bg-white/5">
-        <CardHeader className="border-b border-futuristic-border">
-          <CardTitle className="text-xl text-center text-futuristic-accent1 neon-text">Create Your Audio Profile</CardTitle>
-        </CardHeader>
-        <CardContent className="pt-6">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="name" className="text-white/90">Your Name</Label>
-              <Input
-                id="name"
-                placeholder="Enter your name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="border-futuristic-border bg-white/5 backdrop-blur-sm focus:border-futuristic-accent1"
-                required
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="age" className="text-white/90">Age</Label>
-              <Input
-                id="age"
-                type="number"
-                placeholder="Enter your age"
-                value={age}
-                onChange={(e) => setAge(e.target.value)}
-                className="border-futuristic-border bg-white/5 backdrop-blur-sm focus:border-futuristic-accent1"
-                min="1"
-                max="120"
-                required
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="dob" className="text-white/90">Date of Birth</Label>
-              <Input
-                id="dob"
-                type="date"
-                value={dob}
-                onChange={(e) => setDob(e.target.value)}
-                className="border-futuristic-border bg-white/5 backdrop-blur-sm focus:border-futuristic-accent1"
-                required
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="gender" className="text-white/90">Gender</Label>
-              <Select
-                value={gender}
-                onValueChange={(val) => setGender(val as any)}
-              >
-                <SelectTrigger className="border-futuristic-border bg-white/5 backdrop-blur-sm">
-                  <SelectValue placeholder="Select gender" />
-                </SelectTrigger>
-                <SelectContent className="bg-futuristic-bg border-futuristic-border">
-                  <SelectItem value="male">Male</SelectItem>
-                  <SelectItem value="female">Female</SelectItem>
-                  <SelectItem value="non-binary">Non-binary</SelectItem>
-                  <SelectItem value="prefer-not-to-say">Prefer not to say</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <Button 
-              type="submit" 
-              disabled={isLoading}
-              className="w-full bg-gradient-to-r from-futuristic-accent1 to-futuristic-accent2 hover:opacity-90 transition-all animate-glow"
-              onClick={() => soundEffects.playTouchFeedback()}
-            >
-              {isLoading ? "Creating Profile..." : "Create Profile"}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-      
-      <div className="text-center mt-6 text-futuristic-muted text-sm">
-        TUNE GUARD - Cognitive Audio Synthesis
-      </div>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <Label htmlFor="username">Username</Label>
+          <Input
+            type="text"
+            id="username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="Enter username"
+          />
+        </div>
+        <div>
+          <Label htmlFor="email">Email</Label>
+          <Input
+            type="email"
+            id="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Enter email"
+          />
+        </div>
+        <div>
+          <Label htmlFor="password">Password</Label>
+          <Input
+            type="password"
+            id="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Enter password"
+          />
+        </div>
+        <Button type="submit" className="w-full bg-gradient-to-r from-futuristic-accent1 to-futuristic-accent2 text-white hover:opacity-90 animate-glow">
+          Sign Up
+        </Button>
+      </form>
     </div>
   );
 };
