@@ -16,6 +16,11 @@ The core innovation behind this app lies in **Cognitive Enhancement of Audio Pro
 
 ---
 
+![Tune-gurd-app_page-0001](https://github.com/user-attachments/assets/25765844-5028-44e3-b194-a32027510cc3)
+
+
+---
+
 ## 🎯 Project Purpose
 This project introduces an **Advanced Frequency Manipulation Web App** built using **Node.js**, **React.js**, **CSS**, and **TypeScript**. The core aim is to provide:
 - **Real-time audio processing** for safer listening.
@@ -153,4 +158,18 @@ df -h          # Disk space usage
 
 ---
 
+## 👤 Author Profile
 
+**Name:** Onkar Chaugule  
+🎓 **Education:** BTech in Electronics & Telecommunication  
+📍 **Location:** Solapur, Maharashtra, India  
+💼 **Interests:** DevOps, Embedded IoT, Cloud Engineering, Full-Stack Development  
+📧 **Email:** onkarchougule501@gmail.com  
+🔗 **LinkedIn:** [linkedin.com/in/onkar-chaugule](https://linkedin.com/in/onkar-chaugule)
+
+---
+
+> 🛠️ *This repository is maintained as an educational project. Contributions and feedback are welcome!*  
+> ⭐ *If you find it useful, feel free to star and share!*
+
+---
