@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import PlayerControls from './PlayerControls';
 import SongInfo from './SongInfo';
@@ -16,9 +16,58 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Settings, Music, LogOut, Siren, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAudio } from '@/lib/audioContext';
+import { toast } from '@/components/ui/use-toast';
 
 const AudioPlayerUI: React.FC = () => {
-  const { logout, profile } = useAudio();
+  const { 
+    logout, 
+    profile, 
+    songs, 
+    playerState, 
+    playSong,
+    togglePlayPause
+  } = useAudio();
+  
+  // Auto-play first song after login
+  useEffect(() => {
+    // Small delay to ensure all components are properly mounted
+    const timer = setTimeout(() => {
+      if (songs.length > 0 && !playerState.isPlaying && !playerState.currentSongId) {
+        try {
+          playSong(songs[0].id);
+          console.log("Auto-playing first song after login:", songs[0].title);
+          toast({
+            title: "Welcome back!",
+            description: `Now playing: ${songs[0].title} by ${songs[0].artist}`
+          });
+        } catch (error) {
+          console.error("Error auto-playing first song:", error);
+        }
+      }
+    }, 1500);
+    
+    return () => clearTimeout(timer);
+  }, [songs, playSong, playerState.isPlaying, playerState.currentSongId]);
+  
+  // Enhanced logout handler that ensures clean termination of all processes
+  const handleLogout = () => {
+    try {
+      // Stop any currently playing music
+      if (playerState.isPlaying) {
+        togglePlayPause();
+      }
+      
+      // Small delay to ensure audio is properly stopped
+      setTimeout(() => {
+        logout();
+        console.log("User logged out successfully");
+      }, 100);
+    } catch (error) {
+      console.error("Error during logout:", error);
+      // Proceed with logout even if there's an error
+      logout();
+    }
+  };
   
   return (
     <div className="flex flex-col lg:flex-row gap-4 w-full max-w-6xl mx-auto p-4">
@@ -33,7 +82,7 @@ const AudioPlayerUI: React.FC = () => {
               <Button 
                 variant="ghost" 
                 size="icon" 
-                onClick={logout}
+                onClick={handleLogout}
                 className="text-futuristic-muted hover:text-destructive"
                 title="Logout"
               >
