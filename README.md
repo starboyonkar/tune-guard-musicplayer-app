@@ -1,8 +1,19 @@
 
-# 🚀 Cognitive Audio Enhancement Web App with CI/CD on AWS
+## 🚀 Cognitive Audio Enhancement Web App with CI/CD on AWS
 
 ## 📌 Problem Statement
 With the growing consumption of digital audio, users are often exposed to unsafe frequency levels that can cause long-term hearing damage. Conventional audio players lack real-time cognitive enhancements and safety checks for hearing protection.
+
+---
+## 🎧 Advanced Audio Enhancement Web Application – Features
+
+### 🌟 Overview
+
+The Advanced Audio Enhancement Web Application is a highly intelligent, full-stack audio playback platform developed using **Node.js**, **React.js**, **TypeScript**, and **CSS**, with a robust backend infrastructure powered by **Docker**, **Jenkins**, and **GitHub** CI/CD pipelines. Designed for seamless performance, this containerized app is deployed on an Amazon EC2 instance and accessible via its public IP at port **8000**, while Jenkins runs on port **8080**.
+
+The core innovation behind this app lies in **Cognitive Enhancement of Audio Processing** — specifically, **advanced frequency manipulation for safe audio listening**. The app features real-time voice command integration, user hearing safety statistics, and smooth playback features that ensure a futuristic and accessible user experience.
+
+---
 
 ## 🎯 Project Purpose
 This project introduces an **Advanced Frequency Manipulation Web App** built using **Node.js**, **React.js**, **CSS**, and **TypeScript**. The core aim is to provide:
@@ -135,13 +146,4 @@ df -h          # Disk space usage
 
 ---
 
-## 🎧 Advanced Audio Enhancement Web Application – Description and Features
-
-### 🌟 Overview
-
-The Advanced Audio Enhancement Web Application is a highly intelligent, full-stack audio playback platform developed using **Node.js**, **React.js**, **TypeScript**, and **CSS**, with a robust backend infrastructure powered by **Docker**, **Jenkins**, and **GitHub** CI/CD pipelines. Designed for seamless performance, this containerized app is deployed on an Amazon EC2 instance and accessible via its public IP at port **8000**, while Jenkins runs on port **8080**.
-
-The core innovation behind this app lies in **Cognitive Enhancement of Audio Processing** — specifically, **advanced frequency manipulation for safe audio listening**. The app features real-time voice command integration, user hearing safety statistics, and smooth playback features that ensure a futuristic and accessible user experience.
-
-...
 
