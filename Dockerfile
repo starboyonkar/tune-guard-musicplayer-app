@@ -1,31 +1,27 @@
+# Build stage
+FROM node:18.19.0-alpine as build
 
-# Use Node.js LTS as the base image
-FROM node:20-alpine as build
-
-# Set working directory
-WORKDIR /app
-
-# Copy package files and install dependencies
+WORKDIR /tune-guard app
 COPY package*.json ./
-RUN npm ci
+RUN npm install --legacy-peer-deps
 
-# Copy project files
 COPY . .
-
-# Build the application
 RUN npm run build
 
 # Production stage
 FROM nginx:alpine
 
-# Copy built files from build stage to nginx serve directory
-COPY --from=build /app/dist /usr/share/nginx/html
+COPY --from=build /tune-guard app/dist /usr/share/nginx/html
 
-# Copy custom nginx config to serve the React app
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+RUN echo 'server { \
+    listen 8000; \
+    server_name localhost; \
+    root /usr/share/nginx/html; \
+    index index.html index.htm; \
+    location / { \
+        try_files $uri $uri/ /index.html; \
+    } \
+}' > /etc/nginx/conf.d/default.conf
 
-# Expose port 8000
 EXPOSE 8000
-
-# Start nginx
 CMD ["nginx", "-g", "daemon off;"]
