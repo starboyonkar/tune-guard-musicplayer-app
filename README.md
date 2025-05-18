@@ -1,13 +1,14 @@
 
-## 🚀 Cognitive Audio Enhancement Web App with CI/CD on AWS
+## 🚀 TuneGuard: A Cognitive Audio Synthesis Web App (Node.js & React.js) with Containerized Deployment via Jenkins CI/CD on AWS
+---
 
 ## 📌 Problem Statement
 With the growing consumption of digital audio, users are often exposed to unsafe frequency levels that can cause long-term hearing damage. Conventional audio players lack real-time cognitive enhancements and safety checks for hearing protection.
 
 ---
-## 🎧 Advanced Audio Enhancement Web Application – Features
 
-### 🌟 Overview
+## 🎧 Advanced Audio Enhancement Web Application – Features 🌟
+
 
 The Advanced Audio Enhancement Web Application is a highly intelligent, full-stack audio playback platform developed using **Node.js**, **React.js**, **TypeScript**, and **CSS**, with a robust backend infrastructure powered by **Docker**, **Jenkins**, and **GitHub** CI/CD pipelines. Designed for seamless performance, this containerized app is deployed on an Amazon EC2 instance and accessible via its public IP at port **8000**, while Jenkins runs on port **8080**.
 
@@ -28,12 +29,16 @@ This project introduces an **Advanced Frequency Manipulation Web App** built usi
 - **Containerized deployment** with Docker ensures cross-environment consistency.
 - **Automated GitHub Webhooks** and Jenkins pipelines reduce human error and speed up delivery cycles.
 
+---
+
 ## 🖥️ Technology Stack
 - **Frontend:** React.js, TypeScript, CSS
 - **Backend:** Node.js
 - **Containerization:** Docker
 - **CI/CD Pipeline:** Jenkins + GitHub Webhooks
 - **Cloud Hosting:** Amazon EC2 (Amazon Linux 2)
+
+  ---
 
 ## ⚙️ EC2 Setup and Software Installation (Amazon Linux 2)
 
@@ -114,6 +119,8 @@ htop           # Better real-time monitoring (install with `sudo yum install hto
 free -h        # Memory usage
 df -h          # Disk space usage
 ```
+
+---
 
 ## 🐙 GitHub Webhook Setup
 1. Go to your GitHub repo → **Settings → Webhooks → Add Webhook**
