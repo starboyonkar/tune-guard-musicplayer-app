@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useAudio } from '@/lib/audioContext';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { soundEffects } from '@/lib/soundEffects';
+import VoiceCommandManager from './VoiceCommandManager';
 
 const SignUpForm: React.FC = () => {
   const { setProfile } = useAudio();
@@ -75,8 +77,9 @@ const SignUpForm: React.FC = () => {
       </h1>
       
       <Card className="glass border-futuristic-border backdrop-blur-xl bg-white/5">
-        <CardHeader className="border-b border-futuristic-border">
+        <CardHeader className="border-b border-futuristic-border flex justify-between items-center">
           <CardTitle className="text-xl text-center text-futuristic-accent1 neon-text">Create Your Audio Profile</CardTitle>
+          <VoiceCommandManager />
         </CardHeader>
         <CardContent className="pt-6">
           <form onSubmit={handleSubmit} className="space-y-6">

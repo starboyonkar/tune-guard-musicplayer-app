@@ -1,15 +1,18 @@
 
 // User Profile Type
 export interface UserProfile {
+  id?: string;
+  username?: string;
+  email?: string;
+  avatar?: string;
   name: string;
   age: number;
   gender: string;
   preferences?: string[];
   createdAt: string;
   updatedAt?: string;
-  dob?: string; // Add DOB field
-  musicExperience?: string; // Music experience level
-  id?: string; // Add optional id field
+  dob?: string;
+  musicExperience?: string;
 }
 
 // EQ Settings based on age profile
@@ -30,7 +33,7 @@ export interface Song {
   albumArt?: string;
   duration: number;
   source: string;
-  originalFileName?: string; // Added for persistence tracking
+  originalFileName?: string;
 }
 
 // Playlist Type
@@ -84,7 +87,13 @@ export interface SirenDetectionSettings {
   enabled: boolean;
   sensitivity: number;
   autoResume: boolean;
-  pauseDuration: number; // additional seconds to wait after siren ends before resuming
+  pauseDuration: number;
+}
+
+// Voice Command Panel State
+export interface VoiceCommandPanelState {
+  isOpen: boolean;
+  mode: 'help' | 'profile' | null;
 }
 
 // Extend AudioContextType to include removeSong
@@ -95,7 +104,7 @@ export interface AudioContextType {
   setEQSettings: (settings: EQSettings) => void;
   songs: Song[];
   addSong: (file: File) => void;
-  removeSong: (songId: string) => void;  // Add function to remove songs
+  removeSong: (songId: string) => void;
   playerState: PlayerState;
   voiceCommand: string;
   setVoiceCommand: (command: string) => void;
