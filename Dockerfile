@@ -1,7 +1,7 @@
 # Build stage
 FROM node:18.19.0-alpine as build
 
-WORKDIR /tune-guard app
+WORKDIR /app
 COPY package*.json ./
 RUN npm install --legacy-peer-deps
 
@@ -11,7 +11,7 @@ RUN npm run build
 # Production stage
 FROM nginx:alpine
 
-COPY --from=build /tune-guard app/dist /usr/share/nginx/html
+COPY --from=build /app/dist /usr/share/nginx/html
 
 RUN echo 'server { \
     listen 8000; \
