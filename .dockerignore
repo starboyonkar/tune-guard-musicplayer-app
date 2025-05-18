@@ -1,0 +1,28 @@
+
+# Node modules
+node_modules
+
+# Build files
+dist
+build
+
+# Version control
+.git
+.gitignore
+
+# Environment variables
+.env
+.env.*
+
+# Development files
+.vscode
+.idea
+*.log
+npm-debug.log*
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Jenkins files (no need to copy to Docker image)
+Jenkinsfile
