@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react';
 import { useAudio } from '@/lib/audioContext';
 import SignUpForm from '@/components/SignUpForm';
 import AudioPlayerUI from '@/components/AudioPlayerUI';
-import VoiceCommandManager from '@/components/VoiceCommandManager';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { soundEffects } from '@/lib/soundEffects';
 

@@ -1,4 +1,17 @@
 
+interface SpeechGrammar {
+  src: string;
+  weight: number;
+}
+
+interface SpeechGrammarList {
+  length: number;
+  addFromString(string: string, weight?: number): void;
+  addFromURI(src: string, weight?: number): void;
+  item(index: number): SpeechGrammar;
+  [index: number]: SpeechGrammar;
+}
+
 interface SpeechRecognitionErrorEvent extends Event {
   error: string;
   message: string;
@@ -16,10 +29,10 @@ interface SpeechRecognitionResultList {
 }
 
 interface SpeechRecognitionResult {
+  isFinal: boolean;
   length: number;
   item(index: number): SpeechRecognitionAlternative;
   [index: number]: SpeechRecognitionAlternative;
-  isFinal: boolean;
 }
 
 interface SpeechRecognitionAlternative {
@@ -44,34 +57,19 @@ interface SpeechRecognition extends EventTarget {
   onspeechend: ((this: SpeechRecognition, ev: Event) => any) | null;
   onspeechstart: ((this: SpeechRecognition, ev: Event) => any) | null;
   onstart: ((this: SpeechRecognition, ev: Event) => any) | null;
+  abort(): void;
   start(): void;
   stop(): void;
-  abort(): void;
-}
-
-interface SpeechGrammar {
-  src: string;
-  weight: number;
-}
-
-interface SpeechGrammarList {
-  length: number;
-  item(index: number): SpeechGrammar;
-  [index: number]: SpeechGrammar;
-  addFromURI(src: string, weight?: number): void;
-  addFromString(string: string, weight?: number): void;
-}
-
-interface SpeechGrammarListConstructor {
-  new(): SpeechGrammarList;
-  new(speechGrammarList: SpeechGrammarList): SpeechGrammarList;
-  prototype: SpeechGrammarList;
 }
 
 interface SpeechRecognitionConstructor {
-  new(): SpeechRecognition;
+  new (): SpeechRecognition;
   prototype: SpeechRecognition;
 }
 
-declare var SpeechRecognition: SpeechRecognitionConstructor | undefined;
-declare var webkitSpeechRecognition: SpeechRecognitionConstructor | undefined;
+declare global {
+  interface Window {
+    SpeechRecognition: SpeechRecognitionConstructor;
+    webkitSpeechRecognition: SpeechRecognitionConstructor;
+  }
+}

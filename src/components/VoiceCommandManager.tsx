@@ -240,7 +240,7 @@ const VoiceCommandManager: React.FC<VoiceCommandManagerProps> = ({ isSignedUp })
       </Sheet>
 
       {/* Profile Sheet */}
-      {isSignedUp && (
+      {isSignedUp && profile && (
         <Sheet open={showProfile} onOpenChange={setShowProfile}>
           <SheetContent side="right" className="glass-panel border-futuristic-border animate-fade-in">
             <SheetHeader>
@@ -250,23 +250,19 @@ const VoiceCommandManager: React.FC<VoiceCommandManagerProps> = ({ isSignedUp })
               </SheetDescription>
             </SheetHeader>
             <div className="mt-6 space-y-4">
-              {profile && (
-                <>
-                  <div className="text-center mb-6">
-                    <div className="inline-block rounded-full p-1 bg-gradient-to-r from-futuristic-accent1 to-futuristic-accent2 animate-pulse-slow">
-                      <div className="w-24 h-24 rounded-full overflow-hidden bg-futuristic-bg">
-                        <img 
-                          src={profile.avatar || "/lovable-uploads/d4fe6f3e-e72d-4760-93e5-5f71a12f2238.png"} 
-                          alt="Profile" 
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                    </div>
-                    <h3 className="mt-2 text-xl font-bold">{profile.username}</h3>
-                    <p className="text-futuristic-muted">{profile.email}</p>
+              <div className="text-center mb-6">
+                <div className="inline-block rounded-full p-1 bg-gradient-to-r from-futuristic-accent1 to-futuristic-accent2 animate-pulse-slow">
+                  <div className="w-24 h-24 rounded-full overflow-hidden bg-futuristic-bg">
+                    <img 
+                      src={profile.avatar || "/lovable-uploads/d4fe6f3e-e72d-4760-93e5-5f71a12f2238.png"} 
+                      alt="Profile" 
+                      className="w-full h-full object-cover"
+                    />
                   </div>
-                </>
-              )}
+                </div>
+                <h3 className="mt-2 text-xl font-bold">{profile.username}</h3>
+                <p className="text-futuristic-muted">{profile.email}</p>
+              </div>
 
               <div className="mt-6">
                 <Button 
