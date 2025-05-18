@@ -10,8 +10,7 @@ import FileUploader from './FileUploader';
 import ProfileEditor from './ProfileEditor';
 import SongsList from './SongsList';
 import SirenDetectionControl from './SirenDetectionControl';
-import HearingProtection from './HearingProtection';
-import VoiceCommandManager from './VoiceCommandManager';
+import HearingProtection from './HearingProtection'; // Added import for new component
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Settings, Music, LogOut, Siren, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -27,8 +26,7 @@ const AudioPlayerUI: React.FC = () => {
         <Card className="glass border-futuristic-border w-full overflow-hidden mb-4">
           <div className="flex justify-between items-center">
             <SongInfo />
-            <div className="flex items-center space-x-2">
-              <VoiceCommandManager isSignedUp={true} />
+            <div className="flex items-center">
               <ProfileEditor />
               <Button 
                 variant="ghost" 
