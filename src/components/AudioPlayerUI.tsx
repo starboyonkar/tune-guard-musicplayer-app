@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import PlayerControls from './PlayerControls';
 import SongInfo from './SongInfo';
@@ -24,48 +24,11 @@ const AudioPlayerUI: React.FC = () => {
     profile, 
     songs, 
     playerState, 
-    playSong,
     togglePlayPause
   } = useAudio();
   
-  // Auto-play first song after login with improved error handling
-  useEffect(() => {
-    let autoplayAttempted = false;
-    let autoplayTriesCount = 0;
-    const MAX_AUTOPLAY_ATTEMPTS = 3;
-    
-    // Improved auto-play with multiple retries and better error handling
-    const attemptAutoplay = (index = 0) => {
-      if (autoplayTriesCount >= MAX_AUTOPLAY_ATTEMPTS || index >= songs.length) {
-        console.log("Exhausted autoplay attempts");
-        return;
-      }
-      
-      try {
-        autoplayTriesCount++;
-        playSong(songs[index].id);
-        console.log(`Auto-playing song ${index + 1}: ${songs[index].title}`);
-        toast({
-          title: "Welcome back!",
-          description: `Now playing: ${songs[index].title} by ${songs[index].artist}`
-        });
-      } catch (error) {
-        console.error(`Error auto-playing song ${index + 1}:`, error);
-        // Try next song after a small delay
-        setTimeout(() => attemptAutoplay(index + 1), 300);
-      }
-    };
-    
-    // Small delay to ensure all components are properly mounted
-    const timer = setTimeout(() => {
-      if (songs.length > 0 && !playerState.isPlaying && !playerState.currentSongId && !autoplayAttempted) {
-        autoplayAttempted = true;
-        attemptAutoplay();
-      }
-    }, 1800); // Increased delay for better stability
-    
-    return () => clearTimeout(timer);
-  }, [songs, playSong, playerState.isPlaying, playerState.currentSongId]);
+  const [hasError, setHasError] = useState(false);
+  const [audioInitialized, setAudioInitialized] = useState(false);
   
   // Enhanced logout handler that ensures clean termination of all processes
   const handleLogout = () => {
@@ -86,6 +49,73 @@ const AudioPlayerUI: React.FC = () => {
       logout();
     }
   };
+  
+  // Initialize audio context when component mounts - this helps with browser autoplay policies
+  useEffect(() => {
+    if (!audioInitialized) {
+      setAudioInitialized(true);
+      
+      // Try to initialize audio context by user interaction
+      const initAudio = () => {
+        try {
+          // Create and immediately suspend a temporary audio context
+          const tempContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+          tempContext.resume().then(() => {
+            console.log("Audio context initialized by user gesture");
+            tempContext.suspend();
+          }).catch(err => {
+            console.warn("Could not resume audio context:", err);
+          });
+        } catch (error) {
+          console.error("Error initializing audio:", error);
+        }
+      };
+      
+      // Add and then remove event listeners to catch any user interaction
+      const handleUserInteraction = () => {
+        initAudio();
+        
+        // Remove event listeners after first interaction
+        document.removeEventListener('click', handleUserInteraction);
+        document.removeEventListener('touchstart', handleUserInteraction);
+        document.removeEventListener('keydown', handleUserInteraction);
+      };
+      
+      document.addEventListener('click', handleUserInteraction);
+      document.addEventListener('touchstart', handleUserInteraction);
+      document.addEventListener('keydown', handleUserInteraction);
+      
+      return () => {
+        document.removeEventListener('click', handleUserInteraction);
+        document.removeEventListener('touchstart', handleUserInteraction);
+        document.removeEventListener('keydown', handleUserInteraction);
+      };
+    }
+  }, [audioInitialized]);
+  
+  // Error boundary recovery
+  useEffect(() => {
+    const handleError = () => {
+      setHasError(true);
+      
+      toast({
+        title: "Application Error",
+        description: "We encountered an issue. Attempting to recover...",
+        variant: "destructive"
+      });
+      
+      // Try to recover after a delay
+      setTimeout(() => {
+        setHasError(false);
+      }, 2000);
+    };
+    
+    window.addEventListener('error', handleError);
+    
+    return () => {
+      window.removeEventListener('error', handleError);
+    };
+  }, []);
   
   return (
     <div className="flex flex-col lg:flex-row gap-4 w-full max-w-6xl mx-auto p-4">

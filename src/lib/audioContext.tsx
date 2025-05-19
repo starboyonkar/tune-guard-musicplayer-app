@@ -11,6 +11,8 @@ import {
 } from './types';
 import { toast } from '@/components/ui/use-toast';
 import { matchesVoiceCommand } from '@/lib/utils';
+import { autoPlayService } from './autoPlayService';
+import { VoiceCommandProcessor } from './voiceCommandProcessor';
 
 const SAMPLE_SONGS: Song[] = [
   {
@@ -186,12 +188,21 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const eqNodesRef = useRef<BiquadFilterNode[]>([]);
   const audioGraphSetup = useRef<boolean>(false);
   const songBufferCache = useRef<Map<string, ArrayBuffer>>(new Map());
+  const autoPlayAttempted = useRef<boolean>(false);
+  const voiceCommandProcessorRef = useRef<VoiceCommandProcessor | null>(null);
   
   const songs = [...SAMPLE_SONGS, ...customSongs];
   
   const currentSong = playerState.currentSongId 
     ? songs.find(song => song.id === playerState.currentSongId) 
     : null;
+    
+  // Initialize the voice command processor
+  useEffect(() => {
+    if (!voiceCommandProcessorRef.current) {
+      voiceCommandProcessorRef.current = new VoiceCommandProcessor();
+    }
+  }, []);
 
   const initializeAudioContext = () => {
     if (!audioContextRef.current) {
@@ -1229,24 +1240,64 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const playSong = (songId: string) => {
     if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
-      audioContextRef.current.resume().catch(console.error);
+      audioContextRef.current.resume().catch(error => {
+        console.error("Failed to resume AudioContext:", error);
+        
+        // Try to reinitialize audio context if resume fails
+        setTimeout(() => {
+          audioContextRef.current = null;
+          audioGraphSetup.current = false;
+          initializeAudioContext();
+          setupAudioGraph();
+        }, 100);
+      });
     }
 
+    // Special handling for toggling current song
     if (playerState.currentSongId === songId) {
       togglePlayPause();
       return;
     }
     
+    // Find the requested song
+    const song = songs.find(s => s.id === songId);
+    if (!song) {
+      console.error(`Song with id ${songId} not found`);
+      toast({
+        title: "Song Not Found",
+        description: "The requested song could not be played.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     // Add a small buffer between operations to avoid glitches
     setTimeout(() => {
-      setPlayerState(prevState => ({
-        ...prevState,
-        currentSongId: songId,
-        currentTime: 0,
-        isPlaying: true
-      }));
-      
-      setWaveformData(defaultWaveformData);
+      try {
+        // Stop current playback before changing song
+        if (audioRef.current && !audioRef.current.paused) {
+          audioRef.current.pause();
+        }
+        
+        // Update last played song for future sessions
+        autoPlayService.updateLastPlayedSong(songId);
+        
+        setPlayerState(prevState => ({
+          ...prevState,
+          currentSongId: songId,
+          currentTime: 0,
+          isPlaying: true
+        }));
+        
+        setWaveformData(defaultWaveformData);
+      } catch (error) {
+        console.error("Error in playSong:", error);
+        toast({
+          title: "Playback Error",
+          description: "Failed to play the selected song.",
+          variant: "destructive"
+        });
+      }
     }, 10);
   };
 
@@ -1257,7 +1308,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const newCommand: VoiceCommand = {
       text: command,
       timestamp: new Date().toISOString(),
-      processed: false
+      processed: false,
+      recognized: false
     };
     
     setCommandHistory(prev => [newCommand, ...prev].slice(0, 10));
@@ -1265,7 +1317,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setTimeout(() => {
       processVoiceCommand(command);
       setProcessingVoice(false);
-    }, 1000);
+    }, 500); // Reduced from 1000ms for faster response
   };
 
   const toggleVoiceListening = () => {
@@ -1279,26 +1331,44 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const processVoiceCommand = (command: string) => {
-    const lowerCommand = command.toLowerCase();
+    if (!command) return;
     
     let commandRecognized = false;
     
-    if (matchesVoiceCommand(lowerCommand, ["play"])) {
-      commandRecognized = true;
-      setPlayerState(prevState => ({ ...prevState, isPlaying: true }));
-      toast({
-        title: "Playback Started",
-        description: currentSong ? `Playing "${currentSong.title}"` : "Playing music",
-      });
-    } 
-    else if (matchesVoiceCommand(lowerCommand, ["pause"])) {
-      commandRecognized = true;
-      setPlayerState(prevState => ({ ...prevState, isPlaying: false }));
-      toast({
-        title: "Playback Paused",
-        description: "Music paused"
-      });
-    } 
+    if (voiceCommandProcessorRef.current) {
+      // Use the enhanced voice command processor
+      commandRecognized = voiceCommandProcessorRef.current.processCommand(command);
+    } else {
+      // Fallback to simpler method if processor isn't available
+      const lowerCommand = command.toLowerCase();
+      
+      if (matchesVoiceCommand(lowerCommand, ["play"])) {
+        commandRecognized = true;
+        setPlayerState(prevState => ({ ...prevState, isPlaying: true }));
+        toast({
+          title: "Playback Started",
+          description: currentSong ? `Playing "${currentSong.title}"` : "Playing music",
+        });
+      } 
+      else if (matchesVoiceCommand(lowerCommand, ["pause"])) {
+        commandRecognized = true;
+        setPlayerState(prevState => ({ ...prevState, isPlaying: false }));
+        toast({
+          title: "Playback Paused",
+          description: "Music paused"
+        });
+      }
+    }
+    
+    // Update command history to reflect command recognition
+    setCommandHistory(prev => {
+      const updated = [...prev];
+      if (updated.length > 0) {
+        updated[0].processed = true;
+        updated[0].recognized = commandRecognized;
+      }
+      return updated;
+    });
     
     if (!commandRecognized) {
       toast({
@@ -1307,14 +1377,6 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         variant: "destructive"
       });
     }
-    
-    setCommandHistory(prev => {
-      const updated = [...prev];
-      if (updated.length > 0) {
-        updated[0].processed = true;
-      }
-      return updated;
-    });
   };
 
   useEffect(() => {
@@ -1405,6 +1467,47 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       description: "Visualization has been reset"
     });
   };
+
+  // Improved auto-play after login effect
+  useEffect(() => {
+    // Only attempt auto-play if user is signed up and songs are loaded
+    if (isSignedUp && songs.length > 0 && !autoPlayAttempted.current) {
+      autoPlayAttempted.current = true;
+      
+      // Small delay to ensure audio context is fully ready
+      setTimeout(async () => {
+        try {
+          // Attempt to resume audio context if suspended
+          if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
+            try {
+              await audioContextRef.current.resume();
+              console.log("AudioContext resumed for auto-play");
+            } catch (err) {
+              console.warn("Could not resume AudioContext:", err);
+            }
+          }
+          
+          // Use the enhanced auto-play service
+          const success = await autoPlayService.initializeAutoPlay(
+            songs,
+            playSong,
+            setPlayerState
+          );
+          
+          if (!success) {
+            // Fallback method - try direct play on first song
+            console.log("Using fallback auto-play method");
+            if (songs.length > 0) {
+              playSong(songs[0].id);
+            }
+          }
+        } catch (error) {
+          console.error("Auto-play error:", error);
+          // Silent fail for auto-play (better UX)
+        }
+      }, 1000); // 1 second delay for better reliability
+    }
+  }, [isSignedUp, songs.length]);
 
   return (
     <AudioContext.Provider value={{
