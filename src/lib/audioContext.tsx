@@ -850,6 +850,13 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setIsSignedUp(true);
     
     localStorage.setItem('audioPersonaProfile', JSON.stringify(newProfile));
+    
+    // Prepare audio elements for immediate playback after profile creation
+    if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
+      audioContextRef.current.resume().catch(err => {
+        console.warn("Could not resume audio context on profile creation:", err);
+      });
+    }
   };
 
   const updateProfile = (partialProfile: Partial<UserProfile>) => {
@@ -919,14 +926,29 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           toast({
             title: "Playback Error",
             description: "Could not load this song. It may have been from a previous session.",
-            variant: "destructive"
+            variant: "destructive",
+            id: "song-load-error" // Prevent duplicate toasts
           });
           return;
         }
       }
       
+      // Improved canplaythrough handler with timeout backup
+      const playbackTimeout = setTimeout(() => {
+        // If we haven't started playing after a reasonable time, force it
+        if (playerState.isPlaying && audioRef.current) {
+          try {
+            console.log("Forcing playback after timeout");
+            audioRef.current.play().catch(e => console.error("Forced play error:", e));
+          } catch (e) {
+            console.error("Timeout force play error:", e);
+          }
+        }
+      }, 2000);
+      
       audioRef.current.oncanplaythrough = () => {
         console.log("Audio can play through");
+        clearTimeout(playbackTimeout);
         
         if (playerState.isPlaying) {
           console.log("Starting playback");
@@ -938,13 +960,19 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 console.log("Playback started successfully");
               })
               .catch(error => {
-                console.error("Audio play error:", error);
-                setPlayerState(prevState => ({ ...prevState, isPlaying: false }));
-                toast({
-                  title: "Playback Error",
-                  description: "There was an error playing this song. Please try again.",
-                  variant: "destructive"
-                });
+                if (error.name === 'NotAllowedError') {
+                  console.log("Automatic playback prevented by browser. User interaction required.");
+                  // We'll just keep the player state as playing and let the user interact
+                } else {
+                  console.error("Audio play error:", error);
+                  setPlayerState(prevState => ({ ...prevState, isPlaying: false }));
+                  toast({
+                    title: "Playback Error",
+                    description: "There was an error playing this song. Please try again.",
+                    variant: "destructive",
+                    id: "audio-play-error"
+                  });
+                }
               });
           }
         } else {
@@ -1013,7 +1041,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                   toast({
                     title: "Playback Issue",
                     description: "There was a problem with playback. Please try again.",
-                    variant: "destructive"
+                    variant: "destructive",
+                    id: "toggle-play-error"
                   });
                 }
                 return prevState;
@@ -1266,7 +1295,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       toast({
         title: "Song Not Found",
         description: "The requested song could not be played.",
-        variant: "destructive"
+        variant: "destructive",
+        id: "song-not-found"
       });
       return;
     }
@@ -1295,7 +1325,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         toast({
           title: "Playback Error",
           description: "Failed to play the selected song.",
-          variant: "destructive"
+          variant: "destructive",
+          id: "play-song-error"
         });
       }
     }, 10);
@@ -1468,47 +1499,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     });
   };
 
-  // Improved auto-play after login effect
-  useEffect(() => {
-    // Only attempt auto-play if user is signed up and songs are loaded
-    if (isSignedUp && songs.length > 0 && !autoPlayAttempted.current) {
-      autoPlayAttempted.current = true;
-      
-      // Small delay to ensure audio context is fully ready
-      setTimeout(async () => {
-        try {
-          // Attempt to resume audio context if suspended
-          if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
-            try {
-              await audioContextRef.current.resume();
-              console.log("AudioContext resumed for auto-play");
-            } catch (err) {
-              console.warn("Could not resume AudioContext:", err);
-            }
-          }
-          
-          // Use the enhanced auto-play service
-          const success = await autoPlayService.initializeAutoPlay(
-            songs,
-            playSong,
-            setPlayerState
-          );
-          
-          if (!success) {
-            // Fallback method - try direct play on first song
-            console.log("Using fallback auto-play method");
-            if (songs.length > 0) {
-              playSong(songs[0].id);
-            }
-          }
-        } catch (error) {
-          console.error("Auto-play error:", error);
-          // Silent fail for auto-play (better UX)
-        }
-      }, 1000); // 1 second delay for better reliability
-    }
-  }, [isSignedUp, songs.length]);
-
+  // Improved auto-play after login effect - removed in favor of the approach in Index.tsx
+  
   return (
     <AudioContext.Provider value={{
       profile,

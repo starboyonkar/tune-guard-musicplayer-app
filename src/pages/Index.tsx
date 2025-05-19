@@ -5,10 +5,12 @@ import SignUpForm from '@/components/SignUpForm';
 import AudioPlayerUI from '@/components/AudioPlayerUI';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { soundEffects } from '@/lib/soundEffects';
+import { autoPlayService } from '@/lib/autoPlayService';
 
 const Index = () => {
-  const { isSignedUp } = useAudio();
+  const { isSignedUp, songs, playSong, setPlayerState } = useAudio();
   const [showControls, setShowControls] = useState(false);
+  const [profileCreated, setProfileCreated] = useState(false);
   
   useEffect(() => {
     // Initialize sound effects
@@ -36,6 +38,27 @@ const Index = () => {
       clearTimeout(timer);
     };
   }, []);
+  
+  // Auto-play detection when user signs up
+  useEffect(() => {
+    // Only run this effect when transitioning from not signed up to signed up
+    if (isSignedUp && !profileCreated) {
+      setProfileCreated(true);
+      
+      // Begin immediate auto-play using the optimized post-login function
+      if (songs.length > 0) {
+        // Small timeout to ensure audio context is ready
+        setTimeout(async () => {
+          try {
+            console.log("Starting post-login playback...");
+            await autoPlayService.startPlaybackAfterLogin(songs, playSong, setPlayerState);
+          } catch (error) {
+            console.error("Post-login auto-play failed:", error);
+          }
+        }, 500);
+      }
+    }
+  }, [isSignedUp, songs, profileCreated, playSong, setPlayerState]);
 
   return (
     <div className="min-h-screen w-full bg-futuristic-bg overflow-hidden relative">

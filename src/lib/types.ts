@@ -18,6 +18,8 @@ export interface EQSettings {
   mid: number;
   treble: number;
   volume: number;
+  presence?: number; // Add presence setting
+  warmth?: number;   // Add warmth setting
 }
 
 export interface VoiceCommand {
@@ -108,4 +110,16 @@ export interface NavigationItem {
   label: string;
   href: string;
   icon: ReactNode;
+}
+
+export interface SirenDetectionSettings {
+  enabled: boolean;
+  sensitivity: number;
+  notificationType: 'visual' | 'audio' | 'both';
+}
+
+export interface VoiceCommandPanelState {
+  isOpen: boolean;
+  isListening: boolean;
+  lastCommand: string | null;
 }

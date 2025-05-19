@@ -15,7 +15,7 @@ const SignUpForm: React.FC = () => {
   const [name, setName] = useState('');
   const [age, setAge] = useState('');
   const [dob, setDob] = useState('');
-  const [gender, setGender] = useState<'male' | 'female' | 'non-binary' | 'prefer-not-to-say'>('prefer-not-to-say');
+  const [gender, setGender] = useState<'male' | 'female' | 'non-binary' | 'prefer not to say'>('prefer not to say');
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -135,7 +135,7 @@ const SignUpForm: React.FC = () => {
                   <SelectItem value="male">Male</SelectItem>
                   <SelectItem value="female">Female</SelectItem>
                   <SelectItem value="non-binary">Non-binary</SelectItem>
-                  <SelectItem value="prefer-not-to-say">Prefer not to say</SelectItem>
+                  <SelectItem value="prefer not to say">Prefer not to say</SelectItem>
                 </SelectContent>
               </Select>
             </div>
