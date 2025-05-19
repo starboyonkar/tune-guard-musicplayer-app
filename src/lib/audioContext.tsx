@@ -12,6 +12,7 @@ import {
 import { toast } from '@/components/ui/use-toast';
 import { matchesVoiceCommand } from '@/lib/utils';
 
+// Updated sample songs with more reliable audio sources
 const SAMPLE_SONGS: Song[] = [
   {
     id: '1',
@@ -19,7 +20,7 @@ const SAMPLE_SONGS: Song[] = [
     artist: 'Audio Studio',
     albumArt: '/lovable-uploads/b26c60f6-26f9-4e3b-afb1-ba0d0a2e076d.png',
     duration: 200,
-    source: 'https://assets.mixkit.co/music/preview/mixkit-tech-house-vibes-130.mp3'
+    source: 'https://assets.mixkit.co/music/preview/mixkit-hazy-after-hours-132.mp3'
   },
   {
     id: '2',
@@ -27,7 +28,7 @@ const SAMPLE_SONGS: Song[] = [
     artist: 'Sound Waves',
     albumArt: '/lovable-uploads/b26c60f6-26f9-4e3b-afb1-ba0d0a2e076d.png',
     duration: 234,
-    source: 'https://assets.mixkit.co/music/preview/mixkit-dance-with-me-3.mp3'
+    source: 'https://assets.mixkit.co/music/preview/mixkit-serene-view-443.mp3'
   },
   {
     id: '3',
@@ -35,7 +36,7 @@ const SAMPLE_SONGS: Song[] = [
     artist: 'Music Lab',
     albumArt: '/lovable-uploads/b26c60f6-26f9-4e3b-afb1-ba0d0a2e076d.png',
     duration: 210,
-    source: 'https://assets.mixkit.co/music/preview/mixkit-uplift-breakbeat-loop-180.mp3'
+    source: 'https://assets.mixkit.co/music/preview/mixkit-hip-hop-02-738.mp3'
   },
   {
     id: '4',
@@ -43,7 +44,7 @@ const SAMPLE_SONGS: Song[] = [
     artist: 'Echo Studio',
     albumArt: '/lovable-uploads/b26c60f6-26f9-4e3b-afb1-ba0d0a2e076d.png',
     duration: 183,
-    source: 'https://assets.mixkit.co/music/preview/mixkit-serene-view-443.mp3'
+    source: 'https://assets.mixkit.co/music/preview/mixkit-relaxing-in-nature-522.mp3'
   }
 ];
 
@@ -226,7 +227,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         console.error('Error initializing Web Audio API:', error);
         toast({
           title: 'Audio Processing Error',
-          description: 'Failed to initialize audio processing.',
+          description: 'Failed to initialize audio processing. Please check your browser settings.',
           variant: 'destructive'
         });
         return false;
@@ -376,7 +377,9 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
     
     return () => {
-      cancelAnimationFrame(animationFrameId);
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+      }
     };
   }, [playerState.isPlaying, eqSettings]);
 
@@ -404,31 +407,43 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const blob = new Blob([arrayBuffer], { type: file.type });
       const fileUrl = URL.createObjectURL(blob);
       
-      const audio = new Audio(fileUrl);
+      const audio = new Audio();
+      audio.preload = 'metadata';
       
-      await new Promise<void>((resolve, reject) => {
-        const timeoutId = setTimeout(() => resolve(), 3000);
+      // Set up event handlers before setting src
+      const metadataPromise = new Promise<number>((resolve) => {
+        audio.onloadedmetadata = () => {
+          resolve(audio.duration);
+        };
         
-        audio.addEventListener('loadedmetadata', () => {
-          clearTimeout(timeoutId);
-          resolve();
-        });
-        
-        audio.addEventListener('error', (e) => {
-          clearTimeout(timeoutId);
-          console.error("Error loading audio metadata:", e);
-          reject(e);
-        });
+        // Fallback in case metadata loading fails
+        setTimeout(() => {
+          if (audio.duration === 0 || isNaN(audio.duration)) {
+            resolve(180); // Default 3 minutes if we can't get duration
+          }
+        }, 3000);
       });
+      
+      // Set source and start loading
+      audio.src = fileUrl;
+      
+      // Wait for metadata to load with a timeout
+      let duration = 0;
+      try {
+        duration = await metadataPromise;
+      } catch (e) {
+        console.warn("Could not get audio duration, using default", e);
+        duration = 180;
+      }
       
       const songId = `song-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       
       const newSong: Song = {
         id: songId,
-        title: file.name.replace(/\.[^/.]+$/, ""),
+        title: file.name.replace(/\.[^/.]+$/, "").slice(0, 50),
         artist: 'Unknown Artist',
         albumArt: '/lovable-uploads/b26c60f6-26f9-4e3b-afb1-ba0d0a2e076d.png',
-        duration: Math.round(audio.duration) || 180,
+        duration: Math.round(duration) || 180,
         source: fileUrl,
         originalFileName: file.name
       };
@@ -499,12 +514,17 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         console.error("Error accessing IndexedDB:", dbError);
       }
       
-      setPlayerState(prevState => ({
-        ...prevState,
-        currentSongId: newSong.id,
-        currentTime: 0,
-        isPlaying: true
-      }));
+      // If this is the first song added, play it automatically
+      if (updatedCustomSongs.length === 1 && !playerState.isPlaying) {
+        setTimeout(() => {
+          setPlayerState(prevState => ({
+            ...prevState,
+            currentSongId: newSong.id,
+            currentTime: 0,
+            isPlaying: true
+          }));
+        }, 500);
+      }
       
       toast({
         title: "Song Added Successfully",
@@ -515,14 +535,14 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       console.error("Error adding song:", error);
       toast({
         title: "Error Adding Song",
-        description: "There was a problem adding your song. Please try again.",
+        description: "There was a problem adding your song. Please try a different file format or size.",
         variant: "destructive"
       });
     } finally {
       setIsLoading(false);
     }
   };
-  
+
   const removeSong = (songId: string) => {
     if (playerState.currentSongId === songId) {
       if (songs.length > 1) {
@@ -595,8 +615,10 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     audioRef.current = new Audio();
     audioRef.current.preload = 'auto';
     
+    // Initialize Web Audio API
     initializeAudioContext();
     
+    // Improved song loading with better error handling
     const loadSavedSongs = async () => {
       try {
         const savedMetadata = localStorage.getItem('tuneGuardSongMetadata');
@@ -636,7 +658,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                       
                       const recoveredSong: Song = {
                         id: songMeta.id,
-                        title: songMeta.title || songData.fileName.replace(/\.[^/.]+$/, ""),
+                        title: songMeta.title || songData.fileName.replace(/\.[^/.]+$/, "").slice(0, 50),
                         artist: songMeta.artist || 'Unknown Artist',
                         albumArt: songMeta.albumArt || '/lovable-uploads/b26c60f6-26f9-4e3b-afb1-ba0d0a2e076d.png',
                         duration: songMeta.duration || 0,
@@ -734,10 +756,6 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const duration = Math.floor(audioRef.current.duration);
         
         if (duration && duration !== currentSong.duration) {
-          const updatedSongs = songs.map(song => 
-            song.id === currentSong.id ? { ...song, duration } : song
-          );
-          
           if (customSongs.some(song => song.id === currentSong.id)) {
             setCustomSongs(customSongs.map(song => 
               song.id === currentSong.id ? { ...song, duration } : song
@@ -762,11 +780,14 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       console.error("Audio element error:", e);
       const currentSongId = playerState.currentSongId;
       
-      toast({
-        title: "Playback Error",
-        description: "There was an error playing this song. Trying to recover...",
-        variant: "destructive"
-      });
+      // Only show toast for persistent errors, not during song changes
+      if (audioRef.current?.error?.code === 4) { // MEDIA_ERR_SRC_NOT_SUPPORTED
+        toast({
+          title: "Playback Error",
+          description: "This audio format may not be supported by your browser. Trying another song...",
+          variant: "destructive"
+        });
+      }
       
       setTimeout(() => {
         if (currentSongId === playerState.currentSongId) {
@@ -794,6 +815,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     audio.addEventListener('error', onError);
     document.addEventListener('play-song', onPlaySong);
     
+    // Disable voice listening by default
     setIsVoiceListening(false);
     
     const savedPlaylists = localStorage.getItem('tuneGuardPlaylists');
@@ -825,7 +847,11 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       });
       
       if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
-        audioContextRef.current.close();
+        try {
+          audioContextRef.current.close();
+        } catch(e) {
+          console.error("Error closing audio context:", e);
+        }
       }
     };
   }, []);
@@ -892,7 +918,6 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     resumeAudioContext();
     
     if (!audioGraphSetup.current) {
-      console.log("Setting up audio graph for the first time");
       setupAudioGraph();
     }
     
@@ -901,21 +926,47 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         console.log("Setting audio source to:", currentSong.source);
         
         try {
+          // Reset the audio element completely before setting new source
+          audioRef.current.pause();
+          audioRef.current.currentTime = 0;
+          audioRef.current.src = '';
+          audioRef.current.load();
+          
+          // Now set the new source
           audioRef.current.src = currentSong.source;
           audioRef.current.load();
+          
+          // Pre-buffer the audio for smoother playback
+          audioRef.current.preload = 'auto';
         } catch (error) {
           console.error("Error setting audio source:", error);
           toast({
             title: "Playback Error",
-            description: "Could not load this song. It may have been from a previous session.",
+            description: "Could not load this song. Trying another track...",
             variant: "destructive"
           });
+          
+          // Try to recover by playing another song after a short delay
+          setTimeout(() => nextSong(), 1000);
           return;
         }
       }
       
+      const playbackTimeout = setTimeout(() => {
+        // If we haven't started playback after 5 seconds, something is wrong
+        console.warn("Playback taking too long, trying to recover...");
+        if (playerState.isPlaying && audioRef.current) {
+          try {
+            audioRef.current.play().catch(e => console.error("Recovery play failed:", e));
+          } catch(e) {
+            console.error("Recovery attempt error:", e);
+          }
+        }
+      }, 5000);
+      
       audioRef.current.oncanplaythrough = () => {
         console.log("Audio can play through");
+        clearTimeout(playbackTimeout);
         
         if (playerState.isPlaying) {
           console.log("Starting playback");
@@ -928,12 +979,16 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               })
               .catch(error => {
                 console.error("Audio play error:", error);
-                setPlayerState(prevState => ({ ...prevState, isPlaying: false }));
-                toast({
-                  title: "Playback Error",
-                  description: "There was an error playing this song. Please try again.",
-                  variant: "destructive"
-                });
+                
+                // Only show error if it's not user interaction related
+                if (error.name !== 'NotAllowedError') {
+                  setPlayerState(prevState => ({ ...prevState, isPlaying: false }));
+                  toast({
+                    title: "Playback Error",
+                    description: "There was an error playing this song. Please try again.",
+                    variant: "destructive"
+                  });
+                }
               });
           }
         } else {
@@ -997,15 +1052,16 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             if (playPromise !== undefined) {
               playPromise.catch(error => {
                 console.error("Error playing audio:", error);
-                // Only show errors for critical issues, not user-initiated actions
-                if (error.name !== 'AbortError' && error.name !== 'NotAllowedError') {
-                  toast({
-                    title: "Playback Issue",
-                    description: "There was a problem with playback. Please try again.",
-                    variant: "destructive"
-                  });
+                // Auto-retry once for non-user interaction errors
+                if (error.name !== 'NotAllowedError') {
+                  setTimeout(() => {
+                    if (audioRef.current) {
+                      audioRef.current.play().catch(e => 
+                        console.error("Retry play failed:", e)
+                      );
+                    }
+                  }, 1000);
                 }
-                return prevState;
               });
             }
           }, 50);
@@ -1126,9 +1182,36 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const logout = () => {
+    // Stop any playback before logout
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.src = '';
+    }
+    
+    // Reset audio context if possible
+    if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+      try {
+        audioContextRef.current.close();
+      } catch (e) {
+        console.error("Error closing audio context during logout:", e);
+      }
+    }
+    
+    // Stop voice recognition if active
+    if (isVoiceListening) {
+      setIsVoiceListening(false);
+    }
+    
+    // Clear user data
     setProfileState(null);
     setIsSignedUp(false);
     localStorage.removeItem('audioPersonaProfile');
+    
+    // Reset player state
+    setPlayerState(defaultPlayerState);
+    
+    // Reset waveform data
+    setWaveformData(defaultWaveformData);
     
     toast({
       title: "Logged Out",
@@ -1237,6 +1320,16 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       return;
     }
     
+    // Reset any ongoing playback first
+    if (audioRef.current) {
+      try {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      } catch (e) {
+        console.error("Error resetting current playback:", e);
+      }
+    }
+    
     // Add a small buffer between operations to avoid glitches
     setTimeout(() => {
       setPlayerState(prevState => ({
@@ -1251,6 +1344,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const setVoiceCommand = (command: string) => {
+    if (!command.trim()) return;
+    
     setVoiceCommandText(command);
     setProcessingVoice(true);
     
@@ -1265,56 +1360,154 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setTimeout(() => {
       processVoiceCommand(command);
       setProcessingVoice(false);
-    }, 1000);
+    }, 300);
   };
 
   const toggleVoiceListening = () => {
+    // Toggle voice listening state
     setIsVoiceListening(prev => !prev);
+    
+    // If enabling, show a toast notification
     if (!isVoiceListening) {
       toast({
         title: "Voice Assistant Activated",
         description: "Listening for commands...",
       });
+    } else {
+      toast({
+        title: "Voice Assistant Deactivated",
+        description: "Voice commands turned off.",
+      });
     }
   };
 
   const processVoiceCommand = (command: string) => {
-    const lowerCommand = command.toLowerCase();
+    const lowerCommand = command.toLowerCase().trim();
     
     let commandRecognized = false;
     
-    if (matchesVoiceCommand(lowerCommand, ["play"])) {
+    // Basic commands with better matching
+    if (matchesVoiceCommand(lowerCommand, ["play", "start", "resume", "begin"])) {
       commandRecognized = true;
       setPlayerState(prevState => ({ ...prevState, isPlaying: true }));
+      
+      if (audioRef.current) {
+        audioRef.current.play().catch(err => {
+          console.error("Error starting playback via voice command:", err);
+        });
+      }
+      
       toast({
         title: "Playback Started",
         description: currentSong ? `Playing "${currentSong.title}"` : "Playing music",
       });
     } 
-    else if (matchesVoiceCommand(lowerCommand, ["pause"])) {
+    else if (matchesVoiceCommand(lowerCommand, ["pause", "stop", "halt"])) {
       commandRecognized = true;
       setPlayerState(prevState => ({ ...prevState, isPlaying: false }));
+      
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+      
       toast({
         title: "Playback Paused",
         description: "Music paused"
       });
-    } 
-    
-    if (!commandRecognized) {
+    }
+    else if (matchesVoiceCommand(lowerCommand, ["next", "skip", "next song"])) {
+      commandRecognized = true;
+      nextSong();
       toast({
-        title: "Command Not Recognized",
-        description: "Only supported voice commands are accepted",
-        variant: "destructive"
+        title: "Next Song",
+        description: "Playing next track"
       });
     }
+    else if (matchesVoiceCommand(lowerCommand, ["previous", "back", "last song"])) {
+      commandRecognized = true;
+      prevSong();
+      toast({
+        title: "Previous Song",
+        description: "Playing previous track"
+      });
+    }
+    else if (matchesVoiceCommand(lowerCommand, ["louder", "volume up", "increase volume"])) {
+      commandRecognized = true;
+      setPlayerState(prev => {
+        const newVolume = Math.min(100, prev.volume + 10);
+        return { ...prev, volume: newVolume, isMuted: false };
+      });
+      toast({
+        title: "Volume Up",
+        description: "Increasing volume"
+      });
+    }
+    else if (matchesVoiceCommand(lowerCommand, ["quieter", "volume down", "decrease volume"])) {
+      commandRecognized = true;
+      setPlayerState(prev => {
+        const newVolume = Math.max(0, prev.volume - 10);
+        return { ...prev, volume: newVolume, isMuted: false };
+      });
+      toast({
+        title: "Volume Down",
+        description: "Decreasing volume"
+      });
+    }
+    else if (matchesVoiceCommand(lowerCommand, ["mute", "silence", "quiet"])) {
+      commandRecognized = true;
+      setPlayerState(prev => ({ ...prev, isMuted: true }));
+      toast({
+        title: "Muted",
+        description: "Audio muted"
+      });
+    }
+    else if (matchesVoiceCommand(lowerCommand, ["unmute", "sound on"])) {
+      commandRecognized = true;
+      setPlayerState(prev => ({ ...prev, isMuted: false }));
+      toast({
+        title: "Unmuted",
+        description: "Audio unmuted"
+      });
+    }
+    else if (matchesVoiceCommand(lowerCommand, ["shuffle on", "shuffle", "mix"])) {
+      commandRecognized = true;
+      setPlayerState(prev => ({ ...prev, shuffleEnabled: true }));
+      toast({
+        title: "Shuffle Enabled",
+        description: "Playing songs in random order"
+      });
+    }
+    else if (matchesVoiceCommand(lowerCommand, ["shuffle off", "no shuffle", "in order"])) {
+      commandRecognized = true;
+      setPlayerState(prev => ({ ...prev, shuffleEnabled: false }));
+      toast({
+        title: "Shuffle Disabled",
+        description: "Playing songs in sequence"
+      });
+    }
+    else if (matchesVoiceCommand(lowerCommand, ["logout", "log out", "sign out", "exit"])) {
+      commandRecognized = true;
+      logout();
+    }
     
+    // Update command history to mark as processed
     setCommandHistory(prev => {
       const updated = [...prev];
       if (updated.length > 0) {
         updated[0].processed = true;
+        updated[0].recognized = commandRecognized;
       }
       return updated;
     });
+    
+    // Only show unrecognized command message for non-empty commands
+    if (!commandRecognized && lowerCommand.length > 1) {
+      toast({
+        title: "Command Not Recognized",
+        description: "Try saying: play, pause, next, previous, volume up/down",
+        variant: "destructive"
+      });
+    }
   };
 
   useEffect(() => {
