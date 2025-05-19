@@ -31,32 +31,38 @@ const AudioPlayerUI: React.FC = () => {
   // Auto-play first song after login with improved error handling
   useEffect(() => {
     let autoplayAttempted = false;
+    let autoplayTriesCount = 0;
+    const MAX_AUTOPLAY_ATTEMPTS = 3;
+    
+    // Improved auto-play with multiple retries and better error handling
+    const attemptAutoplay = (index = 0) => {
+      if (autoplayTriesCount >= MAX_AUTOPLAY_ATTEMPTS || index >= songs.length) {
+        console.log("Exhausted autoplay attempts");
+        return;
+      }
+      
+      try {
+        autoplayTriesCount++;
+        playSong(songs[index].id);
+        console.log(`Auto-playing song ${index + 1}: ${songs[index].title}`);
+        toast({
+          title: "Welcome back!",
+          description: `Now playing: ${songs[index].title} by ${songs[index].artist}`
+        });
+      } catch (error) {
+        console.error(`Error auto-playing song ${index + 1}:`, error);
+        // Try next song after a small delay
+        setTimeout(() => attemptAutoplay(index + 1), 300);
+      }
+    };
     
     // Small delay to ensure all components are properly mounted
     const timer = setTimeout(() => {
       if (songs.length > 0 && !playerState.isPlaying && !playerState.currentSongId && !autoplayAttempted) {
-        try {
-          autoplayAttempted = true;
-          playSong(songs[0].id);
-          console.log("Auto-playing first song after login:", songs[0].title);
-          toast({
-            title: "Welcome back!",
-            description: `Now playing: ${songs[0].title} by ${songs[0].artist}`
-          });
-        } catch (error) {
-          console.error("Error auto-playing first song:", error);
-          // Try next song if first one fails
-          if (songs.length > 1) {
-            try {
-              playSong(songs[1].id);
-              console.log("First song failed, trying second song:", songs[1].title);
-            } catch (secondError) {
-              console.error("Error playing fallback song:", secondError);
-            }
-          }
-        }
+        autoplayAttempted = true;
+        attemptAutoplay();
       }
-    }, 1500);
+    }, 1800); // Increased delay for better stability
     
     return () => clearTimeout(timer);
   }, [songs, playSong, playerState.isPlaying, playerState.currentSongId]);

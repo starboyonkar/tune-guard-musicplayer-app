@@ -56,7 +56,7 @@ const Index = () => {
         <span className="text-lg font-semibold neon-text">TUNE GUARD</span>
       </div>
       
-      {/* Main content */}
+      {/* Main content with smoother transition */}
       <div className="container mx-auto min-h-screen flex items-center">
         {isSignedUp ? <AudioPlayerUI /> : <SignUpForm />}
       </div>

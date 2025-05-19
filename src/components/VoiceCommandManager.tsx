@@ -33,45 +33,57 @@ const VoiceCommandManager: React.FC = () => {
   const initAttempts = useRef(0);
   const maxInitAttempts = 3;
   const errorTimeouts = useRef<Record<string, number>>({});
+  const lastErrorTime = useRef<Record<string, number>>({});
+  const recognitionResetTimer = useRef<number | null>(null);
   
   useEffect(() => {
-    // Initialize speech recognition with better error handling
-    try {
-      if (typeof window !== 'undefined') {
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (SpeechRecognition) {
-          recognition.current = new SpeechRecognition();
-          recognition.current.continuous = true;
-          recognition.current.interimResults = false;
-          recognition.current.lang = 'en-US';
-          setIsReady(true);
-          console.log("Speech recognition initialized successfully");
-        } else if (initAttempts.current < maxInitAttempts) {
+    // Only initialize speech recognition when needed
+    const initializeSpeechRecognition = () => {
+      try {
+        if (typeof window !== 'undefined') {
+          const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+          if (SpeechRecognition) {
+            recognition.current = new SpeechRecognition();
+            recognition.current.continuous = true;
+            recognition.current.interimResults = false;
+            recognition.current.lang = 'en-US';
+            setIsReady(true);
+            console.log("Speech recognition initialized successfully");
+            return true;
+          } else if (initAttempts.current < maxInitAttempts) {
+            initAttempts.current += 1;
+            console.warn("Speech recognition not supported in this browser");
+            // Only show this error once
+            if (initAttempts.current === 1) {
+              toast({
+                title: "Voice Commands Limited",
+                description: "Your browser doesn't support speech recognition",
+                variant: "destructive"
+              });
+            }
+          }
+        }
+        return false;
+      } catch (error) {
+        console.error("Error initializing speech recognition:", error);
+        if (initAttempts.current < maxInitAttempts) {
           initAttempts.current += 1;
-          console.warn("Speech recognition not supported in this browser");
           // Only show this error once
           if (initAttempts.current === 1) {
             toast({
-              title: "Voice Commands Limited",
-              description: "Your browser doesn't support speech recognition",
+              title: "Voice Commands Unavailable",
+              description: "Could not initialize speech recognition",
               variant: "destructive"
             });
           }
         }
+        return false;
       }
-    } catch (error) {
-      console.error("Error initializing speech recognition:", error);
-      if (initAttempts.current < maxInitAttempts) {
-        initAttempts.current += 1;
-        // Only show this error once
-        if (initAttempts.current === 1) {
-          toast({
-            title: "Voice Commands Unavailable",
-            description: "Could not initialize speech recognition",
-            variant: "destructive"
-          });
-        }
-      }
+    };
+    
+    // Only initialize when user enables voice listening
+    if (isVoiceListening && !isReady) {
+      initializeSpeechRecognition();
     }
 
     // Cleanup function
@@ -84,8 +96,12 @@ const VoiceCommandManager: React.FC = () => {
           console.log("Error stopping speech recognition during cleanup:", e);
         }
       }
+      
+      if (recognitionResetTimer.current) {
+        clearTimeout(recognitionResetTimer.current);
+      }
     };
-  }, []);
+  }, [isVoiceListening]);
 
   useEffect(() => {
     if (!recognition.current || !isReady) return;
@@ -101,8 +117,8 @@ const VoiceCommandManager: React.FC = () => {
   const showThrottledToast = (key: string, title: string, description: string, variant: "default" | "destructive" = "default") => {
     const now = Date.now();
     // Only show error once every 10 seconds for the same error type
-    if (!errorTimeouts.current[key] || now - errorTimeouts.current[key] > 10000) {
-      errorTimeouts.current[key] = now;
+    if (!lastErrorTime.current[key] || now - lastErrorTime.current[key] > 10000) {
+      lastErrorTime.current[key] = now;
       toast({
         title,
         description,
@@ -152,14 +168,26 @@ const VoiceCommandManager: React.FC = () => {
         // Automatically restart if we're still supposed to be listening
         if (isVoiceListening && recognition.current) {
           try {
-            setTimeout(() => {
+            // Use a more reliable way to restart recognition with exponential backoff
+            const delayTime = Math.min(3000, 500 * Math.pow(1.5, initAttempts.current));
+            
+            if (recognitionResetTimer.current) {
+              clearTimeout(recognitionResetTimer.current);
+            }
+            
+            recognitionResetTimer.current = window.setTimeout(() => {
               if (isVoiceListening && recognition.current) {
-                recognition.current.start();
-                console.log("Speech recognition restarted automatically");
+                try {
+                  recognition.current.start();
+                  console.log("Speech recognition restarted automatically");
+                } catch (e) {
+                  console.log("Error restarting speech recognition:", e);
+                  initAttempts.current += 1;
+                }
               }
-            }, 500); // Small delay before restarting
+            }, delayTime);
           } catch (e) {
-            console.log("Error restarting speech recognition:", e);
+            console.log("Error setting restart timer:", e);
           }
         }
       };
@@ -180,6 +208,11 @@ const VoiceCommandManager: React.FC = () => {
     try {
       recognition.current.stop();
       console.log("Speech recognition stopped");
+      
+      if (recognitionResetTimer.current) {
+        clearTimeout(recognitionResetTimer.current);
+        recognitionResetTimer.current = null;
+      }
     } catch (error) {
       console.error("Error stopping speech recognition:", error);
     }
@@ -195,14 +228,41 @@ const VoiceCommandManager: React.FC = () => {
     // Then try more lenient fuzzy matching for common variations/misspellings
     return commands.some(cmd => {
       const cmdWords = cmd.split(' ');
-      const matchCount = cmdWords.filter(word => 
-        text.includes(word) || 
-        // Allow for slight variations (e.g. "playing" instead of "play")
-        (word.length > 3 && text.includes(word.substring(0, word.length-1)))
-      ).length;
+      
+      // Enhanced matching logic for better accuracy
+      const matchCount = cmdWords.filter(word => {
+        // Check for exact word match
+        if (text.includes(word)) return true;
+        
+        // Check for word with different suffix (e.g., "playing" for "play")
+        if (word.length > 3 && text.includes(word.substring(0, word.length-1))) return true;
+        
+        // Check for common sound-alike words
+        const soundAlikes: Record<string, string[]> = {
+          'play': ['lay', 'pray', 'way', 'say'],
+          'stop': ['spot', 'top', 'hop'],
+          'pause': ['paws', 'cause', 'laws'],
+          'next': ['text', 'nest'],
+          'skip': ['ship', 'slip'],
+          'previous': ['preious', 'prvious', 'previus'],
+          'back': ['bat', 'black', 'track'],
+          'help': ['held', 'kelp', 'health'],
+          'close': ['clothes', 'clues', 'class'],
+          'logout': ['log out', 'log-out', 'lock out', 'log aut']
+        };
+        
+        // Check sound-alikes if this word has any defined
+        if (word in soundAlikes && soundAlikes[word].some(alt => text.includes(alt))) {
+          return true;
+        }
+        
+        return false;
+      }).length;
       
       // If most words in the command match, consider it a match
-      return matchCount >= Math.max(1, Math.ceil(cmdWords.length * 0.7));
+      // More lenient for longer commands (higher threshold for longer phrases)
+      const matchThreshold = cmdWords.length <= 2 ? 0.8 : 0.7;
+      return matchCount >= Math.max(1, Math.ceil(cmdWords.length * matchThreshold));
     });
   };
 
@@ -233,7 +293,7 @@ const VoiceCommandManager: React.FC = () => {
       }
       commandProcessed = true;
     }
-    else if (matchCommand(command, ['next', 'skip', 'forward', 'advance', 'following'])) {
+    else if (matchCommand(command, ['next', 'skip', 'forward', 'advance', 'following', 'next song', 'skip ahead'])) {
       nextSong();
       toast({
         title: "Next Song",
@@ -241,7 +301,7 @@ const VoiceCommandManager: React.FC = () => {
       });
       commandProcessed = true;
     }
-    else if (matchCommand(command, ['previous', 'prev', 'back', 'backward', 'earlier'])) {
+    else if (matchCommand(command, ['previous', 'prev', 'back', 'backward', 'earlier', 'last song', 'go back'])) {
       prevSong();
       toast({
         title: "Previous Song",
@@ -249,7 +309,7 @@ const VoiceCommandManager: React.FC = () => {
       });
       commandProcessed = true;
     }
-    else if (matchCommand(command, ['help', 'commands', 'what can I say', 'options', 'available commands'])) {
+    else if (matchCommand(command, ['help', 'commands', 'what can I say', 'options', 'available commands', 'show help'])) {
       setPanelState({
         isOpen: true,
         mode: 'help'
@@ -260,7 +320,7 @@ const VoiceCommandManager: React.FC = () => {
       });
       commandProcessed = true;
     }
-    else if (matchCommand(command, ['profile', 'user', 'account', 'my profile', 'settings', 'preferences'])) {
+    else if (matchCommand(command, ['profile', 'user', 'account', 'my profile', 'settings', 'preferences', 'show profile'])) {
       setPanelState({
         isOpen: true,
         mode: 'profile'
@@ -271,7 +331,7 @@ const VoiceCommandManager: React.FC = () => {
       });
       commandProcessed = true;
     }
-    else if (matchCommand(command, ['close', 'dismiss', 'exit', 'hide', 'shut', 'cancel'])) {
+    else if (matchCommand(command, ['close', 'dismiss', 'exit', 'hide', 'shut', 'cancel', 'close panel'])) {
       setPanelState({
         isOpen: false,
         mode: null
@@ -282,21 +342,28 @@ const VoiceCommandManager: React.FC = () => {
       });
       commandProcessed = true;
     }
-    else if (matchCommand(command, ['log out', 'logout', 'sign out', 'signout', 'exit app', 'quit', 'goodbye'])) {
+    else if (matchCommand(command, ['log out', 'logout', 'sign out', 'signout', 'exit app', 'quit', 'goodbye', 'log me out'])) {
       // Stop all activities and logout
       if (recognition.current) {
         try {
           recognition.current.stop();
+          if (recognitionResetTimer.current) {
+            clearTimeout(recognitionResetTimer.current);
+          }
         } catch (e) {
           console.error("Error stopping recognition during logout:", e);
         }
       }
       
-      logout();
-      toast({
-        title: "Logged Out",
-        description: "You've been logged out"
-      });
+      // Add a small timeout before logout to ensure cleanup is done
+      setTimeout(() => {
+        logout();
+        toast({
+          title: "Logged Out",
+          description: "You've been logged out"
+        });
+      }, 100);
+      
       commandProcessed = true;
     }
     

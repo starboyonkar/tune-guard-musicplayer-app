@@ -15,32 +15,32 @@ import { matchesVoiceCommand } from '@/lib/utils';
 const SAMPLE_SONGS: Song[] = [
   {
     id: '1',
-    title: "Blinding Lights",
-    artist: 'The Weeknd',
+    title: "Tune Guard Theme",
+    artist: 'Audio Studio',
     albumArt: '/lovable-uploads/b26c60f6-26f9-4e3b-afb1-ba0d0a2e076d.png',
     duration: 200,
     source: 'https://assets.mixkit.co/music/preview/mixkit-tech-house-vibes-130.mp3'
   },
   {
     id: '2',
-    title: "Shape of You",
-    artist: 'Ed Sheeran',
+    title: "Ambient Melody",
+    artist: 'Sound Waves',
     albumArt: '/lovable-uploads/b26c60f6-26f9-4e3b-afb1-ba0d0a2e076d.png',
     duration: 234,
     source: 'https://assets.mixkit.co/music/preview/mixkit-dance-with-me-3.mp3'
   },
   {
     id: '3',
-    title: "Dance Monkey",
-    artist: 'Tones and I',
+    title: "Digital Harmony",
+    artist: 'Music Lab',
     albumArt: '/lovable-uploads/b26c60f6-26f9-4e3b-afb1-ba0d0a2e076d.png',
     duration: 210,
     source: 'https://assets.mixkit.co/music/preview/mixkit-uplift-breakbeat-loop-180.mp3'
   },
   {
     id: '4',
-    title: "Don't Start Now",
-    artist: 'Dua Lipa',
+    title: "Serene Waves",
+    artist: 'Echo Studio',
     albumArt: '/lovable-uploads/b26c60f6-26f9-4e3b-afb1-ba0d0a2e076d.png',
     duration: 183,
     source: 'https://assets.mixkit.co/music/preview/mixkit-serene-view-443.mp3'
@@ -168,7 +168,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   });
   const [playerState, setPlayerState] = useState<PlayerState>(defaultPlayerState);
   const [voiceCommand, setVoiceCommandText] = useState<string>('');
-  const [isVoiceListening, setIsVoiceListening] = useState<boolean>(true);
+  const [isVoiceListening, setIsVoiceListening] = useState<boolean>(false);
   const [commandHistory, setCommandHistory] = useState<VoiceCommand[]>([]);
   const [waveformData, setWaveformData] = useState<WaveformData>(defaultWaveformData);
   const [isSignedUp, setIsSignedUp] = useState<boolean>(false);
@@ -794,7 +794,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     audio.addEventListener('error', onError);
     document.addEventListener('play-song', onPlaySong);
     
-    setIsVoiceListening(true);
+    setIsVoiceListening(false);
     
     const savedPlaylists = localStorage.getItem('tuneGuardPlaylists');
     if (savedPlaylists) {
@@ -990,19 +990,25 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       
       if (audioRef.current) {
         if (newIsPlaying) {
-          const playPromise = audioRef.current.play();
-          
-          if (playPromise !== undefined) {
-            playPromise.catch(error => {
-              console.error("Error playing audio:", error);
-              toast({
-                title: "Playback Error",
-                description: "There was an error playing this song. Please try again.",
-                variant: "destructive"
+          // Add a small delay to prevent rapid toggle issues
+          setTimeout(() => {
+            const playPromise = audioRef.current?.play();
+            
+            if (playPromise !== undefined) {
+              playPromise.catch(error => {
+                console.error("Error playing audio:", error);
+                // Only show errors for critical issues, not user-initiated actions
+                if (error.name !== 'AbortError' && error.name !== 'NotAllowedError') {
+                  toast({
+                    title: "Playback Issue",
+                    description: "There was a problem with playback. Please try again.",
+                    variant: "destructive"
+                  });
+                }
+                return prevState;
               });
-              return prevState;
-            });
-          }
+            }
+          }, 50);
         } else {
           audioRef.current.pause();
         }
@@ -1231,14 +1237,17 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       return;
     }
     
-    setPlayerState(prevState => ({
-      ...prevState,
-      currentSongId: songId,
-      currentTime: 0,
-      isPlaying: true
-    }));
-    
-    setWaveformData(defaultWaveformData);
+    // Add a small buffer between operations to avoid glitches
+    setTimeout(() => {
+      setPlayerState(prevState => ({
+        ...prevState,
+        currentSongId: songId,
+        currentTime: 0,
+        isPlaying: true
+      }));
+      
+      setWaveformData(defaultWaveformData);
+    }, 10);
   };
 
   const setVoiceCommand = (command: string) => {
