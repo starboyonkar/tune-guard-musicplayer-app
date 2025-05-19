@@ -4,12 +4,12 @@ import { Button } from '@/components/ui/button';
 import { useAudio } from '@/lib/audioContext';
 import { Music, Upload } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
-import { useMobile } from '@/hooks/use-mobile';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const FileUploader: React.FC = () => {
   const { addSong, isLoading } = useAudio();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const isMobile = useMobile();
+  const isMobile = useIsMobile();
 
   const handleButtonClick = () => {
     fileInputRef.current?.click();
@@ -22,14 +22,15 @@ const FileUploader: React.FC = () => {
       // Process each selected file
       let uploadCount = 0;
       let invalidCount = 0;
-      let inProgressToast: string | number | null = null;
+      let inProgressToast: string | null = null;
       
       // Show progress toast for multiple files
       if (files.length > 1) {
-        inProgressToast = toast({
+        const { id } = toast({
           title: `Processing ${files.length} Files`,
           description: "Adding your songs to the library...",
-        }).id;
+        });
+        inProgressToast = id;
       }
       
       // Process files sequentially for better performance
@@ -67,7 +68,7 @@ const FileUploader: React.FC = () => {
         // Clear the in-progress toast if it exists
         if (inProgressToast !== null) {
           toast({
-            id: inProgressToast as string,
+            id: inProgressToast,
             title: `Added ${uploadCount} Files`,
             description: `Successfully added ${uploadCount} audio file${uploadCount !== 1 ? 's' : ''} to TUNE GUARD.${invalidCount ? ` ${invalidCount} file(s) were skipped.` : ''}`,
           });

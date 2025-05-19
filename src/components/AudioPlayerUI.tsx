@@ -17,7 +17,7 @@ import { Settings, Music, LogOut, Siren, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAudio } from '@/lib/audioContext';
 import { toast } from '@/components/ui/use-toast';
-import { useMobile } from '@/hooks/use-mobile';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const AudioPlayerUI: React.FC = () => {
   const { 
@@ -29,7 +29,7 @@ const AudioPlayerUI: React.FC = () => {
     togglePlayPause
   } = useAudio();
   
-  const isMobile = useMobile();
+  const isMobile = useIsMobile();
   
   // Enhanced auto-play with better reliability
   useEffect(() => {
