@@ -17,7 +17,6 @@ import { Settings, Music, LogOut, Siren, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAudio } from '@/lib/audioContext';
 import { toast } from '@/components/ui/use-toast';
-import { useMobile } from '@/hooks/use-mobile';
 
 const AudioPlayerUI: React.FC = () => {
   const { 
@@ -29,71 +28,46 @@ const AudioPlayerUI: React.FC = () => {
     togglePlayPause
   } = useAudio();
   
-  const isMobile = useMobile();
-  
-  // Enhanced auto-play with better reliability
+  // Auto-play first song after login with improved error handling
   useEffect(() => {
     let autoplayAttempted = false;
+    let autoplayTriesCount = 0;
     const MAX_AUTOPLAY_ATTEMPTS = 3;
-    let currentAttempt = 0;
     
     // Improved auto-play with multiple retries and better error handling
-    const attemptAutoplay = () => {
-      if (autoplayAttempted || currentAttempt >= MAX_AUTOPLAY_ATTEMPTS) {
-        return;
-      }
-      
-      if (songs.length === 0) {
-        console.log("No songs available for auto-play");
-        return;
-      }
-      
-      currentAttempt++;
-      autoplayAttempted = true;
-      
-      // Find a suitable song to play
-      const suitableSongs = songs.filter(song => 
-        song.source && !song.source.includes('undefined') && !song.source.includes('null')
-      );
-      
-      if (suitableSongs.length === 0) {
-        console.log("No suitable songs found for autoplay");
+    const attemptAutoplay = (index = 0) => {
+      if (autoplayTriesCount >= MAX_AUTOPLAY_ATTEMPTS || index >= songs.length) {
+        console.log("Exhausted autoplay attempts");
         return;
       }
       
       try {
-        const songToPlay = suitableSongs[0];
-        console.log(`Auto-playing song: ${songToPlay.title}`);
-        
-        // Use setTimeout to ensure DOM is ready
-        setTimeout(() => {
-          playSong(songToPlay.id);
-          
-          toast({
-            title: "Welcome to TUNE GUARD",
-            description: `Now playing: ${songToPlay.title} by ${songToPlay.artist}`
-          });
-        }, 1000);
+        autoplayTriesCount++;
+        playSong(songs[index].id);
+        console.log(`Auto-playing song ${index + 1}: ${songs[index].title}`);
+        toast({
+          title: "Welcome back!",
+          description: `Now playing: ${songs[index].title} by ${songs[index].artist}`
+        });
       } catch (error) {
-        console.error("Error during auto-play:", error);
-        
-        // Try again with a delay
-        setTimeout(() => {
-          currentAttempt++;
-          if (currentAttempt < MAX_AUTOPLAY_ATTEMPTS) {
-            attemptAutoplay();
-          }
-        }, 2000);
+        console.error(`Error auto-playing song ${index + 1}:`, error);
+        // Try next song after a small delay
+        setTimeout(() => attemptAutoplay(index + 1), 300);
       }
     };
     
-    // Add a delay to ensure components are properly mounted
-    const timer = setTimeout(attemptAutoplay, 1800);
+    // Small delay to ensure all components are properly mounted
+    const timer = setTimeout(() => {
+      if (songs.length > 0 && !playerState.isPlaying && !playerState.currentSongId && !autoplayAttempted) {
+        autoplayAttempted = true;
+        attemptAutoplay();
+      }
+    }, 1800); // Increased delay for better stability
     
     return () => clearTimeout(timer);
-  }, [songs, playSong]);
+  }, [songs, playSong, playerState.isPlaying, playerState.currentSongId]);
   
-  // Enhanced logout handler for better cleanup
+  // Enhanced logout handler that ensures clean termination of all processes
   const handleLogout = () => {
     try {
       // Stop any currently playing music
@@ -138,9 +112,9 @@ const AudioPlayerUI: React.FC = () => {
           <PlayerControls />
         </Card>
         
-        {/* File uploader with improved mobile support */}
-        <Card className="mb-4 p-4">
-          <FileUploader />
+        {/* Hearing Protection Visual Feedback Panel */}
+        <Card className="mb-4">
+          <HearingProtection />
         </Card>
         
         {/* Songs List */}
@@ -148,14 +122,12 @@ const AudioPlayerUI: React.FC = () => {
           <SongsList />
         </Card>
         
-        {/* Optimized layout for mobile */}
-        {!isMobile && (
-          <Card className="mt-4 p-4">
-            <WaveformAnalyzer />
-          </Card>
-        )}
+        {/* Advanced Waveform Analyzer */}
+        <Card className="mt-4 p-4">
+          <WaveformAnalyzer />
+        </Card>
         
-        {/* Adaptive panels based on device */}
+        {/* Side panels for smaller screens */}
         <div className="flex flex-col sm:flex-row gap-4 mt-4">
           <Tabs defaultValue="eq" className="w-full">
             <TabsList className="grid w-full grid-cols-3">

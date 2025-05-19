@@ -1,3 +1,4 @@
+
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
@@ -11,55 +12,10 @@ export function formatTime(seconds: number): string {
   return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
 }
 
-// Enhanced voice command matcher with fuzzy matching support
-export function matchesVoiceCommand(input: string, commands: string[]): boolean {
-  // Clean up the input
-  const cleanInput = input.toLowerCase().trim().replace(/[^\w\s]/g, '');
-  
-  // First try exact matches
-  for (const command of commands) {
-    if (cleanInput.includes(command.toLowerCase())) {
-      return true;
-    }
-  }
-  
-  // Then try fuzzy matching for longer inputs
-  if (cleanInput.length > 3) {
-    for (const command of commands) {
-      // Check if command words appear in input with some word boundaries
-      const commandWords = command.toLowerCase().split(' ');
-      
-      let matchedWords = 0;
-      for (const word of commandWords) {
-        if (word.length > 2 && cleanInput.includes(word)) {
-          matchedWords++;
-        }
-      }
-      
-      // If more than half of the words match, consider it a match
-      if (commandWords.length > 1 && matchedWords >= commandWords.length / 2) {
-        return true;
-      }
-      
-      // For single word commands, check for partial matches with at least 60% of letters
-      if (commandWords.length === 1 && command.length > 3) {
-        let matchedLetters = 0;
-        const commandLetters = command.toLowerCase().split('');
-        
-        for (const letter of commandLetters) {
-          if (cleanInput.includes(letter)) {
-            matchedLetters++;
-          }
-        }
-        
-        if (matchedLetters >= command.length * 0.6) {
-          return true;
-        }
-      }
-    }
-  }
-  
-  return false;
+// Simple utility to check if a command matches any pattern
+export function matchesVoiceCommand(input: string, patterns: string[]): boolean {
+  const lowerInput = input.toLowerCase();
+  return patterns.some(pattern => lowerInput.includes(pattern.toLowerCase()));
 }
 
 /**
