@@ -28,12 +28,15 @@ const AudioPlayerUI: React.FC = () => {
     togglePlayPause
   } = useAudio();
   
-  // Auto-play first song after login
+  // Auto-play first song after login with improved error handling
   useEffect(() => {
+    let autoplayAttempted = false;
+    
     // Small delay to ensure all components are properly mounted
     const timer = setTimeout(() => {
-      if (songs.length > 0 && !playerState.isPlaying && !playerState.currentSongId) {
+      if (songs.length > 0 && !playerState.isPlaying && !playerState.currentSongId && !autoplayAttempted) {
         try {
+          autoplayAttempted = true;
           playSong(songs[0].id);
           console.log("Auto-playing first song after login:", songs[0].title);
           toast({
@@ -42,6 +45,15 @@ const AudioPlayerUI: React.FC = () => {
           });
         } catch (error) {
           console.error("Error auto-playing first song:", error);
+          // Try next song if first one fails
+          if (songs.length > 1) {
+            try {
+              playSong(songs[1].id);
+              console.log("First song failed, trying second song:", songs[1].title);
+            } catch (secondError) {
+              console.error("Error playing fallback song:", secondError);
+            }
+          }
         }
       }
     }, 1500);

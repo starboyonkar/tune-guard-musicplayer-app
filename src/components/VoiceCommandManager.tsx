@@ -29,9 +29,10 @@ const VoiceCommandManager: React.FC = () => {
     mode: null
   });
   
-  // Track initialization attempts to prevent excessive error messages
+  // Track initialization attempts and error messages 
   const initAttempts = useRef(0);
   const maxInitAttempts = 3;
+  const errorTimeouts = useRef<Record<string, number>>({});
   
   useEffect(() => {
     // Initialize speech recognition with better error handling
@@ -48,22 +49,28 @@ const VoiceCommandManager: React.FC = () => {
         } else if (initAttempts.current < maxInitAttempts) {
           initAttempts.current += 1;
           console.warn("Speech recognition not supported in this browser");
-          toast({
-            title: "Voice Commands Limited",
-            description: "Your browser doesn't support speech recognition",
-            variant: "destructive"
-          });
+          // Only show this error once
+          if (initAttempts.current === 1) {
+            toast({
+              title: "Voice Commands Limited",
+              description: "Your browser doesn't support speech recognition",
+              variant: "destructive"
+            });
+          }
         }
       }
     } catch (error) {
       console.error("Error initializing speech recognition:", error);
       if (initAttempts.current < maxInitAttempts) {
         initAttempts.current += 1;
-        toast({
-          title: "Voice Commands Unavailable",
-          description: "Could not initialize speech recognition",
-          variant: "destructive"
-        });
+        // Only show this error once
+        if (initAttempts.current === 1) {
+          toast({
+            title: "Voice Commands Unavailable",
+            description: "Could not initialize speech recognition",
+            variant: "destructive"
+          });
+        }
       }
     }
 
@@ -90,6 +97,20 @@ const VoiceCommandManager: React.FC = () => {
     }
   }, [isVoiceListening, isReady]);
 
+  // Helper to throttle error messages
+  const showThrottledToast = (key: string, title: string, description: string, variant: "default" | "destructive" = "default") => {
+    const now = Date.now();
+    // Only show error once every 10 seconds for the same error type
+    if (!errorTimeouts.current[key] || now - errorTimeouts.current[key] > 10000) {
+      errorTimeouts.current[key] = now;
+      toast({
+        title,
+        description,
+        variant
+      });
+    }
+  };
+
   const startListening = () => {
     if (!recognition.current || !isReady) return;
 
@@ -115,11 +136,15 @@ const VoiceCommandManager: React.FC = () => {
           console.log("Speech recognition aborted");
         } else {
           console.error("Speech recognition error:", event.error);
-          toast({
-            title: "Voice Recognition Error",
-            description: `Error: ${event.error}`,
-            variant: "destructive"
-          });
+          // Only show critical errors and limit frequency
+          if (event.error !== 'network' && event.error !== 'audio-capture') {
+            showThrottledToast(
+              `speech-error-${event.error}`,
+              "Voice Recognition Issue",
+              "Speech recognition encountered a problem. Click the mic button to retry.",
+              "destructive"
+            );
+          }
         }
       };
 
@@ -140,11 +165,12 @@ const VoiceCommandManager: React.FC = () => {
       };
     } catch (error) {
       console.error("Error starting speech recognition:", error);
-      toast({
-        title: "Voice Recognition Error",
-        description: "Could not start listening",
-        variant: "destructive"
-      });
+      showThrottledToast(
+        "speech-start-error",
+        "Voice Recognition Error",
+        "Could not start listening. Please try again later.",
+        "destructive"
+      );
     }
   };
 
@@ -159,47 +185,71 @@ const VoiceCommandManager: React.FC = () => {
     }
   };
 
-  // More precise command matching
+  // More precise command matching with fuzzy matching for better accuracy
   const matchCommand = (text: string, commands: string[]): boolean => {
-    return commands.some(cmd => text.includes(cmd));
+    // First try exact matching
+    if (commands.some(cmd => text.includes(cmd))) {
+      return true;
+    }
+    
+    // Then try more lenient fuzzy matching for common variations/misspellings
+    return commands.some(cmd => {
+      const cmdWords = cmd.split(' ');
+      const matchCount = cmdWords.filter(word => 
+        text.includes(word) || 
+        // Allow for slight variations (e.g. "playing" instead of "play")
+        (word.length > 3 && text.includes(word.substring(0, word.length-1)))
+      ).length;
+      
+      // If most words in the command match, consider it a match
+      return matchCount >= Math.max(1, Math.ceil(cmdWords.length * 0.7));
+    });
   };
 
   const processCommand = (command: string) => {
     console.log("Processing voice command:", command);
     setVoiceCommand(command);
 
+    let commandProcessed = false;
+
     // Improved command matching with more variations
-    if (matchCommand(command, ['play', 'start', 'resume'])) {
-      togglePlayPause();
-      toast({
-        title: playerState.isPlaying ? "Playing" : "Pausing",
-        description: playerState.isPlaying ? "Music resumed" : "Music paused"
-      });
+    if (matchCommand(command, ['play', 'start', 'resume', 'begin', 'unpause'])) {
+      if (!playerState.isPlaying) {
+        togglePlayPause();
+        toast({
+          title: "Playing",
+          description: "Music resumed"
+        });
+      }
+      commandProcessed = true;
     } 
-    else if (matchCommand(command, ['stop', 'pause', 'halt'])) {
+    else if (matchCommand(command, ['stop', 'pause', 'halt', 'wait'])) {
       if (playerState.isPlaying) {
         togglePlayPause();
         toast({
-          title: "Stopped",
-          description: "Music stopped"
+          title: "Paused",
+          description: "Music paused"
         });
       }
+      commandProcessed = true;
     }
-    else if (matchCommand(command, ['next', 'skip', 'forward'])) {
+    else if (matchCommand(command, ['next', 'skip', 'forward', 'advance', 'following'])) {
       nextSong();
       toast({
         title: "Next Song",
         description: "Playing next song"
       });
+      commandProcessed = true;
     }
-    else if (matchCommand(command, ['previous', 'prev', 'back', 'backward'])) {
+    else if (matchCommand(command, ['previous', 'prev', 'back', 'backward', 'earlier'])) {
       prevSong();
       toast({
         title: "Previous Song",
         description: "Playing previous song"
       });
+      commandProcessed = true;
     }
-    else if (matchCommand(command, ['help', 'commands', 'what can I say'])) {
+    else if (matchCommand(command, ['help', 'commands', 'what can I say', 'options', 'available commands'])) {
       setPanelState({
         isOpen: true,
         mode: 'help'
@@ -208,8 +258,9 @@ const VoiceCommandManager: React.FC = () => {
         title: "Help",
         description: "Opened voice command help panel"
       });
+      commandProcessed = true;
     }
-    else if (matchCommand(command, ['profile', 'user', 'account', 'my profile'])) {
+    else if (matchCommand(command, ['profile', 'user', 'account', 'my profile', 'settings', 'preferences'])) {
       setPanelState({
         isOpen: true,
         mode: 'profile'
@@ -218,8 +269,9 @@ const VoiceCommandManager: React.FC = () => {
         title: "Profile",
         description: "Opened user profile panel"
       });
+      commandProcessed = true;
     }
-    else if (matchCommand(command, ['close', 'dismiss', 'exit', 'hide'])) {
+    else if (matchCommand(command, ['close', 'dismiss', 'exit', 'hide', 'shut', 'cancel'])) {
       setPanelState({
         isOpen: false,
         mode: null
@@ -228,8 +280,9 @@ const VoiceCommandManager: React.FC = () => {
         title: "Closed",
         description: "Panel closed"
       });
+      commandProcessed = true;
     }
-    else if (matchCommand(command, ['log out', 'logout', 'sign out', 'signout', 'exit app'])) {
+    else if (matchCommand(command, ['log out', 'logout', 'sign out', 'signout', 'exit app', 'quit', 'goodbye'])) {
       // Stop all activities and logout
       if (recognition.current) {
         try {
@@ -244,13 +297,18 @@ const VoiceCommandManager: React.FC = () => {
         title: "Logged Out",
         description: "You've been logged out"
       });
+      commandProcessed = true;
     }
-    else {
-      toast({
-        title: "Command Not Recognized",
-        description: `"${command}" is not a valid command`,
-        variant: "destructive"
-      });
+    
+    if (!commandProcessed) {
+      // This is where we'd typically show an error, but we'll suppress frequent alerts
+      // Only show once every 10 seconds for unrecognized commands
+      showThrottledToast(
+        "unrecognized-command",
+        "Hmm, didn't catch that",
+        `Try saying "help" for available commands`,
+        "default" // Changed to default to be less intrusive
+      );
     }
   };
 
@@ -285,6 +343,8 @@ const VoiceCommandManager: React.FC = () => {
           size="icon"
           onClick={toggleListening}
           className={`text-futuristic-muted ${isVoiceListening ? 'text-futuristic-accent1 animate-pulse' : ''}`}
+          title={isVoiceListening ? "Voice commands active - click to disable" : "Enable voice commands"}
+          aria-label={isVoiceListening ? "Disable voice commands" : "Enable voice commands"}
         >
           {isVoiceListening ? (
             <Mic className="h-5 w-5 text-futuristic-accent1" />
@@ -293,7 +353,7 @@ const VoiceCommandManager: React.FC = () => {
           )}
         </Button>
         {isVoiceListening && (
-          <span className="absolute top-0 right-0 w-2 h-2 rounded-full bg-red-500"></span>
+          <span className="absolute top-0 right-0 w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
         )}
       </div>
 
