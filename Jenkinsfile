@@ -7,7 +7,7 @@ pipeline {
         CONTAINER_NAME = 'tune-guard-container'
         APP_PORT = '8000'          // Container app will run on this prot with http://<EC2 public IP>:8000
         HOST_PORT = '8000'         // EC2 port
-        EC2_PUBLIC_IP = '52.66.79.110' // Replace with your EC2 public IP if needed
+        EC2_PUBLIC_IP = '13.201.158.202' // Replace with your EC2 public IP if needed
     }
 
     stages {
