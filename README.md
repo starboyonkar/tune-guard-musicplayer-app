@@ -16,6 +16,14 @@ The core innovation behind this app lies in **Cognitive Enhancement of Audio Pro
 
 ---
 
+## 🌐 Live Application
+
+**URL:** http://13.201.158.202:8000/
+
+_Replace `<YOUR_EC2_PUBLIC_IP>` with your actual EC2 IP._
+
+---
+
 ![Tune-gurd-app_page-0001](https://github.com/user-attachments/assets/25765844-5028-44e3-b194-a32027510cc3)
 
 
