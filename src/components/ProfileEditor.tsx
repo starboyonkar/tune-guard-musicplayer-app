@@ -84,7 +84,7 @@ const ProfileEditor: React.FC = () => {
   if (!profile) return null;
   return <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className="text-base text-gray-950 bg-cyan-500 hover:bg-cyan-400 font-extrabold rounded-2xl">
+        <Button variant="ghost" size="icon" className="rounded-full bg-gradient-to-r from-futuristic-accent1 to-futuristic-accent2 hover:opacity-90 animate-glow h-12 w-12 font-bold text-base">
           <User className="h-5 w-5" />
         </Button>
       </SheetTrigger>
