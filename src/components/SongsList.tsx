@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useAudio } from '@/lib/audioContext';
 import { Button } from '@/components/ui/button';
@@ -5,6 +6,7 @@ import { Play, Pause, Plus, Music, Shuffle, Repeat, Repeat1, Trash } from 'lucid
 import { Card } from '@/components/ui/card';
 import { soundEffects } from '@/lib/soundEffects';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+
 const SongsList: React.FC = () => {
   const {
     songs,
@@ -16,6 +18,10 @@ const SongsList: React.FC = () => {
     toggleShuffle,
     toggleRepeat
   } = useAudio();
+
+  // Filter out any placeholder or non-functional tracks
+  // Only show songs with valid source URLs
+  const validSongs = songs.filter(song => song.source && song.source.trim() !== '');
 
   // Format duration from seconds to MM:SS
   const formatDuration = (seconds: number): string => {
@@ -68,7 +74,9 @@ const SongsList: React.FC = () => {
   const isSampleSong = (songId: string): boolean => {
     return songId.length < 10; // Sample songs have short IDs like '1', '2', etc.
   };
-  return <div className="space-y-4 relative glass-panel">
+  
+  return (
+    <div className="space-y-4 relative glass-panel">
       {/* Animated scan line effect */}
       <div className="scan-line absolute"></div>
       
@@ -78,32 +86,71 @@ const SongsList: React.FC = () => {
           
           {/* Shuffle & Repeat controls */}
           <div className="ml-4 flex items-center space-x-2">
-            <Button variant="ghost" size="icon" onClick={toggleShuffle} className={`h-8 w-8 rounded-full transition-colors ${playerState.shuffleEnabled ? 'text-futuristic-accent1 hover:bg-futuristic-accent1/20' : 'text-futuristic-muted hover:bg-futuristic-bg/30'}`} aria-label={playerState.shuffleEnabled ? "Shuffle Enabled" : "Shuffle Disabled"}>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={toggleShuffle} 
+              className={`h-8 w-8 rounded-full transition-colors ${playerState.shuffleEnabled ? 'text-futuristic-accent1 hover:bg-futuristic-accent1/20' : 'text-futuristic-muted hover:bg-futuristic-bg/30'}`} 
+              aria-label={playerState.shuffleEnabled ? "Shuffle Enabled" : "Shuffle Disabled"}
+            >
               <Shuffle className={`h-4 w-4 ${playerState.shuffleEnabled ? 'neon-glow' : ''}`} />
             </Button>
             
-            <Button variant="ghost" size="icon" onClick={toggleRepeat} className={`h-8 w-8 rounded-full transition-colors ${playerState.repeatMode !== 'off' ? 'text-futuristic-accent1 hover:bg-futuristic-accent1/20' : 'text-futuristic-muted hover:bg-futuristic-bg/30'}`} aria-label={`Repeat: ${playerState.repeatMode}`}>
-              {playerState.repeatMode === 'one' ? <Repeat1 className="h-4 w-4 neon-glow" aria-label="Repeat One" /> : <Repeat className={`h-4 w-4 ${playerState.repeatMode === 'all' ? 'neon-glow' : ''}`} aria-label={`Repeat ${playerState.repeatMode === 'all' ? 'All' : 'Off'}`} />}
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={toggleRepeat} 
+              className={`h-8 w-8 rounded-full transition-colors ${playerState.repeatMode !== 'off' ? 'text-futuristic-accent1 hover:bg-futuristic-accent1/20' : 'text-futuristic-muted hover:bg-futuristic-bg/30'}`} 
+              aria-label={`Repeat: ${playerState.repeatMode}`}
+            >
+              {playerState.repeatMode === 'one' ? (
+                <Repeat1 className="h-4 w-4 neon-glow" aria-label="Repeat One" />
+              ) : (
+                <Repeat 
+                  className={`h-4 w-4 ${playerState.repeatMode === 'all' ? 'neon-glow' : ''}`} 
+                  aria-label={`Repeat ${playerState.repeatMode === 'all' ? 'All' : 'Off'}`} 
+                />
+              )}
             </Button>
           </div>
         </div>
         
-        <Button variant="outline" onClick={handleFileSelect} className="border-futuristic-border animate-pulse-slow bg-sky-400 hover:bg-sky-300 text-slate-950 text-base font-bold">
+        <Button 
+          variant="outline" 
+          onClick={handleFileSelect} 
+          className="border-futuristic-border animate-pulse-slow bg-sky-400 hover:bg-sky-300 text-slate-950 text-base font-bold"
+        >
           <Plus className="mr-2 h-4 w-4" />
           Add Songs
         </Button>
       </div>
 
       <div className="max-h-80 overflow-y-auto custom-scrollbar">
-        {songs.length === 0 ? <div className="flex flex-col items-center justify-center p-8 text-center text-futuristic-muted glass-panel rounded-lg">
+        {validSongs.length === 0 ? (
+          <div className="flex flex-col items-center justify-center p-8 text-center text-futuristic-muted glass-panel rounded-lg">
             <Music className="h-12 w-12 mb-2 opacity-50 animate-pulse-slow" />
             <p className="font-bold">No songs added yet. Add your first song to get started!</p>
-          </div> : <div className="space-y-2">
-            {songs.map(song => <Card key={song.id} className={`p-2 transition-all duration-300 cursor-pointer glass-element ${currentSong?.id === song.id ? 'border-futuristic-accent1 bg-futuristic-bg/30 neon-border' : 'hover:bg-futuristic-bg/20 hover:scale-[1.02]'}`} onClick={() => handleSongClick(song.id)}>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {validSongs.map(song => (
+              <Card 
+                key={song.id} 
+                className={`p-2 transition-all duration-300 cursor-pointer glass-element ${
+                  currentSong?.id === song.id ? 'border-futuristic-accent1 bg-futuristic-bg/30 neon-border' : 'hover:bg-futuristic-bg/20 hover:scale-[1.02]'
+                }`} 
+                onClick={() => handleSongClick(song.id)}
+              >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center flex-1 min-w-0">
-                    <div className={`h-10 w-10 rounded overflow-hidden mr-3 flex-shrink-0 ${currentSong?.id === song.id && playerState.isPlaying ? 'animate-pulse-slow animate-glow' : ''}`}>
-                      <img src={song.albumArt || "/lovable-uploads/d4fe6f3e-e72d-4760-93e5-5f71a12f2238.png"} alt="TUNE GUARD" className="h-full w-full object-cover" />
+                    <div className={`h-10 w-10 rounded overflow-hidden mr-3 flex-shrink-0 ${
+                      currentSong?.id === song.id && playerState.isPlaying ? 'animate-pulse-slow animate-glow' : ''
+                    }`}>
+                      <img 
+                        src={song.albumArt || "/lovable-uploads/d4fe6f3e-e72d-4760-93e5-5f71a12f2238.png"} 
+                        alt={song.title} 
+                        className="h-full w-full object-cover" 
+                      />
                     </div>
                     <div className="overflow-hidden">
                       <p className={`font-bold truncate ${currentSong?.id === song.id ? 'neon-text' : ''}`}>
@@ -112,11 +159,16 @@ const SongsList: React.FC = () => {
                       <p className="text-sm text-futuristic-muted truncate">{song.artist}</p>
                       
                       {/* Progress bar for currently playing song */}
-                      {currentSong?.id === song.id && <div className="w-full bg-futuristic-bg/30 h-1 rounded-full mt-1">
-                          <div className="h-1 bg-gradient-to-r from-futuristic-accent1 to-futuristic-accent2 rounded-full" style={{
-                    width: `${playerState.currentTime / (currentSong?.duration || 1) * 100}%`
-                  }}></div>
-                        </div>}
+                      {currentSong?.id === song.id && (
+                        <div className="w-full bg-futuristic-bg/30 h-1 rounded-full mt-1">
+                          <div 
+                            className="h-1 bg-gradient-to-r from-futuristic-accent1 to-futuristic-accent2 rounded-full" 
+                            style={{
+                              width: `${playerState.currentTime / (currentSong?.duration || 1) * 100}%`
+                            }}
+                          ></div>
+                        </div>
+                      )}
                     </div>
                   </div>
                   
@@ -124,21 +176,40 @@ const SongsList: React.FC = () => {
                     <span className="text-sm text-futuristic-muted mr-3">
                       {formatDuration(song.duration)}
                     </span>
-                    <Button size="icon" variant="ghost" className={`h-8 w-8 rounded-full transition-colors ${currentSong?.id === song.id ? 'hover:bg-futuristic-accent1/40' : 'hover:bg-futuristic-accent2/20'}`} onClick={e => {
-                e.stopPropagation();
-                soundEffects.playTouchFeedback();
-                playSong(song.id);
-              }} aria-label={currentSong?.id === song.id && playerState.isPlaying ? "Pause" : "Play"}>
-                      {currentSong?.id === song.id && playerState.isPlaying ? <Pause className="h-4 w-4 text-futuristic-accent1" /> : <Play className="h-4 w-4" />}
+                    <Button 
+                      size="icon" 
+                      variant="ghost" 
+                      className={`h-8 w-8 rounded-full transition-colors ${
+                        currentSong?.id === song.id ? 'hover:bg-futuristic-accent1/40' : 'hover:bg-futuristic-accent2/20'
+                      }`} 
+                      onClick={e => {
+                        e.stopPropagation();
+                        soundEffects.playTouchFeedback();
+                        playSong(song.id);
+                      }} 
+                      aria-label={currentSong?.id === song.id && playerState.isPlaying ? "Pause" : "Play"}
+                    >
+                      {currentSong?.id === song.id && playerState.isPlaying ? (
+                        <Pause className="h-4 w-4 text-futuristic-accent1" />
+                      ) : (
+                        <Play className="h-4 w-4" />
+                      )}
                     </Button>
                     
                     {/* Delete button - only show for user-added songs */}
-                    {!isSampleSong(song.id) && <AlertDialog>
+                    {!isSampleSong(song.id) && (
+                      <AlertDialog>
                         <AlertDialogTrigger asChild>
-                          <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full text-destructive/70 hover:bg-destructive/10 hover:text-destructive" onClick={e => {
-                    e.stopPropagation();
-                    soundEffects.playTouchFeedback();
-                  }} aria-label="Delete Song">
+                          <Button 
+                            size="icon" 
+                            variant="ghost" 
+                            className="h-8 w-8 rounded-full text-destructive/70 hover:bg-destructive/10 hover:text-destructive" 
+                            onClick={e => {
+                              e.stopPropagation();
+                              soundEffects.playTouchFeedback();
+                            }} 
+                            aria-label="Delete Song"
+                          >
                             <Trash className="h-4 w-4" />
                           </Button>
                         </AlertDialogTrigger>
@@ -151,17 +222,25 @@ const SongsList: React.FC = () => {
                           </AlertDialogHeader>
                           <AlertDialogFooter>
                             <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleDeleteSong(song.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                            <AlertDialogAction 
+                              onClick={() => handleDeleteSong(song.id)} 
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
                               Delete
                             </AlertDialogAction>
                           </AlertDialogFooter>
                         </AlertDialogContent>
-                      </AlertDialog>}
+                      </AlertDialog>
+                    )}
                   </div>
                 </div>
-              </Card>)}
-          </div>}
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
-    </div>;
+    </div>
+  );
 };
+
 export default SongsList;

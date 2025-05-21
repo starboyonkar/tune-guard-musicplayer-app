@@ -29,7 +29,7 @@ export const autoPlayService = {
       : songs[0];
     
     // Initialize retry mechanism
-    const maxRetries = 5; // Increased from 3 to 5 for better reliability
+    const maxRetries = 5;
     let retryCount = 0;
     let success = false;
 
@@ -47,11 +47,10 @@ export const autoPlayService = {
         playSong(songToPlay.id);
         
         // Update player state directly as fallback mechanism
-        setPlayerState((prevState: any) => ({
-          ...prevState,
+        setPlayerState({
           currentSongId: songToPlay.id,
           isPlaying: true
-        }));
+        });
         
         // Pre-buffer the next song to prevent playback gaps
         if (songs.length > 1) {
@@ -149,11 +148,10 @@ export const autoPlayService = {
         console.log("Using emergency direct playback approach");
         try {
           // Direct player state manipulation for immediate response
-          setPlayerState((prevState: any) => ({
-            ...prevState,
+          setPlayerState({
             currentSongId: songs[0].id,
             isPlaying: true
-          }));
+          });
           
           // Dispatch a fake user interaction event to help bypass autoplay restrictions
           const event = new CustomEvent('play-song', { 

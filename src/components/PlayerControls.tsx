@@ -24,7 +24,7 @@ const PlayerControls: React.FC = () => {
     toggleRepeat
   } = useAudio();
   
-  const { isPlaying, currentTime, volume, isMuted, shuffleEnabled, repeatMode } = playerState;
+  const { isPlaying, currentTime, volume, muted, shuffleEnabled, repeatMode } = playerState;
   
   const handleProgressChange = (newValue: number[]) => {
     seekTo(newValue[0]);
@@ -148,12 +148,12 @@ const PlayerControls: React.FC = () => {
             onClick={handleToggleMute}
             className="text-futuristic-muted hover:text-futuristic-accent1 hover:bg-futuristic-bg"
           >
-            {isMuted ? <VolumeX /> : <Volume2 />}
+            {muted ? <VolumeX /> : <Volume2 />}
           </Button>
           
           <div className="w-24 mx-2">
             <Slider
-              value={[isMuted ? 0 : volume]}
+              value={[muted ? 0 : volume]}
               max={100}
               step={1}
               onValueChange={handleVolumeChange}

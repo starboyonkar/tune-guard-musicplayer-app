@@ -8,7 +8,7 @@ import { soundEffects } from '@/lib/soundEffects';
 import { autoPlayService } from '@/lib/autoPlayService';
 
 const Index = () => {
-  const { isSignedUp, songs, playSong, setPlayerState, playerState } = useAudio();
+  const { isSignedUp, songs, playSong, playerState } = useAudio();
   const [showControls, setShowControls] = useState(false);
   const [profileCreated, setProfileCreated] = useState(false);
   
@@ -52,11 +52,19 @@ const Index = () => {
         // Immediate attempt to start playback
         const startPlayback = async () => {
           try {
-            await autoPlayService.startPlaybackAfterLogin(songs, playSong, setPlayerState);
+            // Use audioContext's playSong directly to trigger playback
+            // This approach ensures we bypass the toast and unnecessary steps
+            if (songs.length > 0) {
+              // Try direct playback first
+              playSong(songs[0].id);
+              
+              // If no error occurred immediately, the song should be playing
+              console.log("Direct playback initiated for:", songs[0].title);
+            }
           } catch (error) {
-            console.error("Post-login auto-play failed:", error);
+            console.error("Direct playback failed:", error);
             
-            // Fallback approach - try direct play after a short delay
+            // Fallback approach - try again after a short delay
             setTimeout(() => {
               if (songs.length > 0 && !playerState.isPlaying) {
                 playSong(songs[0].id);
@@ -69,7 +77,7 @@ const Index = () => {
         startPlayback();
       }
     }
-  }, [isSignedUp, songs, profileCreated, playSong, setPlayerState, playerState.isPlaying]);
+  }, [isSignedUp, songs, profileCreated, playSong, playerState.isPlaying]);
 
   return (
     <div className="min-h-screen w-full bg-futuristic-bg overflow-hidden relative">

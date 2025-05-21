@@ -1,5 +1,4 @@
 
-import { ToastWithId } from './types';
 import { toast } from '@/components/ui/use-toast';
 
 type CommandHandler = () => void;
@@ -14,13 +13,15 @@ interface CommandMapping {
 }
 
 /**
- * Enhanced voice command processor with fuzzy matching capabilities
+ * Enhanced voice command processor with improved matching capabilities
  * for more accurate and flexible command recognition
  */
 export class VoiceCommandProcessor {
   private commandMappings: CommandMapping[] = [];
   private commandHistory: string[] = [];
   private contextualKeywords: Record<string, string[]> = {};
+  private lastProcessedCommand: string = '';
+  private processingThrottleTimer: NodeJS.Timeout | null = null;
   
   /**
    * Register a new voice command with multiple pattern variations
@@ -51,13 +52,25 @@ export class VoiceCommandProcessor {
   processCommand(command: string): boolean {
     if (!command) return false;
     
+    // Prevent duplicate command processing
+    if (command === this.lastProcessedCommand) {
+      return false;
+    }
+    
+    // Apply throttling to prevent rapid command executions
+    if (this.processingThrottleTimer) {
+      clearTimeout(this.processingThrottleTimer);
+    }
+    
     const normalizedCommand = this.normalizeCommand(command);
     let executed = false;
     
     // Store command in history for context-aware processing
-    this.commandHistory.unshift(normalizedCommand);
-    if (this.commandHistory.length > 5) {
-      this.commandHistory.pop();
+    if (!this.commandHistory.includes(normalizedCommand)) {
+      this.commandHistory.unshift(normalizedCommand);
+      if (this.commandHistory.length > 5) {
+        this.commandHistory.pop();
+      }
     }
     
     // Check for each registered command
@@ -72,22 +85,29 @@ export class VoiceCommandProcessor {
           // Execute the command handler
           handler();
           
-          // Show success feedback
+          // Show success feedback using toast
           toast({
             title: feedback.title,
             description: feedback.description,
-            variant: "default"
-          } as ToastWithId);
+            variant: "default",
+          });
           
           executed = true;
+          this.lastProcessedCommand = command;
+          
+          // Set throttle to prevent duplicate executions
+          this.processingThrottleTimer = setTimeout(() => {
+            this.processingThrottleTimer = null;
+          }, 1500);
+          
           break;
         } catch (error) {
           console.error("Error executing voice command:", error);
           toast({
             title: "Command Error",
             description: "There was an error executing the command",
-            variant: "destructive"
-          } as ToastWithId);
+            variant: "destructive",
+          });
         }
       }
     }
@@ -230,5 +250,16 @@ export class VoiceCommandProcessor {
     }
     
     return matches;
+  }
+  
+  /**
+   * Reset the processor state (useful when voice recognition restarts)
+   */
+  reset(): void {
+    this.lastProcessedCommand = '';
+    if (this.processingThrottleTimer) {
+      clearTimeout(this.processingThrottleTimer);
+      this.processingThrottleTimer = null;
+    }
   }
 }
