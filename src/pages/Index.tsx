@@ -64,8 +64,7 @@ const Index = () => {
               // First try the enhanced service approach
               const success = await autoPlayService.startPlaybackAfterLogin(
                 validSongs, 
-                playSong,
-                true // Adding the required third parameter
+                playSong
               );
               
               // If that didn't work, try direct playback as last resort

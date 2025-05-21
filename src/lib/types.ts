@@ -137,7 +137,7 @@ export interface ToastWithId {
   description?: string;
   action?: React.ReactNode;
   variant?: "default" | "destructive";
-  id?: string; // Add the id property to ensure type compatibility
+  id?: string;
 }
 
 // Adding missing types for Waveform and Playlist
@@ -145,9 +145,9 @@ export type WaveformData = {
   dataArray?: Uint8Array;
   bufferLength?: number;
   timestamp?: number;
-  processed: Uint8Array; // Changed from boolean to Uint8Array
-  original: Uint8Array; // Changed from boolean to Uint8Array
-  timeData: Uint8Array; // Changed from boolean to Uint8Array
+  processed?: boolean;
+  original?: Uint8Array;
+  timeData?: Uint8Array;
   frequencyData?: Uint8Array;
 };
 
@@ -156,18 +156,18 @@ export type VisSettings = {
   color: string;
   sensitivity: number;
   showPeaks: boolean;
-  scale: number;
-  timeScale: number;
-  amplitudeScale: number;
-  showProcessed: boolean;
-  showOriginal: boolean;
-  overlay: boolean;
+  scale?: number;
+  timeScale?: number;
+  amplitudeScale?: number;
+  showProcessed?: boolean;
+  showOriginal?: boolean;
+  overlay?: boolean;
 };
 
 export type Playlist = {
   id: string;
   name: string;
-  songIds: string[]; // Changed from songs to songIds consistently
+  songIds: string[];
   createdAt: string;
   modifiedAt?: string;
   coverImage?: string;

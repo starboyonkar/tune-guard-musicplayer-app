@@ -32,19 +32,17 @@ const Waveform: React.FC = () => {
     ctx.beginPath();
     ctx.strokeStyle = playerState.isPlaying ? gradient : 'rgba(100, 100, 100, 0.3)';
     
-    const barWidth = canvas.width / (processed ? processed.length : 1);
+    const barWidth = canvas.width / processed.length;
     const centerY = canvas.height / 2;
     
-    if (processed && processed instanceof Uint8Array && processed.length > 0) {
-      for (let i = 0; i < processed.length; i++) {
-        const x = i * barWidth;
-        // Exaggerate the visual effect for better visuals
-        const barHeight = processed[i] * canvas.height * 0.8; 
-        
-        ctx.moveTo(x, centerY - barHeight / 2);
-        ctx.lineTo(x, centerY + barHeight / 2);
-      }
-    }
+    processed.forEach((value, i) => {
+      const x = i * barWidth;
+      // Exaggerate the visual effect for better visuals
+      const barHeight = value * canvas.height * 0.8; 
+      
+      ctx.moveTo(x, centerY - barHeight / 2);
+      ctx.lineTo(x, centerY + barHeight / 2);
+    });
     
     ctx.stroke();
     
@@ -66,14 +64,13 @@ const Waveform: React.FC = () => {
       />
       
       {/* Static bars for visual effect when not playing */}
-      {!playerState.isPlaying && waveformData.processed && Array.isArray(waveformData.processed) && 
-        waveformData.processed.map((height, index) => (
-          <div
-            key={index}
-            style={{ height: `${height * 100}%` }}
-            className="waveform-bar w-[2px] bg-gray-500/20"
-          />
-        ))}
+      {!playerState.isPlaying && waveformData.processed.map((height, index) => (
+        <div
+          key={index}
+          style={{ height: `${height * 100}%` }}
+          className="waveform-bar w-[2px] bg-gray-500/20"
+        />
+      ))}
     </div>
   );
 };
