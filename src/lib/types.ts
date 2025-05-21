@@ -75,9 +75,9 @@ export type EQSettings = {
   preAmp: number;
   enabled: boolean;
   preset: string;
-  volume?: number; // Added to fix type errors
-  presence?: number; // Added to fix type errors
-  warmth?: number; // Added to fix type errors
+  volume?: number;
+  presence?: number;
+  warmth?: number;
 };
 
 export type SirenDetectionSettings = {
@@ -99,8 +99,9 @@ export type VoiceCommand = {
   command: string;
   confidence: number;
   timestamp: number;
-  processed?: boolean; // Added to fix type errors
-  recognized?: boolean; // Added to fix type errors
+  processed?: boolean;
+  recognized?: boolean;
+  text?: string; // Adding this to handle existing code
 };
 
 export type VoiceCommandPanelState = {
@@ -127,10 +128,7 @@ export type ListeningMetrics = {
   safeVolumeTime: number;
   lastSession?: ListeningSession;
   sessions: ListeningSession[];
-  safetyScoreHistory: {
-    date: string;
-    score: number;
-  }[];
+  safetyScoreHistory: { date: string; score: number; }[];
 };
 
 // Toast type extension with action compatibility for shadcn
@@ -144,12 +142,13 @@ export interface ToastWithId {
 
 // Adding missing types for Waveform and Playlist
 export type WaveformData = {
-  dataArray: Uint8Array;
-  bufferLength: number;
-  timestamp: number;
+  dataArray?: Uint8Array;
+  bufferLength?: number;
+  timestamp?: number;
   processed?: boolean;
   original?: Uint8Array;
   timeData?: Uint8Array;
+  frequencyData?: Uint8Array;
 };
 
 export type VisSettings = {
@@ -157,7 +156,6 @@ export type VisSettings = {
   color: string;
   sensitivity: number;
   showPeaks: boolean;
-  // Additional properties needed by components
   scale?: number;
   timeScale?: number;
   amplitudeScale?: number;
@@ -171,6 +169,6 @@ export type Playlist = {
   name: string;
   songIds: string[];
   createdAt: string;
-  modifiedAt: string;
+  modifiedAt?: string;
   coverImage?: string;
 };

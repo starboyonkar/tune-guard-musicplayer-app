@@ -9,7 +9,7 @@ import { autoPlayService } from '@/lib/autoPlayService';
 import { audioSupport } from '@/lib/audioSupport';
 
 const Index = () => {
-  const { isSignedUp, songs, playSong, playerState, setPlayerState } = useAudio();
+  const { isSignedUp, songs, playSong, playerState } = useAudio();
   const [showControls, setShowControls] = useState(false);
   const [profileCreated, setProfileCreated] = useState(false);
   
@@ -64,8 +64,7 @@ const Index = () => {
               // First try the enhanced service approach
               const success = await autoPlayService.startPlaybackAfterLogin(
                 validSongs, 
-                playSong, 
-                setPlayerState
+                playSong
               );
               
               // If that didn't work, try direct playback as last resort
@@ -90,7 +89,7 @@ const Index = () => {
         });
       }
     }
-  }, [isSignedUp, songs, profileCreated, playSong, playerState.isPlaying, setPlayerState]);
+  }, [isSignedUp, songs, profileCreated, playSong, playerState.isPlaying]);
 
   return (
     <div className="min-h-screen w-full bg-futuristic-bg overflow-hidden relative">

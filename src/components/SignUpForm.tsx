@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,6 +10,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { soundEffects } from '@/lib/soundEffects';
 import VoiceCommandManager from './VoiceCommandManager';
 import { UserProfile } from '@/lib/types';
+
 const SignUpForm: React.FC = () => {
   const {
     setProfile
@@ -18,6 +20,7 @@ const SignUpForm: React.FC = () => {
   const [dob, setDob] = useState('');
   const [gender, setGender] = useState<'male' | 'female' | 'non-binary' | 'prefer-not-to-say'>('prefer-not-to-say');
   const [isLoading, setIsLoading] = useState(false);
+  
   useEffect(() => {
     soundEffects.initialize();
 
@@ -32,6 +35,7 @@ const SignUpForm: React.FC = () => {
     const interval = setInterval(updateGradient, 3000);
     return () => clearInterval(interval);
   }, []);
+  
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -53,7 +57,8 @@ const SignUpForm: React.FC = () => {
         averageSessionDuration: 0,
         highVolumeTime: 0,
         safeVolumeTime: 0,
-        sessions: []
+        sessions: [],
+        safetyScoreHistory: [] // Added this missing required field
       },
       safetyScore: 100
     };
@@ -64,6 +69,7 @@ const SignUpForm: React.FC = () => {
       setIsLoading(false);
     }, 500);
   };
+  
   return <div className="w-full max-w-md mx-auto p-6 animate-fade-in">
       <div className="flex justify-center mb-8">
         <Avatar className="h-32 w-32 border-4 border-white/20 shadow-lg animate-pulse-slow">
@@ -100,7 +106,7 @@ const SignUpForm: React.FC = () => {
             
             <div className="space-y-2">
               <Label htmlFor="gender" className="text-white/90">Gender</Label>
-              <Select value={gender} onValueChange={val => setGender(val as any)}>
+              <Select value={gender} onValueChange={val => setGender(val as 'male' | 'female' | 'non-binary' | 'prefer-not-to-say')}>
                 <SelectTrigger className="border-futuristic-border bg-white/5 backdrop-blur-sm">
                   <SelectValue placeholder="Select gender" />
                 </SelectTrigger>
@@ -108,7 +114,7 @@ const SignUpForm: React.FC = () => {
                   <SelectItem value="male">Male</SelectItem>
                   <SelectItem value="female">Female</SelectItem>
                   <SelectItem value="non-binary">Non-binary</SelectItem>
-                  <SelectItem value="prefer not to say">Prefer not to say</SelectItem>
+                  <SelectItem value="prefer-not-to-say">Prefer not to say</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -120,7 +126,7 @@ const SignUpForm: React.FC = () => {
         </CardContent>
       </Card>
       
-      <div className="text-center mt-6 text-futuristic-muted text-sm">© TUNE GUARD - OnkarNova Technologies 
+      <div className="text-center mt-6 text-futuristic-muted text-sm">© TUNE GUARD - OnkarNova Technologies 
 Solapur, Maharashtra</div>
     </div>;
 };
