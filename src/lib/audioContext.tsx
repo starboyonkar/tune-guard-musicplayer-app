@@ -53,9 +53,8 @@ const SAMPLE_PLAYLISTS: Playlist[] = [
   {
     id: 'playlist1',
     name: 'Favorites',
-    songIds: ['1', '3'],
-    createdAt: new Date().toISOString(),
-    modifiedAt: new Date().toISOString()
+    songs: ['1', '3'],
+    createdAt: new Date().toISOString()
   }
 ];
 
@@ -65,40 +64,28 @@ const getEQSettingsByAge = (age: number, gender: string): EQSettings => {
       bass: gender === 'male' ? 75 : 70,
       mid: 65,
       treble: 80,
-      volume: 70,
-      preAmp: 50,
-      enabled: true,
-      preset: 'youth'
+      volume: 70
     };
   } else if (age < 40) {
     return {
       bass: 70,
       mid: 70,
       treble: 75,
-      volume: 65,
-      preAmp: 50,
-      enabled: true,
-      preset: 'adult'
+      volume: 65
     };
   } else if (age < 60) {
     return {
       bass: 75,
       mid: 75, 
       treble: 65,
-      volume: 60,
-      preAmp: 50,
-      enabled: true,
-      preset: 'mature'
+      volume: 60
     };
   } else {
     return {
       bass: 80,
       mid: 70,
       treble: 55,
-      volume: 75,
-      preAmp: 50,
-      enabled: true,
-      preset: 'senior'
+      volume: 75
     };
   }
 };
@@ -148,8 +135,7 @@ const defaultPlayerState: PlayerState = {
   isPlaying: false,
   currentTime: 0,
   volume: 70,
-  duration: 0,
-  muted: false,
+  isMuted: false,
   currentSongId: '1',
   currentPlaylistId: null,
   shuffleEnabled: false,
@@ -157,19 +143,13 @@ const defaultPlayerState: PlayerState = {
 };
 
 const defaultWaveformData: WaveformData = {
-  dataArray: new Uint8Array(30),
-  bufferLength: 30,
-  timestamp: 0,
-  original: new Uint8Array(30),
-  timeData: new Uint8Array(30),
-  frequencyData: new Uint8Array(30)
+  original: Array(30).fill(0),
+  processed: Array(30).fill(0),
+  timeData: Array(30).fill(0),
+  frequencyData: Array(30).fill(0)
 };
 
 const defaultVisSettings: VisSettings = {
-  mode: 'bars',
-  color: '#00aaff',
-  sensitivity: 1.0,
-  showPeaks: true,
   scale: 1,
   timeScale: 1,
   amplitudeScale: 1,
@@ -186,10 +166,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     bass: 70,
     mid: 70,
     treble: 70,
-    volume: 70,
-    preAmp: 50,
-    enabled: true,
-    preset: 'default'
+    volume: 70
   });
   const [playerState, setPlayerState] = useState<PlayerState>(defaultPlayerState);
   const [voiceCommand, setVoiceCommandText] = useState<string>('');
@@ -358,40 +335,32 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       (i * downsampleFactor / sampleRate) * 1000 // Convert to milliseconds
     );
     
-    const original = new Uint8Array(30);
-    for (let i = 0; i < 30; i++) {
-      original[i] = timeDataArray[i * downsampleFactor];
-    }
+    const original = Array(30).fill(0).map((_, i) => 
+      (timeDataArray[i * downsampleFactor] / 128.0) - 1.0
+    );
     
-    const processed = new Uint8Array(30);
-    for (let i = 0; i < 30; i++) {
-      const value = timeDataArray[i * downsampleFactor];
+    const processed = Array(30).fill(0).map((_, i) => {
+      const value = (timeDataArray[i * downsampleFactor] / 128.0) - 1.0;
       
       const bassBoost = (eqSettings.bass - 50) / 100;
       const trebleBoost = (eqSettings.treble - 50) / 100;
       
-      let processedValue = value;
       if (i < 10) {
-        processedValue = Math.min(255, value * (1 + bassBoost));
+        return value * (1 + bassBoost);
       } else if (i >= 20) {
-        processedValue = Math.min(255, value * (1 + trebleBoost));
+        return value * (1 + trebleBoost);
       }
-      
-      processed[i] = processedValue;
-    }
+      return value;
+    });
     
-    const frequencyData = new Uint8Array(30);
-    for (let i = 0; i < 30; i++) {
-      frequencyData[i] = frequencyDataArray[i * downsampleFactor];
-    }
+    const frequencyData = Array(30).fill(0).map((_, i) => 
+      frequencyDataArray[i * downsampleFactor] / 256
+    );
     
     setWaveformData({
-      dataArray: frequencyDataArray,
-      bufferLength: bufferLength,
-      timestamp: Date.now(),
       original,
       processed,
-      timeData: timeDataArray,
+      timeData,
       frequencyData
     });
   };
@@ -594,7 +563,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     
     const updatedPlaylists = playlists.map(playlist => ({
       ...playlist,
-      songIds: playlist.songIds.filter(id => id !== songId)
+      songs: playlist.songs.filter(id => id !== songId)
     }));
     setPlaylists(updatedPlaylists);
     
@@ -1021,14 +990,14 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     if (!audioRef.current) return;
     
-    const effectiveVolume = playerState.muted ? 0 : playerState.volume / 100;
+    const effectiveVolume = playerState.isMuted ? 0 : playerState.volume / 100;
     
     audioRef.current.volume = effectiveVolume;
     
     if (gainNodeRef.current) {
       gainNodeRef.current.gain.value = effectiveVolume;
     }
-  }, [playerState.volume, playerState.muted]);
+  }, [playerState.volume, playerState.isMuted]);
 
   useEffect(() => {
     updateEQSettings();
@@ -1093,11 +1062,11 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (playerState.currentPlaylistId) {
       const currentPlaylist = playlists.find(p => p.id === playerState.currentPlaylistId);
       if (currentPlaylist) {
-        const currentSongIndex = currentPlaylist.songIds.findIndex(id => id === playerState.currentSongId);
+        const currentSongIndex = currentPlaylist.songs.findIndex(id => id === playerState.currentSongId);
         let nextIndex;
         
         if (playerState.shuffleEnabled) {
-          const availableSongs = currentPlaylist.songIds.filter(id => id !== playerState.currentSongId);
+          const availableSongs = currentPlaylist.songs.filter(id => id !== playerState.currentSongId);
           if (availableSongs.length > 0) {
             const randomIndex = Math.floor(Math.random() * availableSongs.length);
             const nextSongId = availableSongs[randomIndex];
@@ -1112,8 +1081,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           }
         }
         
-        nextIndex = (currentSongIndex + 1) % currentPlaylist.songIds.length;
-        const nextSongId = currentPlaylist.songIds[nextIndex];
+        nextIndex = (currentSongIndex + 1) % currentPlaylist.songs.length;
+        const nextSongId = currentPlaylist.songs[nextIndex];
         
         setPlayerState(prevState => ({
           ...prevState,
@@ -1156,9 +1125,9 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (playerState.currentPlaylistId) {
       const currentPlaylist = playlists.find(p => p.id === playerState.currentPlaylistId);
       if (currentPlaylist) {
-        const currentSongIndex = currentPlaylist.songIds.findIndex(id => id === playerState.currentSongId);
-        const prevIndex = (currentSongIndex - 1 + currentPlaylist.songIds.length) % currentPlaylist.songIds.length;
-        const prevSongId = currentPlaylist.songIds[prevIndex];
+        const currentSongIndex = currentPlaylist.songs.findIndex(id => id === playerState.currentSongId);
+        const prevIndex = (currentSongIndex - 1 + currentPlaylist.songs.length) % currentPlaylist.songs.length;
+        const prevSongId = currentPlaylist.songs[prevIndex];
         
         setPlayerState(prevState => ({
           ...prevState,
@@ -1189,11 +1158,11 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const setVolume = (volume: number) => {
-    setPlayerState(prevState => ({ ...prevState, volume, muted: false }));
+    setPlayerState(prevState => ({ ...prevState, volume, isMuted: false }));
   };
 
   const toggleMute = () => {
-    setPlayerState(prevState => ({ ...prevState, muted: !prevState.muted }));
+    setPlayerState(prevState => ({ ...prevState, isMuted: !prevState.isMuted }));
   };
 
   const logout = () => {
@@ -1211,9 +1180,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const newPlaylist: Playlist = {
       id: `playlist-${Date.now()}`,
       name,
-      songIds: [],
-      createdAt: new Date().toISOString(),
-      modifiedAt: new Date().toISOString()
+      songs: [],
+      createdAt: new Date().toISOString()
     };
     
     const updatedPlaylists = [...playlists, newPlaylist];
@@ -1230,11 +1198,11 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const addToPlaylist = (playlistId: string, songId: string) => {
     const updatedPlaylists = playlists.map(playlist => {
       if (playlist.id === playlistId) {
-        if (!playlist.songIds.includes(songId)) {
+        if (!playlist.songs.includes(songId)) {
           return {
             ...playlist,
-            songIds: [...playlist.songIds, songId],
-            modifiedAt: new Date().toISOString()
+            songs: [...playlist.songs, songId],
+            updatedAt: new Date().toISOString()
           };
         }
       }
@@ -1250,8 +1218,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (playlist.id === playlistId) {
         return {
           ...playlist,
-          songIds: playlist.songIds.filter(id => id !== songId),
-          modifiedAt: new Date().toISOString()
+          songs: playlist.songs.filter(id => id !== songId),
+          updatedAt: new Date().toISOString()
         };
       }
       return playlist;
@@ -1281,9 +1249,9 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const playPlaylist = (playlistId: string) => {
     const playlist = playlists.find(p => p.id === playlistId);
-    if (!playlist || playlist.songIds.length === 0) return;
+    if (!playlist || playlist.songs.length === 0) return;
     
-    const firstSongId = playlist.songIds[0];
+    const firstSongId = playlist.songs[0];
     
     setPlayerState(prev => ({
       ...prev,
@@ -1427,12 +1395,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setCommandHistory(prev => {
       const updated = [...prev];
       if (updated.length > 0) {
-        updated[0] = {
-          ...updated[0],
-          processed: true,
-          recognized: commandRecognized,
-          command: updated[0].text || updated[0].command // Handle either text or command property
-        };
+        updated[0].processed = true;
+        updated[0].recognized = commandRecognized;
       }
       return updated;
     });
