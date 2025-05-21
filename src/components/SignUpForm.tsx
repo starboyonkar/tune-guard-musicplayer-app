@@ -53,7 +53,8 @@ const SignUpForm: React.FC = () => {
         averageSessionDuration: 0,
         highVolumeTime: 0,
         safeVolumeTime: 0,
-        sessions: []
+        sessions: [],
+        safetyScoreHistory: [] // Added this missing required field
       },
       safetyScore: 100
     };
@@ -100,7 +101,7 @@ const SignUpForm: React.FC = () => {
             
             <div className="space-y-2">
               <Label htmlFor="gender" className="text-white/90">Gender</Label>
-              <Select value={gender} onValueChange={val => setGender(val as any)}>
+              <Select value={gender} onValueChange={val => setGender(val as 'male' | 'female' | 'non-binary' | 'prefer-not-to-say')}>
                 <SelectTrigger className="border-futuristic-border bg-white/5 backdrop-blur-sm">
                   <SelectValue placeholder="Select gender" />
                 </SelectTrigger>
@@ -108,7 +109,7 @@ const SignUpForm: React.FC = () => {
                   <SelectItem value="male">Male</SelectItem>
                   <SelectItem value="female">Female</SelectItem>
                   <SelectItem value="non-binary">Non-binary</SelectItem>
-                  <SelectItem value="prefer not to say">Prefer not to say</SelectItem>
+                  <SelectItem value="prefer-not-to-say">Prefer not to say</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -120,8 +121,7 @@ const SignUpForm: React.FC = () => {
         </CardContent>
       </Card>
       
-      <div className="text-center mt-6 text-futuristic-muted text-sm">© TUNE GUARD - OnkarNova Technologies 
-Solapur, Maharashtra</div>
+      <div className="text-center mt-6 text-futuristic-muted text-sm">                © TUNE GUARD - OnkarNova Technologies                    Solapur, Maharashtra</div>
     </div>;
 };
 export default SignUpForm;

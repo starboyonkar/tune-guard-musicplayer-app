@@ -68,6 +68,9 @@ const EQSettings: React.FC = () => {
       volume: playerState.volume,
       presence: 50,
       warmth: 50,
+      preAmp: 50,        // Added missing required field
+      enabled: true,     // Added missing required field
+      preset: 'default'  // Added missing required field
     });
   };
   
@@ -120,7 +123,7 @@ const EQSettings: React.FC = () => {
         
         <EQSlider
           label="Volume"
-          value={eqSettings.volume}
+          value={eqSettings.volume || 70}
           onChange={(value) => {
             soundEffects.playTouchFeedback();
             setEQSettings({ ...eqSettings, volume: value[0] });
