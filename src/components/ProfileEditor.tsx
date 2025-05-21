@@ -1,13 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,47 +8,44 @@ import { useAudio } from '@/lib/audioContext';
 import { User } from 'lucide-react';
 import { soundEffects } from '@/lib/soundEffects';
 import { calculateDOBFromAge, formatDate } from '@/lib/utils';
-
 const ProfileEditor: React.FC = () => {
-  const { profile, updateProfile, logout } = useAudio();
+  const {
+    profile,
+    updateProfile,
+    logout
+  } = useAudio();
   const [name, setName] = useState(profile?.name || '');
   const [age, setAge] = useState(profile?.age.toString() || '');
-  const [gender, setGender] = useState<string>(
-    profile?.gender || 'prefer-not-to-say'
-  );
+  const [gender, setGender] = useState<string>(profile?.gender || 'prefer-not-to-say');
   const [dob, setDob] = useState('');
   const [open, setOpen] = useState(false);
-
   useEffect(() => {
     // Listen for the custom event to open the profile editor
     const handleOpenProfileEditor = () => {
       soundEffects.playTouchFeedback();
       setOpen(true);
     };
-    
+
     // Listen for the close event
     const handleCloseActivePanel = () => {
       if (open) {
         setOpen(false);
       }
     };
-
     document.addEventListener('open-profile-editor', handleOpenProfileEditor);
     document.addEventListener('close-active-panel', handleCloseActivePanel);
-    
     return () => {
       document.removeEventListener('open-profile-editor', handleOpenProfileEditor);
       document.removeEventListener('close-active-panel', handleCloseActivePanel);
     };
   }, [open]);
-
   useEffect(() => {
     // Set initial state when profile changes
     if (profile) {
       setName(profile.name || '');
       setAge(profile.age ? profile.age.toString() : '');
       setGender(profile.gender || 'prefer-not-to-say');
-      
+
       // Calculate DOB from age
       if (profile.age) {
         const calculatedDOB = calculateDOBFromAge(profile.age);
@@ -64,7 +53,7 @@ const ProfileEditor: React.FC = () => {
       }
     }
   }, [profile]);
-  
+
   // Auto-calculate DOB when age changes
   useEffect(() => {
     if (age) {
@@ -75,35 +64,27 @@ const ProfileEditor: React.FC = () => {
       }
     }
   }, [age]);
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
     soundEffects.playTouchFeedback();
-    
     updateProfile({
       name,
       age: parseInt(age),
       gender,
       dob
     });
-    
     setOpen(false);
   };
-
   const handleLogout = () => {
     soundEffects.playNotification();
     setOpen(false);
     // Immediately invoke logout without any delay
     logout();
   };
-
   if (!profile) return null;
-
-  return (
-    <Sheet open={open} onOpenChange={setOpen}>
+  return <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className="text-futuristic-accent1">
+        <Button variant="ghost" size="icon" className="text-base text-gray-950 bg-cyan-500 hover:bg-cyan-400 font-extrabold rounded-2xl">
           <User className="h-5 w-5" />
         </Button>
       </SheetTrigger>
@@ -117,48 +98,22 @@ const ProfileEditor: React.FC = () => {
         <form onSubmit={handleSubmit} className="space-y-6 mt-6">
           <div className="space-y-2">
             <Label htmlFor="name">Your Name</Label>
-            <Input
-              id="name"
-              placeholder="Enter your name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="border-futuristic-border bg-futuristic-bg/30"
-              required
-            />
+            <Input id="name" placeholder="Enter your name" value={name} onChange={e => setName(e.target.value)} className="border-futuristic-border bg-futuristic-bg/30" required />
           </div>
           
           <div className="space-y-2">
             <Label htmlFor="age">Age</Label>
-            <Input
-              id="age"
-              type="number"
-              placeholder="Enter your age"
-              value={age}
-              onChange={(e) => setAge(e.target.value)}
-              className="border-futuristic-border bg-futuristic-bg/30"
-              min="1"
-              max="120"
-              required
-            />
+            <Input id="age" type="number" placeholder="Enter your age" value={age} onChange={e => setAge(e.target.value)} className="border-futuristic-border bg-futuristic-bg/30" min="1" max="120" required />
           </div>
           
           <div className="space-y-2">
             <Label htmlFor="dob">Date of Birth (Calculated)</Label>
-            <Input
-              id="dob"
-              type="date"
-              value={dob}
-              readOnly
-              className="border-futuristic-border bg-futuristic-bg/30 opacity-80"
-            />
+            <Input id="dob" type="date" value={dob} readOnly className="border-futuristic-border bg-futuristic-bg/30 opacity-80" />
           </div>
           
           <div className="space-y-2">
             <Label htmlFor="gender">Gender</Label>
-            <Select
-              value={gender}
-              onValueChange={(val) => setGender(val)}
-            >
+            <Select value={gender} onValueChange={val => setGender(val)}>
               <SelectTrigger className="border-futuristic-border bg-futuristic-bg/30">
                 <SelectValue placeholder="Select gender" />
               </SelectTrigger>
@@ -172,25 +127,15 @@ const ProfileEditor: React.FC = () => {
           </div>
           
           <div className="flex gap-4">
-            <Button 
-              type="submit" 
-              className="flex-1 bg-gradient-to-r from-futuristic-accent1 to-futuristic-accent2 hover:opacity-90"
-            >
+            <Button type="submit" className="flex-1 bg-gradient-to-r from-futuristic-accent1 to-futuristic-accent2 hover:opacity-90">
               Update Profile
             </Button>
-            <Button 
-              type="button" 
-              variant="destructive" 
-              className="flex-1"
-              onClick={handleLogout}
-            >
+            <Button type="button" variant="destructive" className="flex-1" onClick={handleLogout}>
               Logout
             </Button>
           </div>
         </form>
       </SheetContent>
-    </Sheet>
-  );
+    </Sheet>;
 };
-
 export default ProfileEditor;
