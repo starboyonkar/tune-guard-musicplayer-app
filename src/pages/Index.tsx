@@ -6,15 +6,19 @@ import AudioPlayerUI from '@/components/AudioPlayerUI';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { soundEffects } from '@/lib/soundEffects';
 import { autoPlayService } from '@/lib/autoPlayService';
+import { audioSupport } from '@/lib/audioSupport';
 
 const Index = () => {
-  const { isSignedUp, songs, playSong, playerState } = useAudio();
+  const { isSignedUp, songs, playSong, playerState, setPlayerState } = useAudio();
   const [showControls, setShowControls] = useState(false);
   const [profileCreated, setProfileCreated] = useState(false);
   
   useEffect(() => {
     // Initialize sound effects
     soundEffects.initialize();
+    
+    // Pre-initialize audio context to help with autoplay
+    audioSupport.initializeAudioContext();
     
     // Set up the dynamic background gradient
     const root = document.documentElement;
@@ -45,39 +49,48 @@ const Index = () => {
     if (isSignedUp && !profileCreated) {
       setProfileCreated(true);
       
+      // Filter out invalid songs
+      const validSongs = songs.filter(song => song.source && song.source.trim() !== '');
+      
       // Begin immediate auto-play using the optimized post-login function
-      if (songs.length > 0) {
+      if (validSongs.length > 0) {
         console.log("Starting post-login playback...");
         
-        // Immediate attempt to start playback
-        const startPlayback = async () => {
-          try {
-            // Use audioContext's playSong directly to trigger playback
-            // This approach ensures we bypass the toast and unnecessary steps
-            if (songs.length > 0) {
-              // Try direct playback first
-              playSong(songs[0].id);
+        // Prepare user's audio context with a silent sound to help with autoplay restrictions
+        audioSupport.unlockAudio().then(() => {
+          // Immediate attempt to start playback
+          const startPlayback = async () => {
+            try {
+              // First try the enhanced service approach
+              const success = await autoPlayService.startPlaybackAfterLogin(
+                validSongs, 
+                playSong, 
+                setPlayerState
+              );
               
-              // If no error occurred immediately, the song should be playing
-              console.log("Direct playback initiated for:", songs[0].title);
-            }
-          } catch (error) {
-            console.error("Direct playback failed:", error);
-            
-            // Fallback approach - try again after a short delay
-            setTimeout(() => {
-              if (songs.length > 0 && !playerState.isPlaying) {
-                playSong(songs[0].id);
+              // If that didn't work, try direct playback as last resort
+              if (!success) {
+                console.log("Direct fallback playback attempt");
+                playSong(validSongs[0].id);
               }
-            }, 800);
-          }
-        };
-        
-        // Start immediately, don't wait
-        startPlayback();
+            } catch (error) {
+              console.error("Direct playback failed:", error);
+              
+              // Fallback approach - try again after a short delay
+              setTimeout(() => {
+                if (validSongs.length > 0 && !playerState.isPlaying) {
+                  playSong(validSongs[0].id);
+                }
+              }, 800);
+            }
+          };
+          
+          // Start immediately, don't wait
+          startPlayback();
+        });
       }
     }
-  }, [isSignedUp, songs, profileCreated, playSong, playerState.isPlaying]);
+  }, [isSignedUp, songs, profileCreated, playSong, playerState.isPlaying, setPlayerState]);
 
   return (
     <div className="min-h-screen w-full bg-futuristic-bg overflow-hidden relative">

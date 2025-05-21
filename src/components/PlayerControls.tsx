@@ -148,7 +148,7 @@ const PlayerControls: React.FC = () => {
             onClick={handleToggleMute}
             className="text-futuristic-muted hover:text-futuristic-accent1 hover:bg-futuristic-bg"
           >
-            {muted ? <VolumeX /> : <Volume2 />}
+            {muted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
           </Button>
           
           <div className="w-24 mx-2">

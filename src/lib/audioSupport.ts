@@ -117,5 +117,96 @@ export const audioSupport = {
       supported: formats.length > 0,
       formats
     };
+  },
+  
+  /**
+   * Force an immediate audio playback attempt with multiple fallbacks
+   * Useful for autoplay scenarios that are commonly blocked
+   */
+  forcePlayback: async (audioElement: HTMLAudioElement): Promise<boolean> => {
+    try {
+      // First, try unlocking audio generally
+      await audioSupport.unlockAudio();
+      
+      // Try multiple approaches to force playback
+      let playAttempts = 0;
+      const maxAttempts = 3;
+      
+      const attemptPlay = async (): Promise<boolean> => {
+        try {
+          playAttempts++;
+          console.log(`Playback attempt ${playAttempts}`);
+          
+          // Set some properties that might help with autoplay
+          audioElement.muted = false;
+          audioElement.volume = 0.1; // Start with lower volume
+          audioElement.currentTime = 0;
+          
+          // Try playing with a timeout to give the audio system time
+          await new Promise<void>((resolve) => {
+            setTimeout(() => {
+              audioElement.play()
+                .then(() => {
+                  console.log("Playback started successfully");
+                  // Gradually restore volume
+                  setTimeout(() => {
+                    if (audioElement.volume < 0.8) {
+                      audioElement.volume = 0.8;
+                    }
+                  }, 300);
+                  resolve();
+                })
+                .catch((error) => {
+                  console.warn(`Play attempt ${playAttempts} failed:`, error);
+                  resolve();
+                });
+            }, playAttempts * 100); // Increasing delay for each attempt
+          });
+          
+          // Check if playback actually started
+          if (!audioElement.paused) {
+            return true;
+          }
+          
+          // If we reached max attempts, try one final approach with user activation simulation
+          if (playAttempts >= maxAttempts) {
+            console.log("Trying final emergency playback approach");
+            
+            // Create and trigger a fake user interaction event
+            const event = new Event('user-action');
+            document.dispatchEvent(event);
+            
+            // Try with muted first (more likely to work) then unmute
+            audioElement.muted = true;
+            await audioElement.play();
+            
+            // If it worked, unmute after a short delay
+            setTimeout(() => {
+              if (!audioElement.paused) {
+                audioElement.muted = false;
+                audioElement.volume = 0.8;
+              }
+            }, 500);
+            
+            return !audioElement.paused;
+          }
+          
+          if (audioElement.paused && playAttempts < maxAttempts) {
+            // Try again with different approach
+            return await attemptPlay();
+          }
+          
+          return !audioElement.paused;
+        } catch (error) {
+          console.error("Playback attempt error:", error);
+          return false;
+        }
+      };
+      
+      return await attemptPlay();
+    } catch (error) {
+      console.error("Force playback failed:", error);
+      return false;
+    }
   }
 };

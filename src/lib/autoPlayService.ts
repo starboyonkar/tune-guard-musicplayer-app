@@ -1,5 +1,6 @@
 import { Song } from './types';
 import { toast } from '@/components/ui/use-toast';
+import { audioSupport } from './audioSupport';
 
 /**
  * A dedicated service for handling auto-play functionality
@@ -20,18 +21,34 @@ export const autoPlayService = {
       return false;
     }
 
+    // Filter out songs with no source for guaranteed playback
+    const validSongs = songs.filter(song => song.source && song.source.trim() !== '');
+    if (validSongs.length === 0) {
+      console.log("No valid songs with source URLs available");
+      return false;
+    }
+
     // Try to find the last played song from local storage
     const lastPlayedSongId = localStorage.getItem('tuneGuardLastPlayed');
     
     // Find the song to play (last played or first in list)
     const songToPlay = lastPlayedSongId 
-      ? songs.find(s => s.id === lastPlayedSongId) || songs[0] 
-      : songs[0];
+      ? validSongs.find(s => s.id === lastPlayedSongId) || validSongs[0] 
+      : validSongs[0];
     
     // Initialize retry mechanism
     const maxRetries = 5;
     let retryCount = 0;
     let success = false;
+
+    // Initialize audio context to help with autoplay restrictions
+    try {
+      await audioSupport.initializeAudioContext();
+      await audioSupport.unlockAudio();
+    } catch (err) {
+      console.warn("Failed to pre-initialize audio:", err);
+      // Continue anyway as it might still work
+    }
 
     while (retryCount < maxRetries && !success) {
       try {
@@ -53,19 +70,24 @@ export const autoPlayService = {
         });
         
         // Pre-buffer the next song to prevent playback gaps
-        if (songs.length > 1) {
-          const nextSongIndex = (songs.indexOf(songToPlay) + 1) % songs.length;
-          const nextSong = songs[nextSongIndex];
-          if (nextSong && nextSong.source) {
-            const preloadAudio = new Audio();
-            preloadAudio.preload = 'auto';
-            preloadAudio.src = nextSong.source;
-            preloadAudio.load();
-            
-            // Remove the preload after a few seconds
-            setTimeout(() => {
-              preloadAudio.src = '';
-            }, 5000);
+        if (validSongs.length > 1) {
+          try {
+            const nextSongIndex = (validSongs.indexOf(songToPlay) + 1) % validSongs.length;
+            const nextSong = validSongs[nextSongIndex];
+            if (nextSong && nextSong.source) {
+              const preloadAudio = new Audio();
+              preloadAudio.preload = 'auto';
+              preloadAudio.src = nextSong.source;
+              preloadAudio.load();
+              
+              // Remove the preload after a few seconds
+              setTimeout(() => {
+                preloadAudio.src = '';
+              }, 5000);
+            }
+          } catch (e) {
+            console.warn("Failed to prebuffer next song:", e);
+            // Non-critical error, continue
           }
         }
         
@@ -79,12 +101,19 @@ export const autoPlayService = {
           console.log(`Auto-play succeeded on attempt ${retryCount + 1}`);
         }
         
-        // Show toast notification only on success
-        toast({
-          title: "Auto-Play Started",
-          description: `Now playing: ${songToPlay.title}`,
-          variant: "default"
-        });
+        // Show toast notification only on success and not on the first load
+        // to avoid overwhelming the user
+        const isFirstLoad = !localStorage.getItem('tuneGuardHasPlayedBefore');
+        if (!isFirstLoad) {
+          toast({
+            title: "Auto-Play Started",
+            description: `Now playing: ${songToPlay.title}`,
+            variant: "default"
+          });
+        }
+        
+        // Mark that we've played before
+        localStorage.setItem('tuneGuardHasPlayedBefore', 'true');
         
         return true;
       } catch (error) {
@@ -94,11 +123,15 @@ export const autoPlayService = {
         if (retryCount >= maxRetries) {
           console.error("All auto-play attempts failed");
           // Show discrete error toast only after all attempts fail
-          toast({
-            title: "Auto-Play Issue",
-            description: "Starting playback automatically failed. Try playing manually.",
-            variant: "destructive"
-          });
+          // And not on the first load to avoid confusion
+          const isFirstLoad = !localStorage.getItem('tuneGuardHasPlayedBefore');
+          if (!isFirstLoad) {
+            toast({
+              title: "Auto-Play Issue",
+              description: "Starting playback automatically failed. Try playing manually.",
+              variant: "destructive"
+            });
+          }
           return false;
         }
       }
@@ -126,36 +159,54 @@ export const autoPlayService = {
     setPlayerState: (state: any) => void
   ): Promise<boolean> => {
     try {
+      // Filter out invalid songs
+      const validSongs = songs.filter(song => song.source && song.source.trim() !== '');
+      if (validSongs.length === 0) {
+        console.log("No valid songs with source URLs available for playback");
+        return false;
+      }
+
       // Attempt to immediately start audio context through a silent audio element
       try {
-        const silentAudio = new Audio();
-        silentAudio.volume = 0.01;
-        silentAudio.src = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA";
-        await silentAudio.play();
-        setTimeout(() => {
-          silentAudio.pause();
-          silentAudio.src = '';
-        }, 100);
+        await audioSupport.unlockAudio();
       } catch (e) {
         console.log("Silent audio warmup failed, continuing anyway:", e);
+        // Continue anyway as it might still work
       }
 
       // Start playback with minimal delay
-      const startSuccess = await autoPlayService.initializeAutoPlay(songs, playSong, setPlayerState);
+      const startSuccess = await autoPlayService.initializeAutoPlay(validSongs, playSong, setPlayerState);
       
       // If standard initialization failed, try emergency direct approach
-      if (!startSuccess && songs.length > 0) {
+      if (!startSuccess && validSongs.length > 0) {
         console.log("Using emergency direct playback approach");
         try {
           // Direct player state manipulation for immediate response
           setPlayerState({
-            currentSongId: songs[0].id,
+            currentSongId: validSongs[0].id,
             isPlaying: true
           });
           
+          // Create a separate audio element to try forcing playback
+          const emergencyAudio = new Audio(validSongs[0].source);
+          
+          // Use more aggressive audio forcing technique
+          const forcedPlay = await audioSupport.forcePlayback(emergencyAudio);
+          
+          if (forcedPlay) {
+            // If emergency audio started, we can stop it and let the real player take over
+            setTimeout(() => {
+              emergencyAudio.pause();
+              emergencyAudio.src = '';
+              
+              // Try normal play again
+              playSong(validSongs[0].id);
+            }, 100);
+          }
+          
           // Dispatch a fake user interaction event to help bypass autoplay restrictions
           const event = new CustomEvent('play-song', { 
-            detail: { songId: songs[0].id } 
+            detail: { songId: validSongs[0].id } 
           });
           document.dispatchEvent(event);
           

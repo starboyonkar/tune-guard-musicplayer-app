@@ -25,8 +25,10 @@ const VoiceCommandManager: React.FC = () => {
   const [isReady, setIsReady] = useState(false);
   const [transcript, setTranscript] = useState("");
   const [panelState, setPanelState] = useState<VoiceCommandPanelState>({
+    isListening: false,
+    transcript: "",
     isOpen: false,
-    mode: null
+    mode: "listening"
   });
   
   // Track initialization attempts and error messages 
@@ -139,6 +141,10 @@ const VoiceCommandManager: React.FC = () => {
         if (result?.isFinal) {
           const text = result[0].transcript.trim().toLowerCase();
           setTranscript(text);
+          setPanelState(prev => ({
+            ...prev,
+            transcript: text
+          }));
           processCommand(text);
         }
       };
@@ -311,6 +317,8 @@ const VoiceCommandManager: React.FC = () => {
     }
     else if (matchCommand(command, ['help', 'commands', 'what can I say', 'options', 'available commands', 'show help'])) {
       setPanelState({
+        isListening: panelState.isListening,
+        transcript: panelState.transcript,
         isOpen: true,
         mode: 'help'
       });
@@ -322,6 +330,8 @@ const VoiceCommandManager: React.FC = () => {
     }
     else if (matchCommand(command, ['profile', 'user', 'account', 'my profile', 'settings', 'preferences', 'show profile'])) {
       setPanelState({
+        isListening: panelState.isListening,
+        transcript: panelState.transcript,
         isOpen: true,
         mode: 'profile'
       });
@@ -333,8 +343,10 @@ const VoiceCommandManager: React.FC = () => {
     }
     else if (matchCommand(command, ['close', 'dismiss', 'exit', 'hide', 'shut', 'cancel', 'close panel'])) {
       setPanelState({
+        isListening: panelState.isListening,
+        transcript: panelState.transcript,
         isOpen: false,
-        mode: null
+        mode: 'listening'
       });
       toast({
         title: "Closed",
@@ -397,8 +409,10 @@ const VoiceCommandManager: React.FC = () => {
 
   const handleClosePanel = () => {
     setPanelState({
+      isListening: panelState.isListening,
+      transcript: panelState.transcript,
       isOpen: false,
-      mode: null
+      mode: 'listening'
     });
   };
 

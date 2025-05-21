@@ -107,7 +107,7 @@ export type VoiceCommandPanelState = {
   isListening: boolean;
   transcript: string;
   isOpen: boolean;
-  mode: 'listening' | 'commands' | 'help';
+  mode: 'listening' | 'commands' | 'help' | 'profile';
 };
 
 export type ListeningSession = {
@@ -147,6 +147,9 @@ export type WaveformData = {
   dataArray: Uint8Array;
   bufferLength: number;
   timestamp: number;
+  processed?: boolean;
+  original?: Uint8Array;
+  timeData?: Uint8Array;
 };
 
 export type VisSettings = {
@@ -154,6 +157,13 @@ export type VisSettings = {
   color: string;
   sensitivity: number;
   showPeaks: boolean;
+  // Additional properties needed by components
+  scale?: number;
+  timeScale?: number;
+  amplitudeScale?: number;
+  showProcessed?: boolean;
+  showOriginal?: boolean;
+  overlay?: boolean;
 };
 
 export type Playlist = {
