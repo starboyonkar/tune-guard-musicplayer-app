@@ -10,6 +10,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { soundEffects } from '@/lib/soundEffects';
 import VoiceCommandManager from './VoiceCommandManager';
 import { UserProfile } from '@/lib/types';
+import { Mail, Linkedin } from 'lucide-react';
 
 const SignUpForm: React.FC = () => {
   const {
@@ -126,7 +127,29 @@ const SignUpForm: React.FC = () => {
         </CardContent>
       </Card>
       
-      <div className="text-center mt-6 text-futuristic-muted text-sm">                © TUNE GUARD - OnkarNova Technologies                    Solapur, Maharashtra</div>
+      <div className="text-center mt-6 text-futuristic-muted text-sm">
+        © TUNE GUARD - OnkarNova Technologies                    Solapur, Maharashtra
+      </div>
+      
+      {/* Social Media Icons */}
+      <div className="flex justify-center items-center mt-3 space-x-6">
+        <a 
+          href="mailto:onkarchougule501@gmail.com" 
+          className="text-futuristic-accent2 hover:text-futuristic-accent1 transition-colors p-2 rounded-full hover:bg-white/5"
+          aria-label="Email"
+        >
+          <Mail className="w-5 h-5 animate-pulse-slow" />
+        </a>
+        <a 
+          href="https://www.linkedin.com/in/onkar-chaugule" 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          className="text-futuristic-accent2 hover:text-futuristic-accent1 transition-colors p-2 rounded-full hover:bg-white/5"
+          aria-label="LinkedIn"
+        >
+          <Linkedin className="w-5 h-5 animate-pulse-slow" />
+        </a>
+      </div>
     </div>;
 };
 
