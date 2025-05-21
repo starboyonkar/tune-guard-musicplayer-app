@@ -80,7 +80,7 @@ const ProfileEditor: React.FC = () => {
     updateProfile({
       name,
       age: parseInt(age),
-      gender: gender as 'male' | 'female' | 'non-binary' | 'prefer-not-to-say',
+      gender: gender,
       dob
     });
     setOpen(false);
@@ -127,7 +127,7 @@ const ProfileEditor: React.FC = () => {
           
           <div className="space-y-2">
             <Label htmlFor="gender">Gender</Label>
-            <Select value={gender} onValueChange={val => setGender(val)}>
+            <Select value={gender} onValueChange={(val: 'male' | 'female' | 'non-binary' | 'prefer-not-to-say') => setGender(val)}>
               <SelectTrigger className="border-futuristic-border bg-futuristic-bg/30">
                 <SelectValue placeholder="Select gender" />
               </SelectTrigger>

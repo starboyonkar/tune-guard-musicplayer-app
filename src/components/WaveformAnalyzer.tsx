@@ -126,7 +126,10 @@ const WaveformAnalyzer: React.FC = () => {
     
     // Time labels (in milliseconds)
     ctx.textAlign = 'center';
-    const maxTimeMs = timeData.length > 0 ? Math.max(...timeData) : 1000;
+    const maxTimeMs = timeData && Array.isArray(timeData) && timeData.length > 0 
+      ? Math.max(...timeData) 
+      : 1000;
+      
     for (let i = 0; i <= timeLines; i++) {
       const x = (canvas.width / timeLines) * i;
       const timeMs = (i / timeLines) * maxTimeMs * timeScaleFactor;
@@ -167,51 +170,51 @@ const WaveformAnalyzer: React.FC = () => {
     ctx.stroke();
     
     // Draw original waveform
-    if (visSettings.showOriginal && original.length > 0) {
+    if (visSettings.showOriginal && original && original instanceof Uint8Array && original.length > 0) {
       ctx.beginPath();
       ctx.strokeStyle = 'rgba(100, 200, 255, 0.7)';
       ctx.lineWidth = 2;
       
       // Plot points with proper time and amplitude scaling
-      original.forEach((value, i) => {
+      for (let i = 0; i < original.length; i++) {
         // Scale x position based on relative time
         const relativeTimePosition = i / original.length;
         const x = relativeTimePosition * canvas.width * timeScaleFactor;
         
         // Scale y position based on amplitude (-1 to 1)
-        const y = centerY - (value * (canvas.height / 2) * ampScaleFactor);
+        const y = centerY - (original[i] * (canvas.height / 2) * ampScaleFactor);
         
         if (i === 0) {
           ctx.moveTo(x, y);
         } else {
           ctx.lineTo(x, y);
         }
-      });
+      }
       
       ctx.stroke();
     }
     
     // Draw processed waveform
-    if (visSettings.showProcessed && processed.length > 0) {
+    if (visSettings.showProcessed && processed && processed instanceof Uint8Array && processed.length > 0) {
       ctx.beginPath();
       ctx.strokeStyle = 'rgba(255, 100, 100, 0.7)';
       ctx.lineWidth = 2;
       
       // Plot points with proper time and amplitude scaling
-      processed.forEach((value, i) => {
+      for (let i = 0; i < processed.length; i++) {
         // Scale x position based on relative time
         const relativeTimePosition = i / processed.length;
         const x = relativeTimePosition * canvas.width * timeScaleFactor;
         
         // Scale y position based on amplitude (-1 to 1)
-        const y = centerY - (value * (canvas.height / 2) * ampScaleFactor);
+        const y = centerY - (processed[i] * (canvas.height / 2) * ampScaleFactor);
         
         if (i === 0) {
           ctx.moveTo(x, y);
         } else {
           ctx.lineTo(x, y);
         }
-      });
+      }
       
       ctx.stroke();
     }
