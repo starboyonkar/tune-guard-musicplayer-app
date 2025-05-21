@@ -9,13 +9,14 @@ import { useAudio } from '@/lib/audioContext';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { soundEffects } from '@/lib/soundEffects';
 import VoiceCommandManager from './VoiceCommandManager';
+import { UserProfile } from '@/lib/types';
 
 const SignUpForm: React.FC = () => {
   const { setProfile } = useAudio();
   const [name, setName] = useState('');
   const [age, setAge] = useState('');
   const [dob, setDob] = useState('');
-  const [gender, setGender] = useState<'male' | 'female' | 'non-binary' | 'prefer not to say'>('prefer not to say');
+  const [gender, setGender] = useState<'male' | 'female' | 'non-binary' | 'prefer-not-to-say'>('prefer-not-to-say');
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -45,18 +46,30 @@ const SignUpForm: React.FC = () => {
     // Play notification sound
     soundEffects.playNotification();
     
+    // Create user profile
+    const newProfile: UserProfile = {
+      name,
+      age: parseInt(age),
+      dob,
+      gender,
+      createdAt: new Date().toISOString(),
+      preferences: ['casual-listening', 'workout'],
+      listeningMetrics: {
+        totalListeningTime: 0,
+        sessionsCount: 0,
+        averageSessionDuration: 0,
+        highVolumeTime: 0,
+        safeVolumeTime: 0,
+        sessions: []
+      },
+      safetyScore: 100
+    };
+    
+    // Minimal delay to ensure smooth transition and allow the notification sound to play
     setTimeout(() => {
-      setProfile({
-        id: `user-${Date.now()}`,
-        name,
-        age: parseInt(age),
-        dob,
-        gender,
-        createdAt: new Date().toISOString(),
-        preferences: ['casual-listening', 'workout']
-      });
+      setProfile(newProfile);
       setIsLoading(false);
-    }, 1000);
+    }, 500);
   };
 
   return (

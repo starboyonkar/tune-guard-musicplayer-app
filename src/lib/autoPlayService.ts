@@ -47,7 +47,7 @@ export const autoPlayService = {
         playSong(songToPlay.id);
         
         // Update player state directly as fallback mechanism
-        setPlayerState(prevState => ({
+        setPlayerState((prevState: any) => ({
           ...prevState,
           currentSongId: songToPlay.id,
           isPlaying: true
@@ -84,7 +84,7 @@ export const autoPlayService = {
         toast({
           title: "Auto-Play Started",
           description: `Now playing: ${songToPlay.title}`,
-          id: "autoplay-success", // Prevent duplicate toasts
+          variant: "default"
         });
         
         return true;
@@ -98,8 +98,7 @@ export const autoPlayService = {
           toast({
             title: "Auto-Play Issue",
             description: "Starting playback automatically failed. Try playing manually.",
-            variant: "destructive",
-            id: "autoplay-error"
+            variant: "destructive"
           });
           return false;
         }
@@ -132,6 +131,7 @@ export const autoPlayService = {
       try {
         const silentAudio = new Audio();
         silentAudio.volume = 0.01;
+        silentAudio.src = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA";
         await silentAudio.play();
         setTimeout(() => {
           silentAudio.pause();
@@ -149,7 +149,7 @@ export const autoPlayService = {
         console.log("Using emergency direct playback approach");
         try {
           // Direct player state manipulation for immediate response
-          setPlayerState(prevState => ({
+          setPlayerState((prevState: any) => ({
             ...prevState,
             currentSongId: songs[0].id,
             isPlaying: true

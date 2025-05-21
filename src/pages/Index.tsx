@@ -8,7 +8,7 @@ import { soundEffects } from '@/lib/soundEffects';
 import { autoPlayService } from '@/lib/autoPlayService';
 
 const Index = () => {
-  const { isSignedUp, songs, playSong, setPlayerState } = useAudio();
+  const { isSignedUp, songs, playSong, setPlayerState, playerState } = useAudio();
   const [showControls, setShowControls] = useState(false);
   const [profileCreated, setProfileCreated] = useState(false);
   
@@ -39,7 +39,7 @@ const Index = () => {
     };
   }, []);
   
-  // Auto-play detection when user signs up
+  // Enhanced auto-play detection when user signs up
   useEffect(() => {
     // Only run this effect when transitioning from not signed up to signed up
     if (isSignedUp && !profileCreated) {
@@ -47,18 +47,29 @@ const Index = () => {
       
       // Begin immediate auto-play using the optimized post-login function
       if (songs.length > 0) {
-        // Small timeout to ensure audio context is ready
-        setTimeout(async () => {
+        console.log("Starting post-login playback...");
+        
+        // Immediate attempt to start playback
+        const startPlayback = async () => {
           try {
-            console.log("Starting post-login playback...");
             await autoPlayService.startPlaybackAfterLogin(songs, playSong, setPlayerState);
           } catch (error) {
             console.error("Post-login auto-play failed:", error);
+            
+            // Fallback approach - try direct play after a short delay
+            setTimeout(() => {
+              if (songs.length > 0 && !playerState.isPlaying) {
+                playSong(songs[0].id);
+              }
+            }, 800);
           }
-        }, 500);
+        };
+        
+        // Start immediately, don't wait
+        startPlayback();
       }
     }
-  }, [isSignedUp, songs, profileCreated, playSong, setPlayerState]);
+  }, [isSignedUp, songs, profileCreated, playSong, setPlayerState, playerState.isPlaying]);
 
   return (
     <div className="min-h-screen w-full bg-futuristic-bg overflow-hidden relative">

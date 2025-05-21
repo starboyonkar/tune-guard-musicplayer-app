@@ -1,125 +1,136 @@
 
-import { ReactNode } from 'react';
+// Adding these types to support the enhanced features
 
-export interface UserProfile {
+export type UserProfile = {
   name: string;
   age: number;
-  gender: 'male' | 'female' | 'non-binary' | 'prefer not to say';
-  hearingLevel: 'normal' | 'mild' | 'moderate' | 'severe';
-  preferredEnvironment: string;
-  eqPreferences?: EQSettings;
-  safetyPreferences?: SafetyPreferences;
+  gender: 'male' | 'female' | 'non-binary' | 'prefer-not-to-say';
+  dob: string;
   createdAt: string;
-  updatedAt: string;
-}
+  preferences?: string[];
+  listeningMetrics?: ListeningMetrics;
+  safetyScore?: number;
+};
 
-export interface EQSettings {
-  bass: number;
-  mid: number;
-  treble: number;
-  volume: number;
-  presence?: number; // Add presence setting
-  warmth?: number;   // Add warmth setting
-}
-
-export interface VoiceCommand {
-  text: string;
-  timestamp: string;
-  processed: boolean;
-  recognized: boolean;
-}
-
-export interface Song {
+export type Song = {
   id: string;
   title: string;
   artist: string;
   albumArt?: string;
   duration: number;
   source: string;
-  originalFileName?: string;
-}
+  playCount?: number;
+  lastPlayed?: string;
+  safetyRating?: number;
+};
 
-export interface WaveformData {
-  original: number[];
-  processed: number[];
-  timeData: number[];
-  frequencyData: number[];
-}
-
-export interface PlayerState {
+export type PlayerState = {
   isPlaying: boolean;
-  currentTime: number;
   volume: number;
-  isMuted: boolean;
+  currentTime: number;
+  duration: number;
   currentSongId: string | null;
-  currentPlaylistId: string | null;
   shuffleEnabled: boolean;
   repeatMode: 'off' | 'all' | 'one';
-}
+  muted: boolean;
+};
 
-export interface SirenDetection {
-  isEnabled: boolean;
-  sensitivity: number;
-  lastDetection: string | null;
-  detectionCount: number;
-  detectionThreshold: number;
-  isSirenDetected: boolean;
-  isCalibrating: boolean;
-  resultCallback?: (result: SirenDetectionResult) => void;
-  notificationType: 'visual' | 'audio' | 'both';
-}
+export type AudioContextType = {
+  isInitialized: boolean;
+  isSignedUp: boolean;
+  songs: Song[];
+  currentSong: Song | null;
+  playerState: PlayerState;
+  profile: UserProfile | null;
+  eqSettings: EQSettings;
+  sirenDetection: SirenDetectionSettings;
+  hearingProtection: HearingProtectionSettings;
+  setProfile: (profile: UserProfile) => void;
+  updateProfile: (profile: Partial<UserProfile>) => void;
+  logout: () => void;
+  playSong: (id: string) => void;
+  togglePlayPause: () => void;
+  seekTo: (time: number) => void;
+  setVolume: (volume: number) => void;
+  toggleMute: () => void;
+  nextSong: () => void;
+  prevSong: () => void;
+  toggleShuffle: () => void;
+  toggleRepeat: () => void;
+  addSong: (file: File) => void;
+  removeSong: (id: string) => void;
+  updateEQSettings: (settings: Partial<EQSettings>) => void;
+  updateSirenDetection: (settings: Partial<SirenDetectionSettings>) => void;
+  updateHearingProtection: (settings: Partial<HearingProtectionSettings>) => void;
+  setPlayerState: (state: Partial<PlayerState> | ((prevState: PlayerState) => Partial<PlayerState>)) => void;
+  getHearingSafetyScore: () => number;
+};
 
-export interface SirenDetectionResult {
-  detected: boolean;
-  confidence: number;
-  timestamp: string;
-  audioFeatures?: {
-    dominantFrequency: number;
-    amplitude: number;
-    duration: number;
-  };
-}
+export type EQSettings = {
+  bass: number;
+  mid: number;
+  treble: number;
+  preAmp: number;
+  enabled: boolean;
+  preset: string;
+};
 
-export interface SafetyPreferences {
-  maxVolume: number;
-  sirenDetectionEnabled: boolean;
-  sirenNotificationType: 'visual' | 'audio' | 'both';
-  environmentalAwarenessLevel: 'low' | 'medium' | 'high';
-  hearingProtectionEnabled: boolean;
-  hearingProtectionThreshold: number;
-}
-
-export interface VisSettings {
-  scale: number;
-  timeScale: number;
-  amplitudeScale: number;
-  showProcessed: boolean;
-  showOriginal: boolean;
-  overlay: boolean;
-}
-
-export interface Playlist {
-  id: string;
-  name: string;
-  songs: string[];
-  createdAt: string;
-  updatedAt?: string;
-}
-
-export interface NavigationItem {
-  label: string;
-  href: string;
-  icon: ReactNode;
-}
-
-export interface SirenDetectionSettings {
+export type SirenDetectionSettings = {
   enabled: boolean;
   sensitivity: number;
-  notificationType: 'visual' | 'audio' | 'both';
-}
+  autoResume: boolean;
+  pauseDuration: number;
+};
 
-export interface VoiceCommandPanelState {
-  isOpen: boolean;
+export type HearingProtectionSettings = {
+  enabled: boolean;
+  maxVolume: number;
+  warningThreshold: number;
+  limitDuration: boolean;
+  maxListeningTime: number;
+};
+
+export type VoiceCommand = {
+  command: string;
+  confidence: number;
+  timestamp: number;
+};
+
+export type VoiceCommandPanelState = {
   isListening: boolean;
-  lastCommand: string | null;
+  transcript: string;
+  isOpen: boolean;
+  mode: 'listening' | 'commands' | 'help';
+};
+
+export type ListeningSession = {
+  startTime: string;
+  endTime?: string;
+  duration: number;
+  averageVolume: number;
+  maxVolume: number;
+  songs: string[];
+};
+
+export type ListeningMetrics = {
+  totalListeningTime: number;
+  sessionsCount: number;
+  averageSessionDuration: number;
+  highVolumeTime: number;
+  safeVolumeTime: number;
+  lastSession?: ListeningSession;
+  sessions: ListeningSession[];
+  safetyScoreHistory: {
+    date: string;
+    score: number;
+  }[];
+};
+
+// Toast type extension for ID property
+export interface ToastWithId {
+  title?: string;
+  description?: string;
+  action?: React.ReactNode;
+  variant?: "default" | "destructive";
+  id?: string;
 }
