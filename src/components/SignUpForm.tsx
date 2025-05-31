@@ -120,7 +120,8 @@ const SignUpForm: React.FC = () => {
         </CardContent>
       </Card>
       
-      <div className="text-center mt-6 text-futuristic-muted text-sm">              © TUNE GUARD - OnkarNova Technologies                    Solapur, Maharashtra</div>
+      <div className="text-center mt-6 text-futuristic-muted text-sm"> © 2025 TUNE GUARD 
+ OnkarNova Technologies, Solapur, Maharashtra</div>
     </div>;
 };
 export default SignUpForm;
