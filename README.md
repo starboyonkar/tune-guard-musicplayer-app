@@ -18,9 +18,7 @@ The core innovation behind this app lies in **Cognitive Enhancement of Audio Pro
 
 ## 🌐 Live Application
 
-**URL:** http://13.201.158.202:8000/
-
-_Replace `<YOUR_EC2_PUBLIC_IP>` with your actual EC2 IP._
+**URL:** https://tune-guard.site/
 
 ---
 
