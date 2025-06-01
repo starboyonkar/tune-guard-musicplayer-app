@@ -2,75 +2,107 @@
 import React, { useRef, useEffect } from 'react';
 import { useAudio } from '@/lib/audioContext';
 
-const Waveform: React.FC = () => {
-  const { waveformData, playerState } = useAudio();
+interface WaveformProps {
+  className?: string;
+}
+
+const Waveform: React.FC<WaveformProps> = ({ className = "" }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  
-  // Draw waveform on canvas
+  const { waveformData, visSettings } = useAudio();
+
   useEffect(() => {
-    if (!canvasRef.current) return;
-    
     const canvas = canvasRef.current;
+    if (!canvas) return;
+
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    
-    // Clear the canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    const { processed } = waveformData;
-    
-    // Set up styles
-    ctx.lineWidth = 3;
-    ctx.lineCap = 'round';
-    
-    // Draw gradient background
-    const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    gradient.addColorStop(0, 'rgba(100, 200, 255, 0.2)');
-    gradient.addColorStop(1, 'rgba(255, 100, 255, 0.2)');
-    
-    // Draw processed waveform
-    ctx.beginPath();
-    ctx.strokeStyle = playerState.isPlaying ? gradient : 'rgba(100, 100, 100, 0.3)';
-    
-    const barWidth = canvas.width / processed.length;
-    const centerY = canvas.height / 2;
-    
-    processed.forEach((value, i) => {
-      const x = i * barWidth;
-      // Exaggerate the visual effect for better visuals
-      const barHeight = value * canvas.height * 0.8; 
-      
-      ctx.moveTo(x, centerY - barHeight / 2);
-      ctx.lineTo(x, centerY + barHeight / 2);
-    });
-    
-    ctx.stroke();
-    
-    // Add glow effect when playing
-    if (playerState.isPlaying) {
-      ctx.shadowColor = 'rgba(100, 200, 255, 0.5)';
-      ctx.shadowBlur = 10;
+
+    // Set canvas size
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * window.devicePixelRatio;
+    canvas.height = rect.height * window.devicePixelRatio;
+    ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+    // Clear canvas
+    ctx.clearRect(0, 0, rect.width, rect.height);
+
+    // Ensure we have valid array data
+    const originalData = Array.isArray(waveformData.original) ? waveformData.original : [];
+    const processedData = Array.isArray(waveformData.processed) ? waveformData.processed : [];
+
+    if (originalData.length === 0 && processedData.length === 0) {
+      // Draw placeholder when no data
+      ctx.strokeStyle = 'rgba(0, 255, 255, 0.3)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, rect.height / 2);
+      ctx.lineTo(rect.width, rect.height / 2);
+      ctx.stroke();
+      return;
     }
-    
-  }, [waveformData, playerState.isPlaying]);
-  
-  return (
-    <div className="flex items-end justify-center h-24 gap-[1px] px-4 mb-2 relative">
-      <canvas 
-        ref={canvasRef}
-        width={800}
-        height={150}
-        className="w-full h-full absolute top-0 left-0"
-      />
+
+    const drawWaveform = (data: number[], color: string, alpha: number = 1) => {
+      if (!Array.isArray(data) || data.length === 0) return;
+
+      ctx.strokeStyle = color;
+      ctx.globalAlpha = alpha;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+
+      const barWidth = rect.width / data.length;
       
-      {/* Static bars for visual effect when not playing */}
-      {!playerState.isPlaying && waveformData.processed.map((height, index) => (
-        <div
-          key={index}
-          style={{ height: `${height * 100}%` }}
-          className="waveform-bar w-[2px] bg-gray-500/20"
-        />
-      ))}
+      data.forEach((value, index) => {
+        const normalizedValue = Math.max(-1, Math.min(1, value || 0));
+        const barHeight = (normalizedValue * rect.height * 0.4 * visSettings.scale);
+        const x = index * barWidth;
+        const y = rect.height / 2;
+
+        if (index === 0) {
+          ctx.moveTo(x, y + barHeight);
+        } else {
+          ctx.lineTo(x, y + barHeight);
+        }
+      });
+
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    };
+
+    // Draw original waveform
+    if (visSettings.showOriginal && originalData.length > 0) {
+      drawWaveform(originalData, '#00ffff', 0.6);
+    }
+
+    // Draw processed waveform
+    if (visSettings.showProcessed && processedData.length > 0) {
+      drawWaveform(processedData, '#ff6b00', 0.8);
+    }
+
+  }, [waveformData, visSettings]);
+
+  return (
+    <div className={`relative ${className}`}>
+      <canvas
+        ref={canvasRef}
+        className="w-full h-full"
+        style={{ imageRendering: 'crisp-edges' }}
+      />
+      <div className="absolute top-2 right-2 text-xs text-futuristic-muted">
+        <div className="flex space-x-2">
+          {visSettings.showOriginal && (
+            <span className="flex items-center">
+              <div className="w-3 h-1 bg-cyan-400 mr-1"></div>
+              Original
+            </span>
+          )}
+          {visSettings.showProcessed && (
+            <span className="flex items-center">
+              <div className="w-3 h-1 bg-orange-400 mr-1"></div>
+              Processed
+            </span>
+          )}
+        </div>
+      </div>
     </div>
   );
 };
