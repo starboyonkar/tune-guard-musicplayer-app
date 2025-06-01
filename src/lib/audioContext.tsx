@@ -43,7 +43,7 @@ interface AudioContextType {
   updateEQSettings: (settings: Partial<EQSettings>) => void;
   setEQSettings: (settings: EQSettings) => void;
   visSettings: VisSettings;
-  setVisSettings: (settings: VisSettings) => void;
+  setVisSettings: (settings: Partial<VisSettings>) => void;
   resetWaveform: () => void;
   sirenDetection: SirenDetectionSettings;
   updateSirenDetection: (settings: Partial<SirenDetectionSettings>) => void;
@@ -116,7 +116,13 @@ export const AudioProvider: React.FC<AudioProviderProps> = ({ children }) => {
     mode: 'bars',
     color: '#00ffff',
     sensitivity: 50,
-    showPeaks: true
+    showPeaks: true,
+    scale: 1,
+    timeScale: 1,
+    amplitudeScale: 1,
+    showProcessed: true,
+    showOriginal: true,
+    overlay: true
   });
   
   const [sirenDetection, setSirenDetection] = useState<SirenDetectionSettings>({
@@ -146,12 +152,26 @@ export const AudioProvider: React.FC<AudioProviderProps> = ({ children }) => {
   
   const analyserRef = useRef<AnalyserNode | null>(null);
 
-  // Initialize audio context
+  // Initialize audio context with proper browser compatibility
   useEffect(() => {
-    const audioContext = new AudioContext();
-    const analyser = audioContext.createAnalyser();
-    analyser.fftSize = 256;
-    analyserRef.current = analyser;
+    try {
+      // Check for AudioContext support with vendor prefixes
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      
+      if (!AudioContextClass) {
+        console.warn('AudioContext not supported in this browser');
+        return;
+      }
+
+      const audioContext = new AudioContextClass();
+      const analyser = audioContext.createAnalyser();
+      analyser.fftSize = 256;
+      analyserRef.current = analyser;
+      
+      console.log('Audio context initialized successfully');
+    } catch (error) {
+      console.error('Failed to initialize audio context:', error);
+    }
   }, []);
 
   const generateWaveformData = useCallback((): WaveformData => {

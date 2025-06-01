@@ -152,19 +152,18 @@ export type WaveformData = {
   processed: Uint8Array; // Add missing processed property
 };
 
-export type VisSettings = {
-  mode: 'bars' | 'line' | 'circle';
+export interface VisSettings {
+  mode: 'bars' | 'waveform' | 'circular';
   color: string;
   sensitivity: number;
   showPeaks: boolean;
-  // Additional properties needed by components
   scale?: number;
   timeScale?: number;
   amplitudeScale?: number;
   showProcessed?: boolean;
   showOriginal?: boolean;
   overlay?: boolean;
-};
+}
 
 export type Playlist = {
   id: string;
