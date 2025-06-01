@@ -67,7 +67,6 @@ export interface Playlist {
   id: string;
   name: string;
   songIds: string[];
-  songs?: Song[];
   createdAt: string;
   updatedAt?: string;
 }

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -136,7 +135,7 @@ const PlaylistManager: React.FC = () => {
       
       {selectedPlaylist && (
         <div className="border rounded-md p-3">
-          <h4 className="font-medium mb-2">{selectedPlaylist.name} - Songs</h4>
+          <h4 className="font-medium mb-2">{selectedPlaylist.name} - songIds</h4>
           <div className="space-y-1 max-h-40 overflow-y-auto">
             {selectedPlaylist.songIds.map(songId => {
               const song = songs.find(s => s.id === songId);
