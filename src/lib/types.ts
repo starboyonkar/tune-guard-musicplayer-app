@@ -104,4 +104,6 @@ export interface SirenDetectionSettings {
   sensitivity: number;
   autoLower: boolean;
   targetVolume: number;
+  autoResume: boolean;
+  pauseDuration: number;
 }

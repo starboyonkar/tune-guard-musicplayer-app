@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useRef, useCallback, useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { Song, PlayerState, UserProfile, Playlist, EQSettings, WaveformData, VisSettings, VoiceCommand } from './types';
@@ -5,6 +6,7 @@ import { Song, PlayerState, UserProfile, Playlist, EQSettings, WaveformData, Vis
 interface AudioContextType {
   isSignedUp: boolean;
   currentProfile: UserProfile | null;
+  profile: UserProfile | null;
   songs: Song[];
   playlists: Playlist[];
   playerState: PlayerState;
@@ -13,6 +15,7 @@ interface AudioContextType {
   eqSettings: EQSettings;
   voiceCommands: VoiceCommand[];
   isVoiceListening: boolean;
+  isLoading: boolean;
   toggleVoiceListening: () => void;
   setVoiceCommand: (command: string) => void;
   playSong: (songId: string) => void;
@@ -26,6 +29,18 @@ interface AudioContextType {
   toggleRepeat: () => void;
   logout: () => void;
   currentSong: Song | null;
+  setProfile: (profile: UserProfile) => void;
+  updateProfile: (updates: Partial<UserProfile>) => void;
+  addSong: (file: File) => void;
+  removeSong: (songId: string) => void;
+  createPlaylist: (name: string) => void;
+  addToPlaylist: (playlistId: string, songId: string) => void;
+  removeFromPlaylist: (playlistId: string, songId: string) => void;
+  deletePlaylist: (playlistId: string) => void;
+  playPlaylist: (playlistId: string) => void;
+  setEQSettings: (settings: Partial<EQSettings>) => void;
+  setVisSettings: (settings: Partial<VisSettings>) => void;
+  resetWaveform: () => void;
 }
 
 const AudioContext = createContext<AudioContextType | undefined>(undefined);
@@ -35,6 +50,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [currentProfile, setCurrentProfile] = useState<UserProfile | null>(null);
   const [songs, setSongs] = useState<Song[]>([]);
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const [playerState, setPlayerState] = useState<PlayerState>({
     isPlaying: false,
     currentTime: 0,
@@ -51,7 +67,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     timeData: [],
     frequencyData: []
   });
-  const [visSettings, setVisSettings] = useState<VisSettings>({
+  const [visSettings, setVisSettingsState] = useState<VisSettings>({
     scale: 1,
     timeScale: 1,
     amplitudeScale: 1,
@@ -63,7 +79,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     sensitivity: 0.5,
     showPeaks: true
   });
-  const [eqSettings, setEqSettings] = useState<EQSettings>({
+  const [eqSettings, setEQSettingsState] = useState<EQSettings>({
     bass: 0,
     mid: 0,
     treble: 0,
@@ -106,6 +122,137 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         recognized: true
       }
     ]);
+  }, []);
+
+  const setProfile = useCallback((profile: UserProfile) => {
+    setCurrentProfile(profile);
+    setIsSignedUp(true);
+    localStorage.setItem('tuneGuardProfile', JSON.stringify(profile));
+  }, []);
+
+  const updateProfile = useCallback((updates: Partial<UserProfile>) => {
+    setCurrentProfile(prev => {
+      if (!prev) return null;
+      const updated = { ...prev, ...updates, updatedAt: new Date().toISOString() };
+      localStorage.setItem('tuneGuardProfile', JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
+
+  const addSong = useCallback((file: File) => {
+    setIsLoading(true);
+    
+    // Create object URL for the file
+    const url = URL.createObjectURL(file);
+    
+    // Create a new song object
+    const newSong: Song = {
+      id: Date.now().toString(),
+      title: file.name.replace(/\.[^/.]+$/, ""), // Remove file extension
+      artist: "Unknown Artist",
+      albumArt: "/lovable-uploads/d4fe6f3e-e72d-4760-93e5-5f71a12f2238.png",
+      duration: 0, // Will be updated when metadata loads
+      source: url,
+      originalFileName: file.name
+    };
+
+    setSongs(prev => [...prev, newSong]);
+    setIsLoading(false);
+    
+    createSafeToast({
+      title: "Song Added",
+      description: `"${newSong.title}" has been added to your library.`
+    });
+  }, []);
+
+  const removeSong = useCallback((songId: string) => {
+    setSongs(prev => prev.filter(song => song.id !== songId));
+    
+    // If this was the current song, stop playback
+    if (playerState.currentSongId === songId) {
+      setPlayerState(prev => ({
+        ...prev,
+        isPlaying: false,
+        currentSongId: null,
+        currentTime: 0
+      }));
+      if (audioElementRef.current) {
+        audioElementRef.current.pause();
+        audioElementRef.current.currentTime = 0;
+      }
+    }
+    
+    createSafeToast({
+      title: "Song Removed",
+      description: "Song has been removed from your library."
+    });
+  }, [playerState.currentSongId]);
+
+  const createPlaylist = useCallback((name: string) => {
+    const newPlaylist: Playlist = {
+      id: Date.now().toString(),
+      name,
+      songIds: [],
+      songs: [],
+      createdAt: new Date().toISOString()
+    };
+    
+    setPlaylists(prev => [...prev, newPlaylist]);
+    
+    createSafeToast({
+      title: "Playlist Created",
+      description: `"${name}" playlist has been created.`
+    });
+  }, []);
+
+  const addToPlaylist = useCallback((playlistId: string, songId: string) => {
+    setPlaylists(prev => prev.map(playlist => 
+      playlist.id === playlistId 
+        ? { ...playlist, songIds: [...playlist.songIds, songId] }
+        : playlist
+    ));
+  }, []);
+
+  const removeFromPlaylist = useCallback((playlistId: string, songId: string) => {
+    setPlaylists(prev => prev.map(playlist => 
+      playlist.id === playlistId 
+        ? { ...playlist, songIds: playlist.songIds.filter(id => id !== songId) }
+        : playlist
+    ));
+  }, []);
+
+  const deletePlaylist = useCallback((playlistId: string) => {
+    setPlaylists(prev => prev.filter(playlist => playlist.id !== playlistId));
+    
+    createSafeToast({
+      title: "Playlist Deleted",
+      description: "Playlist has been removed."
+    });
+  }, []);
+
+  const playPlaylist = useCallback((playlistId: string) => {
+    const playlist = playlists.find(p => p.id === playlistId);
+    if (playlist && playlist.songIds.length > 0) {
+      setPlayerState(prev => ({ ...prev, currentPlaylistId: playlistId }));
+      playSong(playlist.songIds[0]);
+    }
+  }, [playlists]);
+
+  const setEQSettings = useCallback((settings: Partial<EQSettings>) => {
+    setEQSettingsState(prev => ({ ...prev, ...settings }));
+  }, []);
+
+  const setVisSettings = useCallback((settings: Partial<VisSettings>) => {
+    setVisSettingsState(prev => ({ ...prev, ...settings }));
+  }, []);
+
+  const resetWaveform = useCallback(() => {
+    setWaveformData({
+      original: [],
+      processed: [],
+      timeData: [],
+      frequencyData: []
+    });
   }, []);
 
   const playSong = useCallback((songId: string) => {
@@ -321,6 +468,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     <AudioContext.Provider value={{
       isSignedUp,
       currentProfile,
+      profile: currentProfile,
       songs,
       playlists,
       playerState,
@@ -329,6 +477,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       eqSettings,
       voiceCommands,
       isVoiceListening,
+      isLoading,
       toggleVoiceListening,
       setVoiceCommand,
       playSong,
@@ -341,7 +490,19 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       toggleShuffle,
       toggleRepeat,
       logout,
-      currentSong
+      currentSong,
+      setProfile,
+      updateProfile,
+      addSong,
+      removeSong,
+      createPlaylist,
+      addToPlaylist,
+      removeFromPlaylist,
+      deletePlaylist,
+      playPlaylist,
+      setEQSettings,
+      setVisSettings,
+      resetWaveform
     }}>
       {children}
     </AudioContext.Provider>

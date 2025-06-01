@@ -93,6 +93,10 @@ const ProfileEditor: React.FC = () => {
     logout();
   };
 
+  const handleGenderChange = (value: string) => {
+    setGender(value as 'male' | 'female' | 'non-binary' | 'prefer-not-to-say');
+  };
+
   if (!profile) return null;
 
   return (
@@ -127,7 +131,7 @@ const ProfileEditor: React.FC = () => {
           
           <div className="space-y-2">
             <Label htmlFor="gender">Gender</Label>
-            <Select value={gender} onValueChange={val => setGender(val)}>
+            <Select value={gender} onValueChange={handleGenderChange}>
               <SelectTrigger className="border-futuristic-border bg-futuristic-bg/30">
                 <SelectValue placeholder="Select gender" />
               </SelectTrigger>
