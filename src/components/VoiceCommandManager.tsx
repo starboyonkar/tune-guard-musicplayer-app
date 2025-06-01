@@ -31,8 +31,9 @@ const VoiceCommandManager: React.FC = () => {
     mode: "listening"
   });
   
+  const initAttempts = useRef(0);
+  const maxInitAttempts = 3;
   const recognitionResetTimer = useRef<number | null>(null);
-  const commandCooldown = useRef<boolean>(false);
   
   useEffect(() => {
     const initializeSpeechRecognition = () => {
@@ -44,27 +45,37 @@ const VoiceCommandManager: React.FC = () => {
             recognition.current.continuous = true;
             recognition.current.interimResults = false;
             recognition.current.lang = 'en-US';
+            
+            // Enhanced noise filtering
             recognition.current.maxAlternatives = 1;
             
             setIsReady(true);
             console.log("Speech recognition initialized successfully");
             return true;
-          } else {
-            toast({
-              title: "Voice Commands Unavailable",
-              description: "Your browser doesn't support speech recognition",
-              variant: "destructive"
-            });
+          } else if (initAttempts.current < maxInitAttempts) {
+            initAttempts.current += 1;
+            if (initAttempts.current === 1) {
+              toast({
+                title: "Voice Commands Limited",
+                description: "Your browser doesn't support speech recognition",
+                variant: "destructive"
+              });
+            }
           }
         }
         return false;
       } catch (error) {
         console.error("Error initializing speech recognition:", error);
-        toast({
-          title: "Voice Commands Error",
-          description: "Could not initialize speech recognition",
-          variant: "destructive"
-        });
+        if (initAttempts.current < maxInitAttempts) {
+          initAttempts.current += 1;
+          if (initAttempts.current === 1) {
+            toast({
+              title: "Voice Commands Unavailable",
+              description: "Could not initialize speech recognition",
+              variant: "destructive"
+            });
+          }
+        }
         return false;
       }
     };
@@ -111,6 +122,7 @@ const VoiceCommandManager: React.FC = () => {
           const text = result[0].transcript.trim().toLowerCase();
           const confidence = result[0].confidence;
           
+          // Filter low confidence results to reduce false positives
           if (confidence > 0.6) {
             setTranscript(text);
             setPanelState(prev => ({
@@ -118,35 +130,60 @@ const VoiceCommandManager: React.FC = () => {
               transcript: text
             }));
             processCommand(text);
+          } else {
+            console.log("Low confidence speech result ignored:", text, confidence);
           }
         }
       };
 
       recognition.current.onerror = (event) => {
-        if (event.error !== 'no-speech' && event.error !== 'aborted') {
+        if (event.error === 'no-speech') {
+          console.log("No speech detected - continuing to listen");
+        } else if (event.error === 'aborted') {
+          console.log("Speech recognition stopped");
+        } else {
           console.error("Speech recognition error:", event.error);
+          if (event.error !== 'network' && event.error !== 'audio-capture') {
+            toast({
+              title: "Voice Recognition Issue",
+              description: "Speech recognition had a problem. Click the mic to retry.",
+              variant: "destructive"
+            });
+          }
         }
       };
 
       recognition.current.onend = () => {
         if (isVoiceListening && recognition.current) {
-          if (recognitionResetTimer.current) {
-            clearTimeout(recognitionResetTimer.current);
-          }
-          
-          recognitionResetTimer.current = window.setTimeout(() => {
-            if (isVoiceListening && recognition.current) {
-              try {
-                recognition.current.start();
-              } catch (e) {
-                console.log("Error restarting speech recognition:", e);
-              }
+          try {
+            const delayTime = Math.min(1000, 200 * Math.pow(1.2, initAttempts.current));
+            
+            if (recognitionResetTimer.current) {
+              clearTimeout(recognitionResetTimer.current);
             }
-          }, 500);
+            
+            recognitionResetTimer.current = window.setTimeout(() => {
+              if (isVoiceListening && recognition.current) {
+                try {
+                  recognition.current.start();
+                  console.log("Speech recognition restarted");
+                } catch (e) {
+                  console.log("Error restarting speech recognition:", e);
+                }
+              }
+            }, delayTime);
+          } catch (e) {
+            console.log("Error setting restart timer:", e);
+          }
         }
       };
     } catch (error) {
       console.error("Error starting speech recognition:", error);
+      toast({
+        title: "Voice Recognition Error",
+        description: "Could not start listening. Please try again.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -166,37 +203,32 @@ const VoiceCommandManager: React.FC = () => {
   };
 
   const matchCommand = (text: string, commands: string[]): boolean => {
+    // Enhanced command matching with noise filtering
     const cleanText = text.replace(/[^\w\s]/g, '').toLowerCase();
     
     return commands.some(cmd => {
       const cmdWords = cmd.split(' ');
       const textWords = cleanText.split(' ');
       
+      // Check for exact phrase match
       if (cleanText.includes(cmd)) return true;
       
+      // Check word-by-word matching with threshold
       const matchCount = cmdWords.filter(word => 
         textWords.some(textWord => 
           textWord.includes(word) || word.includes(textWord)
         )
       ).length;
       
-      return matchCount >= Math.ceil(cmdWords.length * 0.7);
+      return matchCount >= Math.ceil(cmdWords.length * 0.8);
     });
   };
 
   const processCommand = (command: string) => {
-    if (commandCooldown.current) return;
-    
     console.log("Processing voice command:", command);
     setVoiceCommand(command);
 
     let commandProcessed = false;
-
-    // Prevent rapid command execution
-    commandCooldown.current = true;
-    setTimeout(() => {
-      commandCooldown.current = false;
-    }, 800);
 
     if (matchCommand(command, ['play', 'start', 'resume', 'begin'])) {
       if (!playerState.isPlaying) {
@@ -289,7 +321,7 @@ const VoiceCommandManager: React.FC = () => {
     if (!commandProcessed) {
       toast({
         title: "🤔 Command Not Recognized",
-        description: "Try saying 'help' for available commands",
+        description: `Try saying "help" for available commands`,
         variant: "default"
       });
     }
@@ -329,7 +361,7 @@ const VoiceCommandManager: React.FC = () => {
           onClick={toggleListening}
           className={`text-futuristic-muted transition-all duration-300 ${
             isVoiceListening 
-              ? 'text-futuristic-accent1 bg-futuristic-accent1/10' 
+              ? 'text-futuristic-accent1 animate-pulse bg-futuristic-accent1/10' 
               : 'hover:text-futuristic-accent1'
           }`}
           title={isVoiceListening ? "Voice commands active - click to disable" : "Enable voice commands"}
@@ -341,7 +373,7 @@ const VoiceCommandManager: React.FC = () => {
           )}
         </Button>
         {isVoiceListening && (
-          <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-red-500 border-2 border-futuristic-bg"></span>
+          <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-red-500 animate-pulse border-2 border-futuristic-bg"></span>
         )}
       </div>
 

@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { useAudio } from '@/lib/audioContext';
 import SignUpForm from '@/components/SignUpForm';
@@ -104,11 +105,11 @@ const Index = () => {
       
       {/* App logo */}
       <div className="absolute top-4 left-4 flex items-center space-x-2 z-10">
-        <Avatar className="h-10 w-10 border border-white/10">
+        <Avatar className="h-10 w-10 border border-white/10 animate-pulse-slow">
           <AvatarImage src="/lovable-uploads/d4fe6f3e-e72d-4760-93e5-5f71a12f2238.png" alt="TUNE GUARD" />
           <AvatarFallback>TG</AvatarFallback>
         </Avatar>
-        <span className="text-lg font-semibold text-futuristic-accent1">TUNE GUARD</span>
+        <span className="text-lg font-semibold neon-text">TUNE GUARD</span>
       </div>
       
       {/* Main content with smoother transition */}
@@ -116,10 +117,12 @@ const Index = () => {
         {isSignedUp ? <AudioPlayerUI /> : <SignUpForm />}
       </div>
 
-      {/* Social Footer - show on both login and main app */}
-      <div className="mt-auto">
-        <SocialFooter />
-      </div>
+      {/* Social Footer - only show when signed up */}
+      {isSignedUp && (
+        <div className="mt-auto">
+          <SocialFooter />
+        </div>
+      )}
     </div>
   );
 };

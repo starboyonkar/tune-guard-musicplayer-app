@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -88,7 +89,7 @@ const PlaylistManager: React.FC = () => {
                     <Badge variant="secondary" className="text-[10px]">PLAYING</Badge>
                   )}
                 </div>
-                <p className="text-xs text-gray-400">{playlist.songIds.length} songs</p>
+                <p className="text-xs text-gray-400">{playlist.songs.length} songs</p>
               </div>
               <div className="flex space-x-1">
                 <Button 
@@ -104,7 +105,7 @@ const PlaylistManager: React.FC = () => {
                   size="sm" 
                   variant="ghost" 
                   onClick={() => handlePlayPlaylist(playlist.id)}
-                  disabled={playlist.songIds.length === 0}
+                  disabled={playlist.songs.length === 0}
                   className="hover:bg-futuristic-accent1/20"
                 >
                   <Play className="h-3 w-3" />
@@ -135,9 +136,9 @@ const PlaylistManager: React.FC = () => {
       
       {selectedPlaylist && (
         <div className="border rounded-md p-3">
-          <h4 className="font-medium mb-2">{selectedPlaylist.name} - songIds</h4>
+          <h4 className="font-medium mb-2">{selectedPlaylist.name} - Songs</h4>
           <div className="space-y-1 max-h-40 overflow-y-auto">
-            {selectedPlaylist.songIds.map(songId => {
+            {selectedPlaylist.songs.map(songId => {
               const song = songs.find(s => s.id === songId);
               return song ? (
                 <div 
@@ -189,7 +190,7 @@ const PlaylistManager: React.FC = () => {
               ) : null;
             })}
             
-            {selectedPlaylist.songIds.length === 0 && (
+            {selectedPlaylist.songs.length === 0 && (
               <p className="text-sm text-gray-400 text-center py-2">No songs in this playlist</p>
             )}
           </div>

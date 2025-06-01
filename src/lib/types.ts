@@ -31,8 +31,6 @@ export interface EQSettings {
   preAmp: number;
   enabled: boolean;
   preset: string;
-  presence: number;
-  warmth: number;
 }
 
 export interface Song {
@@ -96,13 +94,4 @@ export interface VoiceCommandPanelState {
   transcript: string;
   isOpen: boolean;
   mode: 'listening' | 'help' | 'profile';
-}
-
-export interface SirenDetectionSettings {
-  enabled: boolean;
-  sensitivity: number;
-  autoLower: boolean;
-  targetVolume: number;
-  autoResume: boolean;
-  pauseDuration: number;
 }
