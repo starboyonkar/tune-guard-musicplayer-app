@@ -1,229 +1,117 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
-import { useAudio } from '@/lib/audioContext';
 import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { 
-  Waves, 
-  Music3, 
-  Volume2, 
-  Settings2, 
-  Sliders, 
-  RotateCw,
-  BarChart4
-} from 'lucide-react';
-import { soundEffects } from '@/lib/soundEffects';
+import { useAudio } from '@/lib/audioContext';
 
-// Custom slider component for EQ controls
-const EQSlider: React.FC<{
-  label: string;
-  value: number;
-  onChange: (value: number[]) => void;
-  icon?: React.ReactNode;
-  color?: string;
-}> = ({ label, value, onChange, icon, color = 'bg-futuristic-accent1' }) => {
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          {icon}
-          <label className="text-sm font-medium">{label}</label>
-        </div>
-        <span className="text-xs text-futuristic-accent2">{value}%</span>
-      </div>
-      <Slider
-        value={[value]}
-        min={0}
-        max={100}
-        step={1}
-        onValueChange={onChange}
-        className={`${color}`}
-      />
-    </div>
-  );
-};
+const EQSettings = () => {
+  const { eqSettings, updateEQSettings } = useAudio();
 
-const EQSettings: React.FC = () => {
-  const { 
-    eqSettings, 
-    setEQSettings, 
-    visSettings, 
-    setVisSettings,
-    playerState,
-    resetWaveform
-  } = useAudio();
-  
-  const [advanced, setAdvanced] = useState(false);
-  
-  const handleResetEQ = () => {
-    soundEffects.playTouchFeedback();
-    
-    setEQSettings({
-      bass: 70,
-      mid: 70,
-      treble: 70,
-      volume: playerState.volume,
-      presence: 50,
-      warmth: 50,
+  const presets = [
+    { name: 'Flat', bass: 0, mid: 0, treble: 0, preAmp: 0 },
+    { name: 'Rock', bass: 4, mid: 2, treble: 6, preAmp: 2 },
+    { name: 'Pop', bass: 2, mid: 4, treble: 3, preAmp: 1 },
+    { name: 'Classical', bass: -2, mid: 0, treble: 2, preAmp: 0 },
+    { name: 'Bass Boost', bass: 8, mid: 0, treble: -2, preAmp: 3 },
+  ];
+
+  const handlePresetSelect = (preset: typeof presets[0]) => {
+    updateEQSettings({
+      bass: preset.bass,
+      mid: preset.mid,
+      treble: preset.treble,
+      preAmp: preset.preAmp,
+      preset: preset.name,
+      enabled: true
     });
   };
-  
-  const handleResetWaveform = () => {
-    soundEffects.playTouchFeedback();
-    resetWaveform();
-  };
 
   return (
-    <Card className="glass border-futuristic-border">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-md flex items-center">
-          <Sliders className="mr-2 h-4 w-4 text-futuristic-accent1" />
-          Audio Settings
-        </CardTitle>
+    <Card className="border-futuristic-border bg-black/40 backdrop-blur-sm">
+      <CardHeader>
+        <CardTitle className="text-futuristic-accent1">Equalizer</CardTitle>
+        <div className="flex items-center space-x-2">
+          <Switch
+            checked={eqSettings.enabled}
+            onCheckedChange={(enabled) => updateEQSettings({ enabled })}
+          />
+          <span className="text-sm text-futuristic-muted">Enable EQ</span>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <EQSlider
-          label="Bass"
-          value={eqSettings.bass}
-          onChange={(value) => {
-            soundEffects.playTouchFeedback();
-            setEQSettings({ ...eqSettings, bass: value[0] });
-          }}
-          icon={<Waves className="h-3 w-3 text-blue-400" />}
-          color="bg-blue-400"
-        />
-        
-        <EQSlider
-          label="Mid"
-          value={eqSettings.mid}
-          onChange={(value) => {
-            soundEffects.playTouchFeedback();
-            setEQSettings({ ...eqSettings, mid: value[0] });
-          }}
-          icon={<Waves className="h-3 w-3 text-green-400" />}
-          color="bg-green-400"
-        />
-        
-        <EQSlider
-          label="Treble"
-          value={eqSettings.treble}
-          onChange={(value) => {
-            soundEffects.playTouchFeedback();
-            setEQSettings({ ...eqSettings, treble: value[0] });
-          }}
-          icon={<Waves className="h-3 w-3 text-yellow-400" />}
-          color="bg-yellow-400"
-        />
-        
-        <EQSlider
-          label="Volume"
-          value={eqSettings.volume}
-          onChange={(value) => {
-            soundEffects.playTouchFeedback();
-            setEQSettings({ ...eqSettings, volume: value[0] });
-          }}
-          icon={<Volume2 className="h-3 w-3 text-purple-400" />}
-          color="bg-purple-400"
-        />
-        
-        <div className="flex items-center space-x-2 pt-2">
-          <Switch 
-            id="advanced-eq"
-            checked={advanced}
-            onCheckedChange={(checked) => {
-              soundEffects.playTouchFeedback();
-              setAdvanced(checked);
-            }}
-          />
-          <Label htmlFor="advanced-eq">Advanced Controls</Label>
+        <div className="flex flex-wrap gap-2">
+          {presets.map((preset) => (
+            <Button
+              key={preset.name}
+              variant={eqSettings.preset === preset.name ? "default" : "outline"}
+              size="sm"
+              onClick={() => handlePresetSelect(preset)}
+              className="text-xs"
+            >
+              {preset.name}
+            </Button>
+          ))}
         </div>
-        
-        {advanced && (
-          <div className="space-y-4 pt-2">
-            <EQSlider
-              label="Presence"
-              value={eqSettings.presence || 50}
-              onChange={(value) => {
-                soundEffects.playTouchFeedback();
-                setEQSettings({ ...eqSettings, presence: value[0] });
-              }}
-              icon={<Music3 className="h-3 w-3 text-pink-400" />}
-              color="bg-pink-400"
+
+        <div className="space-y-4">
+          <div>
+            <label className="text-sm font-medium">Pre-Amp</label>
+            <Slider
+              value={[eqSettings.preAmp]}
+              onValueChange={(value) => updateEQSettings({ preAmp: value[0] })}
+              max={10}
+              min={-10}
+              step={1}
+              className="mt-2"
+              disabled={!eqSettings.enabled}
             />
-            
-            <EQSlider
-              label="Warmth"
-              value={eqSettings.warmth || 50}
-              onChange={(value) => {
-                soundEffects.playTouchFeedback();
-                setEQSettings({ ...eqSettings, warmth: value[0] });
-              }}
-              icon={<Music3 className="h-3 w-3 text-orange-400" />}
-              color="bg-orange-400"
-            />
-            
-            <div className="pt-2 space-y-4">
-              <h4 className="text-sm font-medium flex items-center">
-                <BarChart4 className="h-3 w-3 mr-1 text-futuristic-accent2" />
-                Visualization Settings
-              </h4>
-              
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="vis-scale" className="text-xs">Scale</Label>
-                  <span className="text-xs text-futuristic-accent2">{visSettings.scale.toFixed(1)}x</span>
-                </div>
-                <Slider
-                  id="vis-scale"
-                  value={[visSettings.scale]}
-                  min={0.5}
-                  max={2}
-                  step={0.1}
-                  onValueChange={(value) => setVisSettings({ ...visSettings, scale: value[0] })}
-                  className="bg-futuristic-accent2"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="vis-amplitude" className="text-xs">Amplitude</Label>
-                  <span className="text-xs text-futuristic-accent2">{visSettings.amplitudeScale.toFixed(1)}x</span>
-                </div>
-                <Slider
-                  id="vis-amplitude"
-                  value={[visSettings.amplitudeScale]}
-                  min={0.5}
-                  max={2}
-                  step={0.1}
-                  onValueChange={(value) => setVisSettings({ ...visSettings, amplitudeScale: value[0] })}
-                  className="bg-futuristic-accent2"
-                />
-              </div>
-            </div>
-            
-            <div className="flex justify-between pt-2">
-              <Button 
-                size="sm" 
-                variant="outline" 
-                onClick={handleResetEQ}
-                className="text-xs"
-              >
-                <RotateCw className="h-3 w-3 mr-1" /> Reset EQ
-              </Button>
-              <Button 
-                size="sm" 
-                variant="outline" 
-                onClick={handleResetWaveform}
-                className="text-xs"
-              >
-                <RotateCw className="h-3 w-3 mr-1" /> Reset Waveform
-              </Button>
-            </div>
+            <span className="text-xs text-futuristic-muted">{eqSettings.preAmp}dB</span>
           </div>
-        )}
+
+          <div>
+            <label className="text-sm font-medium">Bass</label>
+            <Slider
+              value={[eqSettings.bass]}
+              onValueChange={(value) => updateEQSettings({ bass: value[0] })}
+              max={10}
+              min={-10}
+              step={1}
+              className="mt-2"
+              disabled={!eqSettings.enabled}
+            />
+            <span className="text-xs text-futuristic-muted">{eqSettings.bass}dB</span>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium">Mid</label>
+            <Slider
+              value={[eqSettings.mid]}
+              onValueChange={(value) => updateEQSettings({ mid: value[0] })}
+              max={10}
+              min={-10}
+              step={1}
+              className="mt-2"
+              disabled={!eqSettings.enabled}
+            />
+            <span className="text-xs text-futuristic-muted">{eqSettings.mid}dB</span>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium">Treble</label>
+            <Slider
+              value={[eqSettings.treble]}
+              onValueChange={(value) => updateEQSettings({ treble: value[0] })}
+              max={10}
+              min={-10}
+              step={1}
+              className="mt-2"
+              disabled={!eqSettings.enabled}
+            />
+            <span className="text-xs text-futuristic-muted">{eqSettings.treble}dB</span>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );
