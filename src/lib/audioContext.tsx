@@ -9,7 +9,7 @@ import {
   WaveformData,
   VisSettings
 } from './types';
-import { toast } from '@/hooks/use-toast';
+import { toast } from '@/components/ui/use-toast';
 import { matchesVoiceCommand } from '@/lib/utils';
 import { autoPlayService } from './autoPlayService';
 import { VoiceCommandProcessor } from './voiceCommandProcessor';
@@ -53,21 +53,14 @@ const SAMPLE_PLAYLISTS: Playlist[] = [
   {
     id: 'playlist1',
     name: 'Favorites',
-    songIds: ['1', '3'],
+    songs: ['1', '3'],
     createdAt: new Date().toISOString()
   }
 ];
 
 const getEQSettingsByAge = (age: number, gender: string): EQSettings => {
-  const baseSettings = {
-    preAmp: 0,
-    enabled: true,
-    preset: 'custom'
-  };
-
   if (age < 20) {
     return {
-      ...baseSettings,
       bass: gender === 'male' ? 75 : 70,
       mid: 65,
       treble: 80,
@@ -75,7 +68,6 @@ const getEQSettingsByAge = (age: number, gender: string): EQSettings => {
     };
   } else if (age < 40) {
     return {
-      ...baseSettings,
       bass: 70,
       mid: 70,
       treble: 75,
@@ -83,7 +75,6 @@ const getEQSettingsByAge = (age: number, gender: string): EQSettings => {
     };
   } else if (age < 60) {
     return {
-      ...baseSettings,
       bass: 75,
       mid: 75, 
       treble: 65,
@@ -91,7 +82,6 @@ const getEQSettingsByAge = (age: number, gender: string): EQSettings => {
     };
   } else {
     return {
-      ...baseSettings,
       bass: 80,
       mid: 70,
       treble: 55,
@@ -105,12 +95,10 @@ interface AudioContextType {
   setProfile: (profile: UserProfile) => void;
   eqSettings: EQSettings;
   setEQSettings: (settings: EQSettings) => void;
-  updateEQSettings: (settings: Partial<EQSettings>) => void;
   songs: Song[];
   addSong: (file: File) => void;
   removeSong: (songId: string) => void;
   playerState: PlayerState;
-  setPlayerState: React.Dispatch<React.SetStateAction<PlayerState>>;
   voiceCommand: string;
   setVoiceCommand: (command: string) => void;
   isVoiceListening: boolean;
@@ -147,7 +135,7 @@ const defaultPlayerState: PlayerState = {
   isPlaying: false,
   currentTime: 0,
   volume: 70,
-  muted: false,
+  isMuted: false,
   currentSongId: '1',
   currentPlaylistId: null,
   shuffleEnabled: false,
@@ -167,11 +155,7 @@ const defaultVisSettings: VisSettings = {
   amplitudeScale: 1,
   showProcessed: true,
   showOriginal: true,
-  overlay: true,
-  mode: 'spectrum',
-  color: '#00ff00',
-  sensitivity: 0.5,
-  showPeaks: true
+  overlay: true
 };
 
 const AudioContext = createContext<AudioContextType | undefined>(undefined);
@@ -182,10 +166,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     bass: 70,
     mid: 70,
     treble: 70,
-    volume: 70,
-    preAmp: 0,
-    enabled: true,
-    preset: 'custom'
+    volume: 70
   });
   const [playerState, setPlayerState] = useState<PlayerState>(defaultPlayerState);
   const [voiceCommand, setVoiceCommandText] = useState<string>('');
@@ -227,11 +208,6 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (!audioContextRef.current) {
       try {
         const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-        if (!AudioContextClass) {
-          console.warn("Web Audio API not supported in this browser");
-          return false;
-        }
-        
         audioContextRef.current = new AudioContextClass();
         
         analyserNodeRef.current = audioContextRef.current.createAnalyser();
@@ -270,11 +246,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return true;
   };
 
-  const updateEQSettings = (newSettings?: Partial<EQSettings>) => {
-    if (newSettings) {
-      setEQSettings(prev => ({ ...prev, ...newSettings }));
-    }
-    
+  const updateEQSettings = () => {
     if (!eqNodesRef.current.length) return;
     
     const [bassFilter, midFilter, trebleFilter] = eqNodesRef.current;
@@ -591,7 +563,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     
     const updatedPlaylists = playlists.map(playlist => ({
       ...playlist,
-      songIds: playlist.songIds.filter(id => id !== songId)
+      songs: playlist.songs.filter(id => id !== songId)
     }));
     setPlaylists(updatedPlaylists);
     
@@ -1018,14 +990,14 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     if (!audioRef.current) return;
     
-    const effectiveVolume = playerState.muted ? 0 : playerState.volume / 100;
+    const effectiveVolume = playerState.isMuted ? 0 : playerState.volume / 100;
     
     audioRef.current.volume = effectiveVolume;
     
     if (gainNodeRef.current) {
       gainNodeRef.current.gain.value = effectiveVolume;
     }
-  }, [playerState.volume, playerState.muted]);
+  }, [playerState.volume, playerState.isMuted]);
 
   useEffect(() => {
     updateEQSettings();
@@ -1057,17 +1029,20 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       
       if (audioRef.current) {
         if (newIsPlaying) {
+          // Add a small delay to prevent rapid toggle issues
           setTimeout(() => {
             const playPromise = audioRef.current?.play();
             
             if (playPromise !== undefined) {
               playPromise.catch(error => {
                 console.error("Error playing audio:", error);
+                // Only show errors for critical issues, not user-initiated actions
                 if (error.name !== 'AbortError' && error.name !== 'NotAllowedError') {
                   toast({
                     title: "Playback Issue",
                     description: "There was a problem with playback. Please try again.",
-                    variant: "destructive"
+                    variant: "destructive",
+                    id: "toggle-play-error"
                   });
                 }
                 return prevState;
@@ -1087,11 +1062,11 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (playerState.currentPlaylistId) {
       const currentPlaylist = playlists.find(p => p.id === playerState.currentPlaylistId);
       if (currentPlaylist) {
-        const currentSongIndex = currentPlaylist.songIds.findIndex(id => id === playerState.currentSongId);
+        const currentSongIndex = currentPlaylist.songs.findIndex(id => id === playerState.currentSongId);
         let nextIndex;
         
         if (playerState.shuffleEnabled) {
-          const availableSongs = currentPlaylist.songIds.filter(id => id !== playerState.currentSongId);
+          const availableSongs = currentPlaylist.songs.filter(id => id !== playerState.currentSongId);
           if (availableSongs.length > 0) {
             const randomIndex = Math.floor(Math.random() * availableSongs.length);
             const nextSongId = availableSongs[randomIndex];
@@ -1106,8 +1081,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           }
         }
         
-        nextIndex = (currentSongIndex + 1) % currentPlaylist.songIds.length;
-        const nextSongId = currentPlaylist.songIds[nextIndex];
+        nextIndex = (currentSongIndex + 1) % currentPlaylist.songs.length;
+        const nextSongId = currentPlaylist.songs[nextIndex];
         
         setPlayerState(prevState => ({
           ...prevState,
@@ -1150,9 +1125,9 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (playerState.currentPlaylistId) {
       const currentPlaylist = playlists.find(p => p.id === playerState.currentPlaylistId);
       if (currentPlaylist) {
-        const currentSongIndex = currentPlaylist.songIds.findIndex(id => id === playerState.currentSongId);
-        const prevIndex = (currentSongIndex - 1 + currentPlaylist.songIds.length) % currentPlaylist.songIds.length;
-        const prevSongId = currentPlaylist.songIds[prevIndex];
+        const currentSongIndex = currentPlaylist.songs.findIndex(id => id === playerState.currentSongId);
+        const prevIndex = (currentSongIndex - 1 + currentPlaylist.songs.length) % currentPlaylist.songs.length;
+        const prevSongId = currentPlaylist.songs[prevIndex];
         
         setPlayerState(prevState => ({
           ...prevState,
@@ -1183,41 +1158,16 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const setVolume = (volume: number) => {
-    setPlayerState(prevState => ({ ...prevState, volume, muted: false }));
+    setPlayerState(prevState => ({ ...prevState, volume, isMuted: false }));
   };
 
   const toggleMute = () => {
-    setPlayerState(prevState => ({ ...prevState, muted: !prevState.muted }));
+    setPlayerState(prevState => ({ ...prevState, isMuted: !prevState.isMuted }));
   };
 
   const logout = () => {
-    // Stop all playback immediately
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-    }
-    
-    // Stop voice listening
-    setIsVoiceListening(false);
-    
-    // Clean up audio context
-    if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
-      audioContextRef.current.close().catch(err => {
-        console.error("Error closing audio context:", err);
-      });
-      audioContextRef.current = null;
-    }
-    
-    // Reset all state
-    setPlayerState(defaultPlayerState);
     setProfileState(null);
     setIsSignedUp(false);
-    setWaveformData(defaultWaveformData);
-    setCommandHistory([]);
-    setVoiceCommandText('');
-    setProcessingVoice(false);
-    
-    // Clear local storage
     localStorage.removeItem('audioPersonaProfile');
     
     toast({
@@ -1230,7 +1180,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const newPlaylist: Playlist = {
       id: `playlist-${Date.now()}`,
       name,
-      songIds: [],
+      songs: [],
       createdAt: new Date().toISOString()
     };
     
@@ -1248,10 +1198,10 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const addToPlaylist = (playlistId: string, songId: string) => {
     const updatedPlaylists = playlists.map(playlist => {
       if (playlist.id === playlistId) {
-        if (!playlist.songIds.includes(songId)) {
+        if (!playlist.songs.includes(songId)) {
           return {
             ...playlist,
-            songIds: [...playlist.songIds, songId],
+            songs: [...playlist.songs, songId],
             updatedAt: new Date().toISOString()
           };
         }
@@ -1268,7 +1218,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (playlist.id === playlistId) {
         return {
           ...playlist,
-          songIds: playlist.songIds.filter(id => id !== songId),
+          songs: playlist.songs.filter(id => id !== songId),
           updatedAt: new Date().toISOString()
         };
       }
@@ -1299,9 +1249,9 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const playPlaylist = (playlistId: string) => {
     const playlist = playlists.find(p => p.id === playlistId);
-    if (!playlist || playlist.songIds.length === 0) return;
+    if (!playlist || playlist.songs.length === 0) return;
     
-    const firstSongId = playlist.songIds[0];
+    const firstSongId = playlist.songs[0];
     
     setPlayerState(prev => ({
       ...prev,
@@ -1322,36 +1272,44 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       audioContextRef.current.resume().catch(error => {
         console.error("Failed to resume AudioContext:", error);
         
+        // Try to reinitialize audio context if resume fails
         setTimeout(() => {
           audioContextRef.current = null;
           audioGraphSetup.current = false;
           initializeAudioContext();
+          setupAudioGraph();
         }, 100);
       });
     }
 
+    // Special handling for toggling current song
     if (playerState.currentSongId === songId) {
       togglePlayPause();
       return;
     }
     
+    // Find the requested song
     const song = songs.find(s => s.id === songId);
     if (!song) {
       console.error(`Song with id ${songId} not found`);
       toast({
         title: "Song Not Found",
         description: "The requested song could not be played.",
-        variant: "destructive"
+        variant: "destructive",
+        id: "song-not-found"
       });
       return;
     }
     
+    // Add a small buffer between operations to avoid glitches
     setTimeout(() => {
       try {
+        // Stop current playback before changing song
         if (audioRef.current && !audioRef.current.paused) {
           audioRef.current.pause();
         }
         
+        // Update last played song for future sessions
         autoPlayService.updateLastPlayedSong(songId);
         
         setPlayerState(prevState => ({
@@ -1367,7 +1325,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         toast({
           title: "Playback Error",
           description: "Failed to play the selected song.",
-          variant: "destructive"
+          variant: "destructive",
+          id: "play-song-error"
         });
       }
     }, 10);
@@ -1389,7 +1348,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setTimeout(() => {
       processVoiceCommand(command);
       setProcessingVoice(false);
-    }, 500);
+    }, 500); // Reduced from 1000ms for faster response
   };
 
   const toggleVoiceListening = () => {
@@ -1406,59 +1365,33 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (!command) return;
     
     let commandRecognized = false;
-    const lowerCommand = command.toLowerCase();
     
-    // Enhanced command processing with logout support
-    if (matchesVoiceCommand(lowerCommand, ["play", "start", "resume"])) {
-      commandRecognized = true;
-      if (!playerState.isPlaying) {
-        togglePlayPause();
+    if (voiceCommandProcessorRef.current) {
+      // Use the enhanced voice command processor
+      commandRecognized = voiceCommandProcessorRef.current.processCommand(command);
+    } else {
+      // Fallback to simpler method if processor isn't available
+      const lowerCommand = command.toLowerCase();
+      
+      if (matchesVoiceCommand(lowerCommand, ["play"])) {
+        commandRecognized = true;
+        setPlayerState(prevState => ({ ...prevState, isPlaying: true }));
         toast({
           title: "Playback Started",
           description: currentSong ? `Playing "${currentSong.title}"` : "Playing music",
         });
-      }
-    } 
-    else if (matchesVoiceCommand(lowerCommand, ["pause", "stop"])) {
-      commandRecognized = true;
-      if (playerState.isPlaying) {
-        togglePlayPause();
+      } 
+      else if (matchesVoiceCommand(lowerCommand, ["pause"])) {
+        commandRecognized = true;
+        setPlayerState(prevState => ({ ...prevState, isPlaying: false }));
         toast({
           title: "Playback Paused",
           description: "Music paused"
         });
       }
     }
-    else if (matchesVoiceCommand(lowerCommand, ["next", "skip", "forward"])) {
-      commandRecognized = true;
-      nextSong();
-      toast({
-        title: "Next Song",
-        description: "Playing next song"
-      });
-    }
-    else if (matchesVoiceCommand(lowerCommand, ["previous", "prev", "back"])) {
-      commandRecognized = true;
-      prevSong();
-      toast({
-        title: "Previous Song",
-        description: "Playing previous song"
-      });
-    }
-    else if (matchesVoiceCommand(lowerCommand, ["logout", "log out", "sign out", "exit"])) {
-      commandRecognized = true;
-      toast({
-        title: "Logging Out",
-        description: "Stopping all tasks and logging out..."
-      });
-      
-      // Immediate logout with cleanup
-      setTimeout(() => {
-        logout();
-      }, 100);
-    }
     
-    // Update command history
+    // Update command history to reflect command recognition
     setCommandHistory(prev => {
       const updated = [...prev];
       if (updated.length > 0) {
@@ -1471,11 +1404,58 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (!commandRecognized) {
       toast({
         title: "Command Not Recognized",
-        description: "Say 'help' to see available commands",
+        description: "Only supported voice commands are accepted",
         variant: "destructive"
       });
     }
   };
+
+  useEffect(() => {
+    if (!audioRef.current) return;
+    
+    const handleEnded = () => {
+      if (playerState.repeatMode === 'one') {
+        if (audioRef.current) {
+          audioRef.current.currentTime = 0;
+          audioRef.current.play().catch(err => {
+            console.error("Error restarting song:", err);
+            toast({
+              title: "Playback Error",
+              description: "Failed to repeat the song. Playing next song instead.",
+              variant: "destructive"
+            });
+            nextSong();
+          });
+        }
+      } else if (playerState.repeatMode === 'all' || playerState.shuffleEnabled) {
+        nextSong();
+      } else {
+        const currentIndex = songs.findIndex(song => song.id === playerState.currentSongId);
+        if (currentIndex < songs.length - 1) {
+          nextSong();
+        } else {
+          setPlayerState(prev => ({ ...prev, isPlaying: false, currentTime: 0 }));
+          
+          if (audioRef.current) {
+            audioRef.current.currentTime = 0;
+          }
+          
+          toast({
+            title: "Playback Complete",
+            description: "Reached the end of your songs."
+          });
+        }
+      }
+    };
+    
+    audioRef.current.addEventListener('ended', handleEnded);
+    
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.removeEventListener('ended', handleEnded);
+      }
+    };
+  }, [playerState.repeatMode, playerState.shuffleEnabled, playerState.currentSongId, songs]);
 
   const toggleShuffle = () => {
     setPlayerState(prevState => ({
@@ -1527,12 +1507,10 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setProfile,
       eqSettings,
       setEQSettings,
-      updateEQSettings,
       songs,
       addSong,
       removeSong,
       playerState,
-      setPlayerState,
       voiceCommand,
       setVoiceCommand,
       isVoiceListening,

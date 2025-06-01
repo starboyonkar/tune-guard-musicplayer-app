@@ -2,9 +2,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAudio } from '@/lib/audioContext';
-import { Mic, MicOff, X, HelpCircle } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
+import { Mic, MicOff, X, HelpCircle, Info } from 'lucide-react';
+import { toast } from '@/components/ui/use-toast';
 import { VoiceCommandPanelState } from '@/lib/types';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -20,7 +21,6 @@ const VoiceCommandManager: React.FC = () => {
     playerState,
     logout
   } = useAudio();
-  
   const recognition = useRef<SpeechRecognition | null>(null);
   const [isReady, setIsReady] = useState(false);
   const [transcript, setTranscript] = useState("");
@@ -31,11 +31,15 @@ const VoiceCommandManager: React.FC = () => {
     mode: "listening"
   });
   
+  // Track initialization attempts and error messages 
   const initAttempts = useRef(0);
   const maxInitAttempts = 3;
+  const errorTimeouts = useRef<Record<string, number>>({});
+  const lastErrorTime = useRef<Record<string, number>>({});
   const recognitionResetTimer = useRef<number | null>(null);
   
   useEffect(() => {
+    // Only initialize speech recognition when needed
     const initializeSpeechRecognition = () => {
       try {
         if (typeof window !== 'undefined') {
@@ -45,15 +49,13 @@ const VoiceCommandManager: React.FC = () => {
             recognition.current.continuous = true;
             recognition.current.interimResults = false;
             recognition.current.lang = 'en-US';
-            
-            // Enhanced noise filtering
-            recognition.current.maxAlternatives = 1;
-            
             setIsReady(true);
             console.log("Speech recognition initialized successfully");
             return true;
           } else if (initAttempts.current < maxInitAttempts) {
             initAttempts.current += 1;
+            console.warn("Speech recognition not supported in this browser");
+            // Only show this error once
             if (initAttempts.current === 1) {
               toast({
                 title: "Voice Commands Limited",
@@ -68,6 +70,7 @@ const VoiceCommandManager: React.FC = () => {
         console.error("Error initializing speech recognition:", error);
         if (initAttempts.current < maxInitAttempts) {
           initAttempts.current += 1;
+          // Only show this error once
           if (initAttempts.current === 1) {
             toast({
               title: "Voice Commands Unavailable",
@@ -80,16 +83,19 @@ const VoiceCommandManager: React.FC = () => {
       }
     };
     
+    // Only initialize when user enables voice listening
     if (isVoiceListening && !isReady) {
       initializeSpeechRecognition();
     }
 
+    // Cleanup function
     return () => {
       if (recognition.current) {
         try {
           recognition.current.stop();
+          console.log("Speech recognition stopped during cleanup");
         } catch (e) {
-          console.log("Error stopping speech recognition:", e);
+          console.log("Error stopping speech recognition during cleanup:", e);
         }
       }
       
@@ -109,54 +115,67 @@ const VoiceCommandManager: React.FC = () => {
     }
   }, [isVoiceListening, isReady]);
 
+  // Helper to throttle error messages
+  const showThrottledToast = (key: string, title: string, description: string, variant: "default" | "destructive" = "default") => {
+    const now = Date.now();
+    // Only show error once every 10 seconds for the same error type
+    if (!lastErrorTime.current[key] || now - lastErrorTime.current[key] > 10000) {
+      lastErrorTime.current[key] = now;
+      toast({
+        title,
+        description,
+        variant
+      });
+    }
+  };
+
   const startListening = () => {
     if (!recognition.current || !isReady) return;
 
     try {
       recognition.current.start();
-      console.log("Voice recognition started - listening for commands");
+      console.log("Speech recognition started");
       
       recognition.current.onresult = (event) => {
         const result = event.results[event.resultIndex];
         if (result?.isFinal) {
           const text = result[0].transcript.trim().toLowerCase();
-          const confidence = result[0].confidence;
-          
-          // Filter low confidence results to reduce false positives
-          if (confidence > 0.6) {
-            setTranscript(text);
-            setPanelState(prev => ({
-              ...prev,
-              transcript: text
-            }));
-            processCommand(text);
-          } else {
-            console.log("Low confidence speech result ignored:", text, confidence);
-          }
+          setTranscript(text);
+          setPanelState(prev => ({
+            ...prev,
+            transcript: text
+          }));
+          processCommand(text);
         }
       };
 
       recognition.current.onerror = (event) => {
         if (event.error === 'no-speech') {
-          console.log("No speech detected - continuing to listen");
+          // This is a common error, no need to show it to the user
+          console.log("No speech detected");
         } else if (event.error === 'aborted') {
-          console.log("Speech recognition stopped");
+          // This happens when the recognition is stopped deliberately
+          console.log("Speech recognition aborted");
         } else {
           console.error("Speech recognition error:", event.error);
+          // Only show critical errors and limit frequency
           if (event.error !== 'network' && event.error !== 'audio-capture') {
-            toast({
-              title: "Voice Recognition Issue",
-              description: "Speech recognition had a problem. Click the mic to retry.",
-              variant: "destructive"
-            });
+            showThrottledToast(
+              `speech-error-${event.error}`,
+              "Voice Recognition Issue",
+              "Speech recognition encountered a problem. Click the mic button to retry.",
+              "destructive"
+            );
           }
         }
       };
 
       recognition.current.onend = () => {
+        // Automatically restart if we're still supposed to be listening
         if (isVoiceListening && recognition.current) {
           try {
-            const delayTime = Math.min(1000, 200 * Math.pow(1.2, initAttempts.current));
+            // Use a more reliable way to restart recognition with exponential backoff
+            const delayTime = Math.min(3000, 500 * Math.pow(1.5, initAttempts.current));
             
             if (recognitionResetTimer.current) {
               clearTimeout(recognitionResetTimer.current);
@@ -166,9 +185,10 @@ const VoiceCommandManager: React.FC = () => {
               if (isVoiceListening && recognition.current) {
                 try {
                   recognition.current.start();
-                  console.log("Speech recognition restarted");
+                  console.log("Speech recognition restarted automatically");
                 } catch (e) {
                   console.log("Error restarting speech recognition:", e);
+                  initAttempts.current += 1;
                 }
               }
             }, delayTime);
@@ -179,11 +199,12 @@ const VoiceCommandManager: React.FC = () => {
       };
     } catch (error) {
       console.error("Error starting speech recognition:", error);
-      toast({
-        title: "Voice Recognition Error",
-        description: "Could not start listening. Please try again.",
-        variant: "destructive"
-      });
+      showThrottledToast(
+        "speech-start-error",
+        "Voice Recognition Error",
+        "Could not start listening. Please try again later.",
+        "destructive"
+      );
     }
   };
 
@@ -192,6 +213,7 @@ const VoiceCommandManager: React.FC = () => {
     
     try {
       recognition.current.stop();
+      console.log("Speech recognition stopped");
       
       if (recognitionResetTimer.current) {
         clearTimeout(recognitionResetTimer.current);
@@ -202,25 +224,51 @@ const VoiceCommandManager: React.FC = () => {
     }
   };
 
+  // More precise command matching with fuzzy matching for better accuracy
   const matchCommand = (text: string, commands: string[]): boolean => {
-    // Enhanced command matching with noise filtering
-    const cleanText = text.replace(/[^\w\s]/g, '').toLowerCase();
+    // First try exact matching
+    if (commands.some(cmd => text.includes(cmd))) {
+      return true;
+    }
     
+    // Then try more lenient fuzzy matching for common variations/misspellings
     return commands.some(cmd => {
       const cmdWords = cmd.split(' ');
-      const textWords = cleanText.split(' ');
       
-      // Check for exact phrase match
-      if (cleanText.includes(cmd)) return true;
+      // Enhanced matching logic for better accuracy
+      const matchCount = cmdWords.filter(word => {
+        // Check for exact word match
+        if (text.includes(word)) return true;
+        
+        // Check for word with different suffix (e.g., "playing" for "play")
+        if (word.length > 3 && text.includes(word.substring(0, word.length-1))) return true;
+        
+        // Check for common sound-alike words
+        const soundAlikes: Record<string, string[]> = {
+          'play': ['lay', 'pray', 'way', 'say'],
+          'stop': ['spot', 'top', 'hop'],
+          'pause': ['paws', 'cause', 'laws'],
+          'next': ['text', 'nest'],
+          'skip': ['ship', 'slip'],
+          'previous': ['preious', 'prvious', 'previus'],
+          'back': ['bat', 'black', 'track'],
+          'help': ['held', 'kelp', 'health'],
+          'close': ['clothes', 'clues', 'class'],
+          'logout': ['log out', 'log-out', 'lock out', 'log aut']
+        };
+        
+        // Check sound-alikes if this word has any defined
+        if (word in soundAlikes && soundAlikes[word].some(alt => text.includes(alt))) {
+          return true;
+        }
+        
+        return false;
+      }).length;
       
-      // Check word-by-word matching with threshold
-      const matchCount = cmdWords.filter(word => 
-        textWords.some(textWord => 
-          textWord.includes(word) || word.includes(textWord)
-        )
-      ).length;
-      
-      return matchCount >= Math.ceil(cmdWords.length * 0.8);
+      // If most words in the command match, consider it a match
+      // More lenient for longer commands (higher threshold for longer phrases)
+      const matchThreshold = cmdWords.length <= 2 ? 0.8 : 0.7;
+      return matchCount >= Math.max(1, Math.ceil(cmdWords.length * matchThreshold));
     });
   };
 
@@ -230,43 +278,44 @@ const VoiceCommandManager: React.FC = () => {
 
     let commandProcessed = false;
 
-    if (matchCommand(command, ['play', 'start', 'resume', 'begin'])) {
+    // Improved command matching with more variations
+    if (matchCommand(command, ['play', 'start', 'resume', 'begin', 'unpause'])) {
       if (!playerState.isPlaying) {
         togglePlayPause();
         toast({
-          title: "▶️ Playing",
-          description: "Music resumed via voice command"
+          title: "Playing",
+          description: "Music resumed"
         });
       }
       commandProcessed = true;
     } 
-    else if (matchCommand(command, ['stop', 'pause', 'halt'])) {
+    else if (matchCommand(command, ['stop', 'pause', 'halt', 'wait'])) {
       if (playerState.isPlaying) {
         togglePlayPause();
         toast({
-          title: "⏸️ Paused",
-          description: "Music paused via voice command"
+          title: "Paused",
+          description: "Music paused"
         });
       }
       commandProcessed = true;
     }
-    else if (matchCommand(command, ['next', 'skip', 'forward', 'next song'])) {
+    else if (matchCommand(command, ['next', 'skip', 'forward', 'advance', 'following', 'next song', 'skip ahead'])) {
       nextSong();
       toast({
-        title: "⏭️ Next Song",
-        description: "Skipped to next track"
+        title: "Next Song",
+        description: "Playing next song"
       });
       commandProcessed = true;
     }
-    else if (matchCommand(command, ['previous', 'prev', 'back', 'last song', 'go back'])) {
+    else if (matchCommand(command, ['previous', 'prev', 'back', 'backward', 'earlier', 'last song', 'go back'])) {
       prevSong();
       toast({
-        title: "⏮️ Previous Song",
-        description: "Returned to previous track"
+        title: "Previous Song",
+        description: "Playing previous song"
       });
       commandProcessed = true;
     }
-    else if (matchCommand(command, ['help', 'commands', 'what can i say'])) {
+    else if (matchCommand(command, ['help', 'commands', 'what can I say', 'options', 'available commands', 'show help'])) {
       setPanelState({
         isListening: panelState.isListening,
         transcript: panelState.transcript,
@@ -274,12 +323,25 @@ const VoiceCommandManager: React.FC = () => {
         mode: 'help'
       });
       toast({
-        title: "❓ Help Panel",
-        description: "Voice command help opened"
+        title: "Help",
+        description: "Opened voice command help panel"
       });
       commandProcessed = true;
     }
-    else if (matchCommand(command, ['close', 'dismiss', 'exit panel', 'hide'])) {
+    else if (matchCommand(command, ['profile', 'user', 'account', 'my profile', 'settings', 'preferences', 'show profile'])) {
+      setPanelState({
+        isListening: panelState.isListening,
+        transcript: panelState.transcript,
+        isOpen: true,
+        mode: 'profile'
+      });
+      toast({
+        title: "Profile",
+        description: "Opened user profile panel"
+      });
+      commandProcessed = true;
+    }
+    else if (matchCommand(command, ['close', 'dismiss', 'exit', 'hide', 'shut', 'cancel', 'close panel'])) {
       setPanelState({
         isListening: panelState.isListening,
         transcript: panelState.transcript,
@@ -287,13 +349,13 @@ const VoiceCommandManager: React.FC = () => {
         mode: 'listening'
       });
       toast({
-        title: "✅ Closed",
-        description: "Panel closed via voice"
+        title: "Closed",
+        description: "Panel closed"
       });
       commandProcessed = true;
     }
-    else if (matchCommand(command, ['log out', 'logout', 'sign out', 'exit app', 'quit'])) {
-      // Enhanced logout with immediate cleanup
+    else if (matchCommand(command, ['log out', 'logout', 'sign out', 'signout', 'exit app', 'quit', 'goodbye', 'log me out'])) {
+      // Stop all activities and logout
       if (recognition.current) {
         try {
           recognition.current.stop();
@@ -305,25 +367,27 @@ const VoiceCommandManager: React.FC = () => {
         }
       }
       
-      toast({
-        title: "🚪 Logging Out",
-        description: "Stopping all tasks and signing out..."
-      });
-      
-      // Immediate logout
+      // Add a small timeout before logout to ensure cleanup is done
       setTimeout(() => {
         logout();
+        toast({
+          title: "Logged Out",
+          description: "You've been logged out"
+        });
       }, 100);
       
       commandProcessed = true;
     }
     
     if (!commandProcessed) {
-      toast({
-        title: "🤔 Command Not Recognized",
-        description: `Try saying "help" for available commands`,
-        variant: "default"
-      });
+      // This is where we'd typically show an error, but we'll suppress frequent alerts
+      // Only show once every 10 seconds for unrecognized commands
+      showThrottledToast(
+        "unrecognized-command",
+        "Hmm, didn't catch that",
+        `Try saying "help" for available commands`,
+        "default" // Changed to default to be less intrusive
+      );
     }
   };
 
@@ -332,13 +396,13 @@ const VoiceCommandManager: React.FC = () => {
     
     if (!isVoiceListening) {
       toast({
-        title: "🎤 Voice Commands Active",
-        description: "Listening for your voice commands..."
+        title: "Voice Commands Activated",
+        description: "Listening for voice commands"
       });
     } else {
       toast({
-        title: "🔇 Voice Commands Inactive",
-        description: "Voice recognition stopped"
+        title: "Voice Commands Deactivated",
+        description: "No longer listening for commands"
       });
     }
   };
@@ -359,12 +423,9 @@ const VoiceCommandManager: React.FC = () => {
           variant="ghost"
           size="icon"
           onClick={toggleListening}
-          className={`text-futuristic-muted transition-all duration-300 ${
-            isVoiceListening 
-              ? 'text-futuristic-accent1 animate-pulse bg-futuristic-accent1/10' 
-              : 'hover:text-futuristic-accent1'
-          }`}
+          className={`text-futuristic-muted ${isVoiceListening ? 'text-futuristic-accent1 animate-pulse' : ''}`}
           title={isVoiceListening ? "Voice commands active - click to disable" : "Enable voice commands"}
+          aria-label={isVoiceListening ? "Disable voice commands" : "Enable voice commands"}
         >
           {isVoiceListening ? (
             <Mic className="h-5 w-5 text-futuristic-accent1" />
@@ -373,88 +434,119 @@ const VoiceCommandManager: React.FC = () => {
           )}
         </Button>
         {isVoiceListening && (
-          <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-red-500 animate-pulse border-2 border-futuristic-bg"></span>
+          <span className="absolute top-0 right-0 w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
         )}
       </div>
 
       <Sheet open={panelState.isOpen} onOpenChange={(open) => setPanelState(prev => ({ ...prev, isOpen: open }))}>
         <SheetContent className="w-[300px] sm:w-[540px] border-futuristic-border bg-futuristic-bg/95 backdrop-blur-lg">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-semibold text-futuristic-accent1 flex items-center">
-              <HelpCircle className="mr-2 h-5 w-5" />
-              Voice Command Help
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold text-futuristic-accent1">
+              {panelState.mode === 'help' ? 'Voice Command Help' : 'User Profile'}
             </h2>
-            <Button variant="ghost" size="icon" onClick={handleClosePanel} className="hover:bg-futuristic-accent1/10">
+            <Button variant="ghost" size="icon" onClick={handleClosePanel}>
               <X className="h-5 w-5" />
             </Button>
           </div>
 
-          <div className="space-y-6 animate-fade-in">
-            <p className="text-futuristic-muted text-sm">
-              Say any of these commands clearly to control the player:
-            </p>
-            
-            <Card className="border-futuristic-border bg-black/40 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-sm flex items-center">
-                  <Badge className="mr-2 bg-futuristic-accent1">Playback</Badge>
-                  Media Control Commands
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="text-sm space-y-3">
-                <div className="flex justify-between items-center py-1">
-                  <span className="font-semibold text-futuristic-accent1">"Play" / "Start"</span>
-                  <span className="text-futuristic-muted">▶️ Starts/resumes music</span>
-                </div>
-                <div className="flex justify-between items-center py-1">
-                  <span className="font-semibold text-futuristic-accent1">"Pause" / "Stop"</span>
-                  <span className="text-futuristic-muted">⏸️ Pauses current track</span>
-                </div>
-                <div className="flex justify-between items-center py-1">
-                  <span className="font-semibold text-futuristic-accent1">"Next" / "Skip"</span>
-                  <span className="text-futuristic-muted">⏭️ Skips to next song</span>
-                </div>
-                <div className="flex justify-between items-center py-1">
-                  <span className="font-semibold text-futuristic-accent1">"Previous" / "Back"</span>
-                  <span className="text-futuristic-muted">⏮️ Goes to previous song</span>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card className="border-futuristic-border bg-black/40 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-sm flex items-center">
-                  <Badge className="mr-2 bg-futuristic-accent2">System</Badge>
-                  Application Commands
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="text-sm space-y-3">
-                <div className="flex justify-between items-center py-1">
-                  <span className="font-semibold text-futuristic-accent2">"Help"</span>
-                  <span className="text-futuristic-muted">❓ Opens this help panel</span>
-                </div>
-                <div className="flex justify-between items-center py-1">
-                  <span className="font-semibold text-futuristic-accent2">"Close"</span>
-                  <span className="text-futuristic-muted">✅ Closes open panels</span>
-                </div>
-                <div className="flex justify-between items-center py-1">
-                  <span className="font-semibold text-red-400">"Log Out"</span>
-                  <span className="text-futuristic-muted">🚪 Signs out immediately</span>
-                </div>
-              </CardContent>
-            </Card>
-
-            {transcript && (
-              <Card className="border-futuristic-accent1 bg-futuristic-accent1/10">
+          {panelState.mode === 'help' && (
+            <div className="space-y-4 animate-fade-in">
+              <p className="text-futuristic-muted mb-4">
+                Say any of these commands to control the player:
+              </p>
+              
+              <Card className="border-futuristic-border bg-black/40 backdrop-blur-sm">
                 <CardHeader>
-                  <CardTitle className="text-sm text-futuristic-accent1">Last Command</CardTitle>
+                  <CardTitle className="text-sm flex items-center">
+                    <Badge className="mr-2 bg-futuristic-accent1">Playback</Badge>
+                    Media Control Commands
+                  </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <p className="text-white font-mono">"{transcript}"</p>
+                <CardContent className="text-sm space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold">Play</span>
+                    <span className="text-futuristic-muted">Starts/resumes playback</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold">Stop/Pause</span>
+                    <span className="text-futuristic-muted">Stops current playback</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold">Next</span>
+                    <span className="text-futuristic-muted">Skips to next song</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold">Previous</span>
+                    <span className="text-futuristic-muted">Returns to previous song</span>
+                  </div>
                 </CardContent>
               </Card>
-            )}
-          </div>
+              
+              <Card className="border-futuristic-border bg-black/40 backdrop-blur-sm">
+                <CardHeader>
+                  <CardTitle className="text-sm flex items-center">
+                    <Badge className="mr-2 bg-futuristic-accent2">Navigation</Badge>
+                    Interface Commands
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="text-sm space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold">Help</span>
+                    <span className="text-futuristic-muted">Opens this help panel</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold">User Profile</span>
+                    <span className="text-futuristic-muted">Opens profile panel</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold">Close</span>
+                    <span className="text-futuristic-muted">Closes any open panel</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold">Log Out</span>
+                    <span className="text-futuristic-muted">Signs out of the app</span>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {panelState.mode === 'profile' && (
+            <div className="animate-fade-in">
+              <Tabs defaultValue="info">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="info">
+                    <Info className="mr-1 h-4 w-4" /> User Info
+                  </TabsTrigger>
+                  <TabsTrigger value="settings">
+                    <HelpCircle className="mr-1 h-4 w-4" /> Settings
+                  </TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="info" className="mt-4">
+                  <Card className="border-futuristic-border">
+                    <CardContent className="pt-6">
+                      <div className="space-y-4">
+                        {/* User info content */}
+                        <p>User profile information will appear here.</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+                
+                <TabsContent value="settings" className="mt-4">
+                  <Card className="border-futuristic-border">
+                    <CardContent className="pt-6">
+                      <div className="space-y-4">
+                        {/* Settings content */}
+                        <p>User settings will appear here.</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              </Tabs>
+            </div>
+          )}
         </SheetContent>
       </Sheet>
     </>
