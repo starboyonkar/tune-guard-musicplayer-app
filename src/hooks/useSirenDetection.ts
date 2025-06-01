@@ -12,6 +12,8 @@ export function useSirenDetection() {
   const [settings, setSettings] = useState<SirenDetectionSettings>({
     enabled: true,
     sensitivity: 0.7, // Increased sensitivity for faster detection
+    autoLower: false,
+    targetVolume: 0.3,
     autoResume: true,
     pauseDuration: 1 // Reduced wait time to 1 second for quicker resumption
   });
