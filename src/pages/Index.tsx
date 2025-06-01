@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { useAudio } from '@/lib/audioContext';
 import SignUpForm from '@/components/SignUpForm';
@@ -8,7 +9,7 @@ import { autoPlayService } from '@/lib/autoPlayService';
 import { audioSupport } from '@/lib/audioSupport';
 
 const Index = () => {
-  const { profile, setProfile } = useAudio();
+  const { profile, setProfile, songs, playSong, playerState, setPlayerState } = useAudio();
   const [showControls, setShowControls] = useState(false);
   const [profileCreated, setProfileCreated] = useState(false);
   
@@ -91,7 +92,7 @@ const Index = () => {
     }
   }, [profile, songs, profileCreated, playSong, playerState.isPlaying, setPlayerState]);
 
-  const handleProfileUpdate = (updatedProfile: UserProfile) => {
+  const handleProfileUpdate = (updatedProfile: typeof profile) => {
     setProfile(updatedProfile);
   };
 
