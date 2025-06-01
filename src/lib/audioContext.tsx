@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { 
   UserProfile, 
   EQSettings, 
@@ -53,8 +53,9 @@ const SAMPLE_PLAYLISTS: Playlist[] = [
   {
     id: 'playlist1',
     name: 'Favorites',
-    songs: ['1', '3'],
-    createdAt: new Date().toISOString()
+    songIds: ['1', '3'],
+    createdAt: new Date().toISOString(),
+    modifiedAt: new Date().toISOString(),
   }
 ];
 
@@ -563,7 +564,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     
     const updatedPlaylists = playlists.map(playlist => ({
       ...playlist,
-      songs: playlist.songs.filter(id => id !== songId)
+      songIds: playlist.songIds.filter(id => id !== songId)
     }));
     setPlaylists(updatedPlaylists);
     
@@ -1062,11 +1063,11 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (playerState.currentPlaylistId) {
       const currentPlaylist = playlists.find(p => p.id === playerState.currentPlaylistId);
       if (currentPlaylist) {
-        const currentSongIndex = currentPlaylist.songs.findIndex(id => id === playerState.currentSongId);
+        const currentSongIndex = currentPlaylist.songIds.findIndex(id => id === playerState.currentSongId);
         let nextIndex;
         
         if (playerState.shuffleEnabled) {
-          const availableSongs = currentPlaylist.songs.filter(id => id !== playerState.currentSongId);
+          const availableSongs = currentPlaylist.songIds.filter(id => id !== playerState.currentSongId);
           if (availableSongs.length > 0) {
             const randomIndex = Math.floor(Math.random() * availableSongs.length);
             const nextSongId = availableSongs[randomIndex];
@@ -1081,8 +1082,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           }
         }
         
-        nextIndex = (currentSongIndex + 1) % currentPlaylist.songs.length;
-        const nextSongId = currentPlaylist.songs[nextIndex];
+        nextIndex = (currentSongIndex + 1) % currentPlaylist.songIds.length;
+        const nextSongId = currentPlaylist.songIds[nextIndex];
         
         setPlayerState(prevState => ({
           ...prevState,
@@ -1125,9 +1126,9 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (playerState.currentPlaylistId) {
       const currentPlaylist = playlists.find(p => p.id === playerState.currentPlaylistId);
       if (currentPlaylist) {
-        const currentSongIndex = currentPlaylist.songs.findIndex(id => id === playerState.currentSongId);
-        const prevIndex = (currentSongIndex - 1 + currentPlaylist.songs.length) % currentPlaylist.songs.length;
-        const prevSongId = currentPlaylist.songs[prevIndex];
+        const currentSongIndex = currentPlaylist.songIds.findIndex(id => id === playerState.currentSongId);
+        const prevIndex = (currentSongIndex - 1 + currentPlaylist.songIds.length) % currentPlaylist.songIds.length;
+        const prevSongId = currentPlaylist.songIds[prevIndex];
         
         setPlayerState(prevState => ({
           ...prevState,
@@ -1176,32 +1177,26 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     });
   };
 
-  const createPlaylist = (name: string) => {
+  const createPlaylist = useCallback((name: string) => {
     const newPlaylist: Playlist = {
-      id: `playlist-${Date.now()}`,
+      id: Date.now().toString(),
       name,
-      songs: [],
-      createdAt: new Date().toISOString()
+      songIds: [],
+      createdAt: new Date().toISOString(),
+      modifiedAt: new Date().toISOString(),
     };
     
-    const updatedPlaylists = [...playlists, newPlaylist];
-    setPlaylists(updatedPlaylists);
-    
-    localStorage.setItem('tuneGuardPlaylists', JSON.stringify(updatedPlaylists));
-    
-    toast({
-      title: "Playlist Created",
-      description: `Created new playlist "${name}"`
-    });
-  };
+    setPlaylists(prev => [...prev, newPlaylist]);
+    return newPlaylist.id;
+  }, []);
 
   const addToPlaylist = (playlistId: string, songId: string) => {
     const updatedPlaylists = playlists.map(playlist => {
       if (playlist.id === playlistId) {
-        if (!playlist.songs.includes(songId)) {
+        if (!playlist.songIds.includes(songId)) {
           return {
             ...playlist,
-            songs: [...playlist.songs, songId],
+            songIds: [...playlist.songIds, songId],
             updatedAt: new Date().toISOString()
           };
         }
@@ -1218,7 +1213,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (playlist.id === playlistId) {
         return {
           ...playlist,
-          songs: playlist.songs.filter(id => id !== songId),
+          songIds: playlist.songIds.filter(id => id !== songId),
           updatedAt: new Date().toISOString()
         };
       }
@@ -1249,9 +1244,9 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const playPlaylist = (playlistId: string) => {
     const playlist = playlists.find(p => p.id === playlistId);
-    if (!playlist || playlist.songs.length === 0) return;
+    if (!playlist || playlist.songIds.length === 0) return;
     
-    const firstSongId = playlist.songs[0];
+    const firstSongId = playlist.songIds[0];
     
     setPlayerState(prev => ({
       ...prev,
@@ -1554,3 +1549,5 @@ export const useAudio = () => {
   }
   return context;
 };
+
+export { AudioProvider, useAudio };

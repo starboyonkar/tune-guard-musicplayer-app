@@ -1,8 +1,8 @@
-
 import { useEffect, useState } from 'react';
 import { useAudio } from '@/lib/audioContext';
 import SignUpForm from '@/components/SignUpForm';
 import AudioPlayerUI from '@/components/AudioPlayerUI';
+import Footer from '@/components/Footer';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { soundEffects } from '@/lib/soundEffects';
 import { autoPlayService } from '@/lib/autoPlayService';
@@ -93,7 +93,7 @@ const Index = () => {
   }, [isSignedUp, songs, profileCreated, playSong, playerState.isPlaying, setPlayerState]);
 
   return (
-    <div className="min-h-screen w-full bg-futuristic-bg overflow-hidden relative">
+    <div className="min-h-screen w-full bg-futuristic-bg overflow-hidden relative pb-20">
       {/* Background gradient elements */}
       <div className="absolute inset-0 bg-black/80 z-[-20]"></div>
       <div className="absolute top-0 left-1/4 w-96 h-96 bg-futuristic-accent1/20 rounded-full blur-3xl -z-10" />
@@ -115,6 +115,9 @@ const Index = () => {
       <div className="container mx-auto min-h-screen flex items-center">
         {isSignedUp ? <AudioPlayerUI /> : <SignUpForm />}
       </div>
+      
+      {/* Footer */}
+      <Footer />
     </div>
   );
 };
