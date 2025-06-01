@@ -54,7 +54,7 @@ const SocialFooter: React.FC = () => {
     <Card className="glass border-futuristic-border backdrop-blur-xl bg-white/5 mx-6 mb-6">
       <div className="p-6">
         <div className="text-center mb-6">
-          <h3 className="text-lg font-semibold text-futuristic-accent1 neon-text mb-2">
+          <h3 className="text-lg font-semibold text-futuristic-accent1 mb-2">
             Connect With Us
           </h3>
           <p className="text-futuristic-muted text-sm">
@@ -72,17 +72,14 @@ const SocialFooter: React.FC = () => {
                 className={`
                   group relative p-3 rounded-full border border-futuristic-border 
                   bg-black/20 backdrop-blur-sm transition-all duration-300 
-                  transform hover:scale-110 hover:rotate-3 active:scale-95
+                  transform hover:scale-110 active:scale-95
                   ${social.color} ${social.bgColor}
                   focus:outline-none focus:ring-2 focus:ring-futuristic-accent1 focus:ring-opacity-50
                 `}
                 title={`Connect on ${social.name}`}
                 aria-label={`Visit our ${social.name} profile`}
               >
-                <IconComponent className="h-6 w-6 transition-all duration-300 group-hover:animate-pulse" />
-                
-                {/* Glow effect on hover */}
-                <div className="absolute inset-0 rounded-full bg-gradient-to-r from-futuristic-accent1/20 to-futuristic-accent2/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 animate-pulse"></div>
+                <IconComponent className="h-6 w-6 transition-all duration-300" />
                 
                 {/* Tooltip */}
                 <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-black/80 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-10">
