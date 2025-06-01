@@ -1,176 +1,97 @@
 
-// Adding these types to support the enhanced features
-
-export type UserProfile = {
+export interface UserProfile {
+  id?: string;
   name: string;
   age: number;
-  gender: 'male' | 'female' | 'non-binary' | 'prefer-not-to-say';
   dob: string;
+  gender: 'male' | 'female' | 'non-binary' | 'prefer-not-to-say';
   createdAt: string;
-  preferences?: string[];
-  listeningMetrics?: ListeningMetrics;
-  safetyScore?: number;
-};
+  updatedAt?: string;
+  preferences: string[];
+  listeningMetrics: {
+    totalListeningTime: number;
+    sessionsCount: number;
+    averageSessionDuration: number;
+    highVolumeTime: number;
+    safeVolumeTime: number;
+    sessions: Array<{
+      date: string;
+      duration: number;
+      volume: number;
+    }>;
+  };
+  safetyScore: number;
+}
 
-export type Song = {
-  id: string;
-  title: string;
-  artist: string;
-  albumArt?: string;
-  duration: number;
-  source: string;
-  playCount?: number;
-  lastPlayed?: string;
-  safetyRating?: number;
-  originalFileName?: string; // Added to fix type error
-};
-
-export type PlayerState = {
-  isPlaying: boolean;
-  volume: number;
-  currentTime: number;
-  duration: number;
-  currentSongId: string | null;
-  shuffleEnabled: boolean;
-  repeatMode: 'off' | 'all' | 'one';
-  muted: boolean; // This was called isMuted in some places
-  currentPlaylistId?: string | null; // Added to fix type errors
-};
-
-export type AudioContextType = {
-  isInitialized: boolean;
-  isSignedUp: boolean;
-  songs: Song[];
-  currentSong: Song | null;
-  playerState: PlayerState;
-  profile: UserProfile | null;
-  eqSettings: EQSettings;
-  sirenDetection: SirenDetectionSettings;
-  hearingProtection: HearingProtectionSettings;
-  setProfile: (profile: UserProfile) => void;
-  updateProfile: (profile: Partial<UserProfile>) => void;
-  logout: () => void;
-  playSong: (id: string) => void;
-  togglePlayPause: () => void;
-  seekTo: (time: number) => void;
-  setVolume: (volume: number) => void;
-  toggleMute: () => void;
-  nextSong: () => void;
-  prevSong: () => void;
-  toggleShuffle: () => void;
-  toggleRepeat: () => void;
-  addSong: (file: File) => void;
-  removeSong: (id: string) => void;
-  updateEQSettings: (settings: Partial<EQSettings>) => void;
-  updateSirenDetection: (settings: Partial<SirenDetectionSettings>) => void;
-  updateHearingProtection: (settings: Partial<HearingProtectionSettings>) => void;
-  setPlayerState: (state: Partial<PlayerState> | ((prevState: PlayerState) => Partial<PlayerState>)) => void;
-  getHearingSafetyScore: () => number;
-};
-
-export type EQSettings = {
+export interface EQSettings {
   bass: number;
   mid: number;
   treble: number;
+  volume: number;
   preAmp: number;
   enabled: boolean;
   preset: string;
-  volume?: number; // Added to fix type errors
-  presence?: number; // Added to fix type errors
-  warmth?: number; // Added to fix type errors
-};
-
-export type SirenDetectionSettings = {
-  enabled: boolean;
-  sensitivity: number;
-  autoResume: boolean;
-  pauseDuration: number;
-};
-
-export type HearingProtectionSettings = {
-  enabled: boolean;
-  maxVolume: number;
-  warningThreshold: number;
-  limitDuration: boolean;
-  maxListeningTime: number;
-};
-
-export type VoiceCommand = {
-  command: string;
-  confidence: number;
-  timestamp: number;
-  processed?: boolean; // Added to fix type errors
-  recognized?: boolean; // Added to fix type errors
-};
-
-export type VoiceCommandPanelState = {
-  isListening: boolean;
-  transcript: string;
-  isOpen: boolean;
-  mode: 'listening' | 'commands' | 'help' | 'profile';
-};
-
-export type ListeningSession = {
-  startTime: string;
-  endTime?: string;
-  duration: number;
-  averageVolume: number;
-  maxVolume: number;
-  songs: string[];
-};
-
-export type ListeningMetrics = {
-  totalListeningTime: number;
-  sessionsCount: number;
-  averageSessionDuration: number;
-  highVolumeTime: number;
-  safeVolumeTime: number;
-  lastSession?: ListeningSession;
-  sessions: ListeningSession[];
-  safetyScoreHistory: {
-    date: string;
-    score: number;
-  }[];
-};
-
-// Toast type extension with action compatibility for shadcn
-export interface ToastWithId {
-  title?: string;
-  description?: string;
-  action?: React.ReactNode;
-  variant?: "default" | "destructive";
-  id?: string;
 }
 
-// Adding missing types for Waveform and Playlist
-export type WaveformData = {
-  dataArray: Uint8Array;
-  bufferLength: number;
-  timestamp: number;
-  processed?: boolean;
-  original?: Uint8Array;
-  timeData?: Uint8Array;
-};
+export interface Song {
+  id: string;
+  title: string;
+  artist: string;
+  albumArt: string;
+  duration: number;
+  source: string;
+  originalFileName?: string;
+}
 
-export type VisSettings = {
-  mode: 'bars' | 'line' | 'circle';
-  color: string;
-  sensitivity: number;
-  showPeaks: boolean;
-  // Additional properties needed by components
-  scale?: number;
-  timeScale?: number;
-  amplitudeScale?: number;
-  showProcessed?: boolean;
-  showOriginal?: boolean;
-  overlay?: boolean;
-};
+export interface PlayerState {
+  isPlaying: boolean;
+  currentTime: number;
+  volume: number;
+  muted: boolean;
+  currentSongId: string | null;
+  currentPlaylistId: string | null;
+  shuffleEnabled: boolean;
+  repeatMode: 'off' | 'all' | 'one';
+}
 
-export type Playlist = {
+export interface VoiceCommand {
+  text: string;
+  timestamp: string;
+  processed: boolean;
+  recognized: boolean;
+}
+
+export interface Playlist {
   id: string;
   name: string;
   songIds: string[];
   createdAt: string;
-  modifiedAt: string;
-  coverImage?: string;
-};
+  updatedAt?: string;
+}
+
+export interface WaveformData {
+  original: number[];
+  processed: number[];
+  timeData: number[];
+  frequencyData: number[];
+}
+
+export interface VisSettings {
+  scale: number;
+  timeScale: number;
+  amplitudeScale: number;
+  showProcessed: boolean;
+  showOriginal: boolean;
+  overlay: boolean;
+  mode: string;
+  color: string;
+  sensitivity: number;
+  showPeaks: boolean;
+}
+
+export interface VoiceCommandPanelState {
+  isListening: boolean;
+  transcript: string;
+  isOpen: boolean;
+  mode: 'listening' | 'help' | 'profile';
+}
