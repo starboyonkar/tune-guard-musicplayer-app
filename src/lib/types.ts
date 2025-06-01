@@ -1,4 +1,3 @@
-
 // Adding these types to support the enhanced features
 
 export type UserProfile = {
@@ -147,9 +146,10 @@ export type WaveformData = {
   dataArray: Uint8Array;
   bufferLength: number;
   timestamp: number;
-  processed?: boolean;
-  original?: Uint8Array;
-  timeData?: Uint8Array;
+  original: Uint8Array;
+  timeData: Uint8Array;
+  frequencyData: Uint8Array;
+  processed: Uint8Array; // Add missing processed property
 };
 
 export type VisSettings = {
