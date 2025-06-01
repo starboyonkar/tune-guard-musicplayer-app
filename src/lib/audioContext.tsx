@@ -1499,55 +1499,49 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     });
   };
 
-  const updateVisSettings = (settings: Partial<VisSettings>) => {
-    setVisSettings(prev => ({ ...prev, ...settings }));
-  };
-
   // Improved auto-play after login effect - removed in favor of the approach in Index.tsx
   
-  const value: AudioContextType = {
-    profile,
-    setProfile,
-    eqSettings,
-    setEQSettings,
-    songs,
-    addSong,
-    removeSong,
-    playerState,
-    voiceCommand,
-    setVoiceCommand,
-    isVoiceListening,
-    toggleVoiceListening,
-    commandHistory,
-    togglePlayPause,
-    nextSong,
-    prevSong,
-    seekTo,
-    setVolume,
-    toggleMute,
-    currentSong,
-    waveformData,
-    isSignedUp,
-    processingVoice,
-    updateProfile,
-    isLoading,
-    playlists,
-    createPlaylist,
-    addToPlaylist,
-    removeFromPlaylist,
-    deletePlaylist,
-    playPlaylist,
-    setVisSettings,
-    visSettings,
-    logout,
-    playSong,
-    toggleShuffle,
-    toggleRepeat,
-    resetWaveform
-  };
-
   return (
-    <AudioContext.Provider value={value}>
+    <AudioContext.Provider value={{
+      profile,
+      setProfile,
+      eqSettings,
+      setEQSettings,
+      songs,
+      addSong,
+      removeSong,
+      playerState,
+      voiceCommand,
+      setVoiceCommand,
+      isVoiceListening,
+      toggleVoiceListening,
+      commandHistory,
+      togglePlayPause,
+      nextSong,
+      prevSong,
+      seekTo,
+      setVolume,
+      toggleMute,
+      currentSong,
+      waveformData,
+      isSignedUp,
+      processingVoice,
+      updateProfile,
+      isLoading,
+      playlists,
+      createPlaylist,
+      addToPlaylist,
+      removeFromPlaylist,
+      deletePlaylist,
+      playPlaylist,
+      setVisSettings: (newSettings) => setVisSettings(prev => ({ ...prev, ...newSettings })),
+      visSettings,
+      logout,
+      playSong,
+      toggleShuffle,
+      toggleRepeat,
+      resetWaveform
+    }}>
       {children}
     </AudioContext.Provider>
   );
