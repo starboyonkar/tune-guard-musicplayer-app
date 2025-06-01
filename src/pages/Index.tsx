@@ -9,7 +9,7 @@ import { autoPlayService } from '@/lib/autoPlayService';
 import { audioSupport } from '@/lib/audioSupport';
 
 const Index = () => {
-  const { profile, setProfile, songs, playSong, playerState, setPlayerState } = useAudio();
+  const { isSignedUp, songs, playSong, playerState, setPlayerState } = useAudio();
   const [showControls, setShowControls] = useState(false);
   const [profileCreated, setProfileCreated] = useState(false);
   
@@ -46,7 +46,7 @@ const Index = () => {
   // Enhanced auto-play detection when user signs up
   useEffect(() => {
     // Only run this effect when transitioning from not signed up to signed up
-    if (profile && !profileCreated) {
+    if (isSignedUp && !profileCreated) {
       setProfileCreated(true);
       
       // Filter out invalid songs
@@ -90,14 +90,10 @@ const Index = () => {
         });
       }
     }
-  }, [profile, songs, profileCreated, playSong, playerState.isPlaying, setPlayerState]);
-
-  const handleProfileUpdate = (updatedProfile: typeof profile) => {
-    setProfile(updatedProfile);
-  };
+  }, [isSignedUp, songs, profileCreated, playSong, playerState.isPlaying, setPlayerState]);
 
   return (
-    <div className="min-h-screen futuristic-gradient overflow-hidden relative">
+    <div className="min-h-screen w-full bg-futuristic-bg overflow-hidden relative">
       {/* Background gradient elements */}
       <div className="absolute inset-0 bg-black/80 z-[-20]"></div>
       <div className="absolute top-0 left-1/4 w-96 h-96 bg-futuristic-accent1/20 rounded-full blur-3xl -z-10" />
@@ -117,11 +113,7 @@ const Index = () => {
       
       {/* Main content with smoother transition */}
       <div className="container mx-auto min-h-screen flex items-center">
-        {!profile ? (
-          <SignUpForm />
-        ) : (
-          <AudioPlayerUI />
-        )}
+        {isSignedUp ? <AudioPlayerUI /> : <SignUpForm />}
       </div>
     </div>
   );

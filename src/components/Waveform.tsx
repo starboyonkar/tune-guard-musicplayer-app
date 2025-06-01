@@ -64,10 +64,10 @@ const Waveform: React.FC = () => {
       />
       
       {/* Static bars for visual effect when not playing */}
-      {!playerState.isPlaying && Array.from(waveformData.processed).map((height, index) => (
+      {!playerState.isPlaying && waveformData.processed.map((height, index) => (
         <div
           key={index}
-          style={{ height: `${(height / 255) * 100}%` }}
+          style={{ height: `${height * 100}%` }}
           className="waveform-bar w-[2px] bg-gray-500/20"
         />
       ))}

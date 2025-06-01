@@ -1,3 +1,4 @@
+
 // Adding these types to support the enhanced features
 
 export type UserProfile = {
@@ -146,24 +147,24 @@ export type WaveformData = {
   dataArray: Uint8Array;
   bufferLength: number;
   timestamp: number;
-  original: Uint8Array;
-  timeData: Uint8Array;
-  frequencyData: Uint8Array;
-  processed: Uint8Array; // Add missing processed property
+  processed?: boolean;
+  original?: Uint8Array;
+  timeData?: Uint8Array;
 };
 
-export interface VisSettings {
-  mode: 'bars' | 'waveform' | 'circular';
+export type VisSettings = {
+  mode: 'bars' | 'line' | 'circle';
   color: string;
   sensitivity: number;
   showPeaks: boolean;
+  // Additional properties needed by components
   scale?: number;
   timeScale?: number;
   amplitudeScale?: number;
   showProcessed?: boolean;
   showOriginal?: boolean;
   overlay?: boolean;
-}
+};
 
 export type Playlist = {
   id: string;

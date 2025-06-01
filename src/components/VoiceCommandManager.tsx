@@ -9,7 +9,6 @@ import { toast } from '@/components/ui/use-toast';
 import { VoiceCommandPanelState } from '@/lib/types';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { VoiceCommandProcessor } from '@/lib/voiceCommandProcessor';
 
 const VoiceCommandManager: React.FC = () => {
   const { 
@@ -22,9 +21,7 @@ const VoiceCommandManager: React.FC = () => {
     playerState,
     logout
   } = useAudio();
-  
   const recognition = useRef<SpeechRecognition | null>(null);
-  const voiceProcessor = useRef<VoiceCommandProcessor | null>(null);
   const [isReady, setIsReady] = useState(false);
   const [transcript, setTranscript] = useState("");
   const [panelState, setPanelState] = useState<VoiceCommandPanelState>({
@@ -34,159 +31,15 @@ const VoiceCommandManager: React.FC = () => {
     mode: "listening"
   });
   
+  // Track initialization attempts and error messages 
   const initAttempts = useRef(0);
   const maxInitAttempts = 3;
+  const errorTimeouts = useRef<Record<string, number>>({});
+  const lastErrorTime = useRef<Record<string, number>>({});
   const recognitionResetTimer = useRef<number | null>(null);
   
-  // Initialize voice command processor
   useEffect(() => {
-    voiceProcessor.current = new VoiceCommandProcessor();
-    
-    // Register all voice commands with enhanced patterns
-    voiceProcessor.current.registerCommand(
-      ['play', 'start', 'resume', 'begin', 'unpause', 'start music', 'play music'],
-      () => {
-        if (!playerState.isPlaying) {
-          togglePlayPause();
-        }
-      },
-      { title: "Playing", description: "Music resumed" },
-      2
-    );
-
-    voiceProcessor.current.registerCommand(
-      ['stop', 'pause', 'halt', 'wait', 'stop music', 'pause music'],
-      () => {
-        if (playerState.isPlaying) {
-          togglePlayPause();
-        }
-      },
-      { title: "Paused", description: "Music paused" },
-      2
-    );
-
-    voiceProcessor.current.registerCommand(
-      ['next', 'skip', 'forward', 'advance', 'next song', 'skip song', 'skip ahead'],
-      () => {
-        nextSong();
-      },
-      { title: "Next Song", description: "Playing next song" },
-      2
-    );
-
-    voiceProcessor.current.registerCommand(
-      ['previous', 'prev', 'back', 'backward', 'earlier', 'last song', 'go back', 'previous song'],
-      () => {
-        prevSong();
-      },
-      { title: "Previous Song", description: "Playing previous song" },
-      2
-    );
-
-    voiceProcessor.current.registerCommand(
-      ['help', 'commands', 'what can I say', 'options', 'available commands', 'show help'],
-      () => {
-        setPanelState(prev => ({
-          ...prev,
-          isOpen: true,
-          mode: 'help'
-        }));
-      },
-      { title: "Help", description: "Opened voice command help panel" },
-      1
-    );
-
-    voiceProcessor.current.registerCommand(
-      ['profile', 'user', 'account', 'my profile', 'settings', 'preferences', 'show profile'],
-      () => {
-        setPanelState(prev => ({
-          ...prev,
-          isOpen: true,
-          mode: 'profile'
-        }));
-      },
-      { title: "Profile", description: "Opened user profile panel" },
-      1
-    );
-
-    voiceProcessor.current.registerCommand(
-      ['close', 'dismiss', 'exit', 'hide', 'shut', 'cancel', 'close panel'],
-      () => {
-        setPanelState(prev => ({
-          ...prev,
-          isOpen: false,
-          mode: 'listening'
-        }));
-      },
-      { title: "Closed", description: "Panel closed" },
-      1
-    );
-
-    // Enhanced logout command with comprehensive cleanup
-    voiceProcessor.current.registerCommand(
-      ['log out', 'logout', 'sign out', 'signout', 'exit app', 'quit', 'goodbye', 'log me out', 'sign me out'],
-      () => {
-        console.log("Processing logout command...");
-        
-        // Stop voice recognition immediately
-        if (recognition.current) {
-          try {
-            recognition.current.stop();
-            recognition.current.abort();
-          } catch (e) {
-            console.log("Voice recognition cleanup:", e);
-          }
-        }
-        
-        // Clear any timers
-        if (recognitionResetTimer.current) {
-          clearTimeout(recognitionResetTimer.current);
-          recognitionResetTimer.current = null;
-        }
-        
-        // Reset voice processor
-        if (voiceProcessor.current) {
-          voiceProcessor.current.reset();
-        }
-        
-        // Stop any ongoing audio
-        try {
-          if (playerState.isPlaying) {
-            togglePlayPause();
-          }
-        } catch (e) {
-          console.log("Audio cleanup:", e);
-        }
-        
-        // Clear state
-        setTranscript("");
-        setPanelState({
-          isListening: false,
-          transcript: "",
-          isOpen: false,
-          mode: "listening"
-        });
-        
-        // Perform logout with a small delay to ensure cleanup
-        setTimeout(() => {
-          logout();
-          toast({
-            title: "Logged Out",
-            description: "You've been successfully logged out"
-          });
-        }, 200);
-      },
-      { title: "Logging Out", description: "Cleaning up and signing out..." },
-      3 // Highest priority
-    );
-
-    // Set contextual keywords for better recognition
-    voiceProcessor.current.registerContextualKeywords('music', ['play', 'song', 'track', 'music', 'audio']);
-    voiceProcessor.current.registerContextualKeywords('navigation', ['open', 'show', 'close', 'help', 'profile']);
-    
-  }, [togglePlayPause, nextSong, prevSong, logout, playerState.isPlaying]);
-
-  useEffect(() => {
+    // Only initialize speech recognition when needed
     const initializeSpeechRecognition = () => {
       try {
         if (typeof window !== 'undefined') {
@@ -196,12 +49,13 @@ const VoiceCommandManager: React.FC = () => {
             recognition.current.continuous = true;
             recognition.current.interimResults = false;
             recognition.current.lang = 'en-US';
-            recognition.current.maxAlternatives = 3; // Get multiple alternatives for better matching
             setIsReady(true);
             console.log("Speech recognition initialized successfully");
             return true;
           } else if (initAttempts.current < maxInitAttempts) {
             initAttempts.current += 1;
+            console.warn("Speech recognition not supported in this browser");
+            // Only show this error once
             if (initAttempts.current === 1) {
               toast({
                 title: "Voice Commands Limited",
@@ -216,6 +70,7 @@ const VoiceCommandManager: React.FC = () => {
         console.error("Error initializing speech recognition:", error);
         if (initAttempts.current < maxInitAttempts) {
           initAttempts.current += 1;
+          // Only show this error once
           if (initAttempts.current === 1) {
             toast({
               title: "Voice Commands Unavailable",
@@ -228,10 +83,12 @@ const VoiceCommandManager: React.FC = () => {
       }
     };
     
+    // Only initialize when user enables voice listening
     if (isVoiceListening && !isReady) {
       initializeSpeechRecognition();
     }
 
+    // Cleanup function
     return () => {
       if (recognition.current) {
         try {
@@ -258,6 +115,20 @@ const VoiceCommandManager: React.FC = () => {
     }
   }, [isVoiceListening, isReady]);
 
+  // Helper to throttle error messages
+  const showThrottledToast = (key: string, title: string, description: string, variant: "default" | "destructive" = "default") => {
+    const now = Date.now();
+    // Only show error once every 10 seconds for the same error type
+    if (!lastErrorTime.current[key] || now - lastErrorTime.current[key] > 10000) {
+      lastErrorTime.current[key] = now;
+      toast({
+        title,
+        description,
+        variant
+      });
+    }
+  };
+
   const startListening = () => {
     if (!recognition.current || !isReady) return;
 
@@ -269,54 +140,41 @@ const VoiceCommandManager: React.FC = () => {
         const result = event.results[event.resultIndex];
         if (result?.isFinal) {
           const text = result[0].transcript.trim().toLowerCase();
-          console.log("Voice command received:", text);
-          
           setTranscript(text);
           setPanelState(prev => ({
             ...prev,
             transcript: text
           }));
-          
-          // Process command using enhanced processor
-          if (voiceProcessor.current) {
-            const processed = voiceProcessor.current.processCommand(text);
-            if (!processed) {
-              console.log("Command not recognized, trying alternatives...");
-              // Try processing alternatives if available
-              for (let i = 1; i < result.length; i++) {
-                const altText = result[i].transcript.trim().toLowerCase();
-                console.log("Trying alternative:", altText);
-                if (voiceProcessor.current.processCommand(altText)) {
-                  break;
-                }
-              }
-            }
-          }
-          
-          setVoiceCommand(text);
+          processCommand(text);
         }
       };
 
       recognition.current.onerror = (event) => {
         if (event.error === 'no-speech') {
+          // This is a common error, no need to show it to the user
           console.log("No speech detected");
         } else if (event.error === 'aborted') {
+          // This happens when the recognition is stopped deliberately
           console.log("Speech recognition aborted");
         } else {
           console.error("Speech recognition error:", event.error);
+          // Only show critical errors and limit frequency
           if (event.error !== 'network' && event.error !== 'audio-capture') {
-            toast({
-              title: "Voice Recognition Issue",
-              description: "Speech recognition encountered a problem. Click the mic button to retry.",
-              variant: "destructive"
-            });
+            showThrottledToast(
+              `speech-error-${event.error}`,
+              "Voice Recognition Issue",
+              "Speech recognition encountered a problem. Click the mic button to retry.",
+              "destructive"
+            );
           }
         }
       };
 
       recognition.current.onend = () => {
+        // Automatically restart if we're still supposed to be listening
         if (isVoiceListening && recognition.current) {
           try {
+            // Use a more reliable way to restart recognition with exponential backoff
             const delayTime = Math.min(3000, 500 * Math.pow(1.5, initAttempts.current));
             
             if (recognitionResetTimer.current) {
@@ -341,11 +199,12 @@ const VoiceCommandManager: React.FC = () => {
       };
     } catch (error) {
       console.error("Error starting speech recognition:", error);
-      toast({
-        title: "Voice Recognition Error",
-        description: "Could not start listening. Please try again later.",
-        variant: "destructive"
-      });
+      showThrottledToast(
+        "speech-start-error",
+        "Voice Recognition Error",
+        "Could not start listening. Please try again later.",
+        "destructive"
+      );
     }
   };
 
@@ -362,6 +221,173 @@ const VoiceCommandManager: React.FC = () => {
       }
     } catch (error) {
       console.error("Error stopping speech recognition:", error);
+    }
+  };
+
+  // More precise command matching with fuzzy matching for better accuracy
+  const matchCommand = (text: string, commands: string[]): boolean => {
+    // First try exact matching
+    if (commands.some(cmd => text.includes(cmd))) {
+      return true;
+    }
+    
+    // Then try more lenient fuzzy matching for common variations/misspellings
+    return commands.some(cmd => {
+      const cmdWords = cmd.split(' ');
+      
+      // Enhanced matching logic for better accuracy
+      const matchCount = cmdWords.filter(word => {
+        // Check for exact word match
+        if (text.includes(word)) return true;
+        
+        // Check for word with different suffix (e.g., "playing" for "play")
+        if (word.length > 3 && text.includes(word.substring(0, word.length-1))) return true;
+        
+        // Check for common sound-alike words
+        const soundAlikes: Record<string, string[]> = {
+          'play': ['lay', 'pray', 'way', 'say'],
+          'stop': ['spot', 'top', 'hop'],
+          'pause': ['paws', 'cause', 'laws'],
+          'next': ['text', 'nest'],
+          'skip': ['ship', 'slip'],
+          'previous': ['preious', 'prvious', 'previus'],
+          'back': ['bat', 'black', 'track'],
+          'help': ['held', 'kelp', 'health'],
+          'close': ['clothes', 'clues', 'class'],
+          'logout': ['log out', 'log-out', 'lock out', 'log aut']
+        };
+        
+        // Check sound-alikes if this word has any defined
+        if (word in soundAlikes && soundAlikes[word].some(alt => text.includes(alt))) {
+          return true;
+        }
+        
+        return false;
+      }).length;
+      
+      // If most words in the command match, consider it a match
+      // More lenient for longer commands (higher threshold for longer phrases)
+      const matchThreshold = cmdWords.length <= 2 ? 0.8 : 0.7;
+      return matchCount >= Math.max(1, Math.ceil(cmdWords.length * matchThreshold));
+    });
+  };
+
+  const processCommand = (command: string) => {
+    console.log("Processing voice command:", command);
+    setVoiceCommand(command);
+
+    let commandProcessed = false;
+
+    // Improved command matching with more variations
+    if (matchCommand(command, ['play', 'start', 'resume', 'begin', 'unpause'])) {
+      if (!playerState.isPlaying) {
+        togglePlayPause();
+        toast({
+          title: "Playing",
+          description: "Music resumed"
+        });
+      }
+      commandProcessed = true;
+    } 
+    else if (matchCommand(command, ['stop', 'pause', 'halt', 'wait'])) {
+      if (playerState.isPlaying) {
+        togglePlayPause();
+        toast({
+          title: "Paused",
+          description: "Music paused"
+        });
+      }
+      commandProcessed = true;
+    }
+    else if (matchCommand(command, ['next', 'skip', 'forward', 'advance', 'following', 'next song', 'skip ahead'])) {
+      nextSong();
+      toast({
+        title: "Next Song",
+        description: "Playing next song"
+      });
+      commandProcessed = true;
+    }
+    else if (matchCommand(command, ['previous', 'prev', 'back', 'backward', 'earlier', 'last song', 'go back'])) {
+      prevSong();
+      toast({
+        title: "Previous Song",
+        description: "Playing previous song"
+      });
+      commandProcessed = true;
+    }
+    else if (matchCommand(command, ['help', 'commands', 'what can I say', 'options', 'available commands', 'show help'])) {
+      setPanelState({
+        isListening: panelState.isListening,
+        transcript: panelState.transcript,
+        isOpen: true,
+        mode: 'help'
+      });
+      toast({
+        title: "Help",
+        description: "Opened voice command help panel"
+      });
+      commandProcessed = true;
+    }
+    else if (matchCommand(command, ['profile', 'user', 'account', 'my profile', 'settings', 'preferences', 'show profile'])) {
+      setPanelState({
+        isListening: panelState.isListening,
+        transcript: panelState.transcript,
+        isOpen: true,
+        mode: 'profile'
+      });
+      toast({
+        title: "Profile",
+        description: "Opened user profile panel"
+      });
+      commandProcessed = true;
+    }
+    else if (matchCommand(command, ['close', 'dismiss', 'exit', 'hide', 'shut', 'cancel', 'close panel'])) {
+      setPanelState({
+        isListening: panelState.isListening,
+        transcript: panelState.transcript,
+        isOpen: false,
+        mode: 'listening'
+      });
+      toast({
+        title: "Closed",
+        description: "Panel closed"
+      });
+      commandProcessed = true;
+    }
+    else if (matchCommand(command, ['log out', 'logout', 'sign out', 'signout', 'exit app', 'quit', 'goodbye', 'log me out'])) {
+      // Stop all activities and logout
+      if (recognition.current) {
+        try {
+          recognition.current.stop();
+          if (recognitionResetTimer.current) {
+            clearTimeout(recognitionResetTimer.current);
+          }
+        } catch (e) {
+          console.error("Error stopping recognition during logout:", e);
+        }
+      }
+      
+      // Add a small timeout before logout to ensure cleanup is done
+      setTimeout(() => {
+        logout();
+        toast({
+          title: "Logged Out",
+          description: "You've been logged out"
+        });
+      }, 100);
+      
+      commandProcessed = true;
+    }
+    
+    if (!commandProcessed) {
+      // This is where we'd typically show an error, but we'll suppress frequent alerts
+      // Only show once every 10 seconds for unrecognized commands
+      showThrottledToast(
+        "unrecognized-command",
+        "Hmm, didn't catch that",
+        `Try saying "help" for available commands`,
+        "default" // Changed to default to be less intrusive
+      );
     }
   };
 
@@ -438,19 +464,19 @@ const VoiceCommandManager: React.FC = () => {
                 </CardHeader>
                 <CardContent className="text-sm space-y-2">
                   <div className="flex justify-between items-center">
-                    <span className="font-semibold">Play / Start / Resume</span>
+                    <span className="font-semibold">Play</span>
                     <span className="text-futuristic-muted">Starts/resumes playback</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="font-semibold">Stop / Pause</span>
+                    <span className="font-semibold">Stop/Pause</span>
                     <span className="text-futuristic-muted">Stops current playback</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="font-semibold">Next / Skip</span>
+                    <span className="font-semibold">Next</span>
                     <span className="text-futuristic-muted">Skips to next song</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="font-semibold">Previous / Back</span>
+                    <span className="font-semibold">Previous</span>
                     <span className="text-futuristic-muted">Returns to previous song</span>
                   </div>
                 </CardContent>
@@ -465,33 +491,23 @@ const VoiceCommandManager: React.FC = () => {
                 </CardHeader>
                 <CardContent className="text-sm space-y-2">
                   <div className="flex justify-between items-center">
-                    <span className="font-semibold">Help / Commands</span>
+                    <span className="font-semibold">Help</span>
                     <span className="text-futuristic-muted">Opens this help panel</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="font-semibold">Profile / User</span>
+                    <span className="font-semibold">User Profile</span>
                     <span className="text-futuristic-muted">Opens profile panel</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="font-semibold">Close / Dismiss</span>
+                    <span className="font-semibold">Close</span>
                     <span className="text-futuristic-muted">Closes any open panel</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="font-semibold">Log Out / Sign Out</span>
+                    <span className="font-semibold">Log Out</span>
                     <span className="text-futuristic-muted">Signs out of the app</span>
                   </div>
                 </CardContent>
               </Card>
-              
-              {transcript && (
-                <Card className="border-green-500/50 bg-green-900/20">
-                  <CardContent className="pt-4">
-                    <p className="text-sm text-green-400">
-                      <strong>Last command:</strong> "{transcript}"
-                    </p>
-                  </CardContent>
-                </Card>
-              )}
             </div>
           )}
 
@@ -511,6 +527,7 @@ const VoiceCommandManager: React.FC = () => {
                   <Card className="border-futuristic-border">
                     <CardContent className="pt-6">
                       <div className="space-y-4">
+                        {/* User info content */}
                         <p>User profile information will appear here.</p>
                       </div>
                     </CardContent>
@@ -521,6 +538,7 @@ const VoiceCommandManager: React.FC = () => {
                   <Card className="border-futuristic-border">
                     <CardContent className="pt-6">
                       <div className="space-y-4">
+                        {/* Settings content */}
                         <p>User settings will appear here.</p>
                       </div>
                     </CardContent>
