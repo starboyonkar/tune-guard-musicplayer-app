@@ -120,7 +120,8 @@ const SignUpForm: React.FC = () => {
         </CardContent>
       </Card>
       
-      <div className="ext-4xl font-bold mb-2 neon-text rounded-md bg-inherit">    © 2025 TUNE GUARD - OnkarNov Technologies                              Solapur, Maharashtra</div>
+      <div className="ext-4xl font-bold mb-2 neon-text rounded-md bg-inherit">   
+    © 2025 TUNE GUARD - OnkarNov Technologies                              Solapur, Maharashtra</div>
     </div>;
 };
 export default SignUpForm;
