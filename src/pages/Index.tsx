@@ -105,7 +105,7 @@ const Index = () => {
       
       {/* App logo */}
       <div className="absolute top-4 left-4 flex items-center space-x-2 z-10">
-        <Avatar className="h-10 w-10 border border-white/10 animate-pulse-slow">
+        <Avatar className="h-10 w-10 border border-white/10">
           <AvatarImage src="/lovable-uploads/d4fe6f3e-e72d-4760-93e5-5f71a12f2238.png" alt="TUNE GUARD" />
           <AvatarFallback>TG</AvatarFallback>
         </Avatar>
@@ -117,12 +117,10 @@ const Index = () => {
         {isSignedUp ? <AudioPlayerUI /> : <SignUpForm />}
       </div>
 
-      {/* Social Footer - only show when signed up */}
-      {isSignedUp && (
-        <div className="mt-auto">
-          <SocialFooter />
-        </div>
-      )}
+      {/* Social Footer - visible on both login and main pages */}
+      <div className="mt-auto">
+        <SocialFooter variant={isSignedUp ? 'full' : 'compact'} />
+      </div>
     </div>
   );
 };

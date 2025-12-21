@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { useAudio } from '@/lib/audioContext';
@@ -35,6 +35,12 @@ const VoiceCommandManager: React.FC = () => {
   const maxInitAttempts = 3;
   const recognitionResetTimer = useRef<number | null>(null);
   
+  // Debouncing refs for instant, reliable command execution
+  const lastCommandTime = useRef<number>(0);
+  const lastCommand = useRef<string>('');
+  const commandDebounceMs = 800; // Minimum time between same commands
+  const processingCommand = useRef<boolean>(false);
+  
   useEffect(() => {
     const initializeSpeechRecognition = () => {
       try {
@@ -45,8 +51,6 @@ const VoiceCommandManager: React.FC = () => {
             recognition.current.continuous = true;
             recognition.current.interimResults = false;
             recognition.current.lang = 'en-US';
-            
-            // Enhanced noise filtering
             recognition.current.maxAlternatives = 1;
             
             setIsReady(true);
@@ -122,8 +126,8 @@ const VoiceCommandManager: React.FC = () => {
           const text = result[0].transcript.trim().toLowerCase();
           const confidence = result[0].confidence;
           
-          // Filter low confidence results to reduce false positives
-          if (confidence > 0.6) {
+          // Accept results with reasonable confidence
+          if (confidence > 0.5) {
             setTranscript(text);
             setPanelState(prev => ({
               ...prev,
@@ -138,7 +142,7 @@ const VoiceCommandManager: React.FC = () => {
 
       recognition.current.onerror = (event) => {
         if (event.error === 'no-speech') {
-          console.log("No speech detected - continuing to listen");
+          // Silent - continue listening
         } else if (event.error === 'aborted') {
           console.log("Speech recognition stopped");
         } else {
@@ -156,22 +160,20 @@ const VoiceCommandManager: React.FC = () => {
       recognition.current.onend = () => {
         if (isVoiceListening && recognition.current) {
           try {
-            const delayTime = Math.min(1000, 200 * Math.pow(1.2, initAttempts.current));
-            
             if (recognitionResetTimer.current) {
               clearTimeout(recognitionResetTimer.current);
             }
             
+            // Quick restart for continuous listening
             recognitionResetTimer.current = window.setTimeout(() => {
               if (isVoiceListening && recognition.current) {
                 try {
                   recognition.current.start();
-                  console.log("Speech recognition restarted");
                 } catch (e) {
                   console.log("Error restarting speech recognition:", e);
                 }
               }
-            }, delayTime);
+            }, 100);
           } catch (e) {
             console.log("Error setting restart timer:", e);
           }
@@ -202,98 +204,95 @@ const VoiceCommandManager: React.FC = () => {
     }
   };
 
-  const matchCommand = (text: string, commands: string[]): boolean => {
-    // Enhanced command matching with noise filtering
-    const cleanText = text.replace(/[^\w\s]/g, '').toLowerCase();
+  // Optimized command matching with debouncing
+  const matchCommand = useCallback((text: string, commands: string[]): boolean => {
+    const cleanText = text.replace(/[^\w\s]/g, '').toLowerCase().trim();
     
     return commands.some(cmd => {
-      const cmdWords = cmd.split(' ');
+      const cmdLower = cmd.toLowerCase();
+      // Exact match
+      if (cleanText === cmdLower || cleanText.includes(cmdLower)) return true;
+      
+      // Word matching for multi-word commands
+      const cmdWords = cmdLower.split(' ');
       const textWords = cleanText.split(' ');
       
-      // Check for exact phrase match
-      if (cleanText.includes(cmd)) return true;
-      
-      // Check word-by-word matching with threshold
       const matchCount = cmdWords.filter(word => 
-        textWords.some(textWord => 
-          textWord.includes(word) || word.includes(textWord)
-        )
+        textWords.some(textWord => textWord === word || textWord.includes(word))
       ).length;
       
-      return matchCount >= Math.ceil(cmdWords.length * 0.8);
+      return matchCount >= Math.ceil(cmdWords.length * 0.7);
     });
-  };
+  }, []);
 
-  const processCommand = (command: string) => {
-    console.log("Processing voice command:", command);
-    setVoiceCommand(command);
+  // Instant command execution with proper debouncing
+  const processCommand = useCallback((command: string) => {
+    const now = Date.now();
+    const normalizedCommand = command.toLowerCase().trim();
+    
+    // Prevent duplicate/rapid command execution
+    if (processingCommand.current) {
+      console.log("Command already processing, skipping:", normalizedCommand);
+      return;
+    }
+    
+    if (normalizedCommand === lastCommand.current && 
+        now - lastCommandTime.current < commandDebounceMs) {
+      console.log("Duplicate command debounced:", normalizedCommand);
+      return;
+    }
+    
+    processingCommand.current = true;
+    lastCommand.current = normalizedCommand;
+    lastCommandTime.current = now;
+    
+    console.log("Processing voice command:", normalizedCommand);
+    setVoiceCommand(normalizedCommand);
 
     let commandProcessed = false;
 
-    if (matchCommand(command, ['play', 'start', 'resume', 'begin'])) {
+    // Play command - immediate execution
+    if (matchCommand(normalizedCommand, ['play', 'start', 'resume', 'begin'])) {
       if (!playerState.isPlaying) {
         togglePlayPause();
-        toast({
-          title: "▶️ Playing",
-          description: "Music resumed via voice command"
-        });
       }
+      toast({ title: "Playing", description: "Music resumed" });
       commandProcessed = true;
     } 
-    else if (matchCommand(command, ['stop', 'pause', 'halt'])) {
+    // Pause/Stop command - immediate execution
+    else if (matchCommand(normalizedCommand, ['stop', 'pause', 'halt'])) {
       if (playerState.isPlaying) {
         togglePlayPause();
-        toast({
-          title: "⏸️ Paused",
-          description: "Music paused via voice command"
-        });
       }
+      toast({ title: "Paused", description: "Music paused" });
       commandProcessed = true;
     }
-    else if (matchCommand(command, ['next', 'skip', 'forward', 'next song'])) {
+    // Next command - immediate execution
+    else if (matchCommand(normalizedCommand, ['next', 'skip', 'forward', 'next song'])) {
       nextSong();
-      toast({
-        title: "⏭️ Next Song",
-        description: "Skipped to next track"
-      });
+      toast({ title: "Next Song", description: "Skipped to next track" });
       commandProcessed = true;
     }
-    else if (matchCommand(command, ['previous', 'prev', 'back', 'last song', 'go back'])) {
+    // Previous command - immediate execution
+    else if (matchCommand(normalizedCommand, ['previous', 'prev', 'back', 'last song', 'go back'])) {
       prevSong();
-      toast({
-        title: "⏮️ Previous Song",
-        description: "Returned to previous track"
-      });
+      toast({ title: "Previous Song", description: "Returned to previous track" });
       commandProcessed = true;
     }
-    else if (matchCommand(command, ['help', 'commands', 'what can i say'])) {
-      setPanelState({
-        isListening: panelState.isListening,
-        transcript: panelState.transcript,
-        isOpen: true,
-        mode: 'help'
-      });
-      toast({
-        title: "❓ Help Panel",
-        description: "Voice command help opened"
-      });
+    // Help command
+    else if (matchCommand(normalizedCommand, ['help', 'commands', 'what can i say'])) {
+      setPanelState(prev => ({ ...prev, isOpen: true, mode: 'help' }));
+      toast({ title: "Help Panel", description: "Voice command help opened" });
       commandProcessed = true;
     }
-    else if (matchCommand(command, ['close', 'dismiss', 'exit panel', 'hide'])) {
-      setPanelState({
-        isListening: panelState.isListening,
-        transcript: panelState.transcript,
-        isOpen: false,
-        mode: 'listening'
-      });
-      toast({
-        title: "✅ Closed",
-        description: "Panel closed via voice"
-      });
+    // Close command
+    else if (matchCommand(normalizedCommand, ['close', 'dismiss', 'exit panel', 'hide'])) {
+      setPanelState(prev => ({ ...prev, isOpen: false, mode: 'listening' }));
+      toast({ title: "Closed", description: "Panel closed" });
       commandProcessed = true;
     }
-    else if (matchCommand(command, ['log out', 'logout', 'sign out', 'exit app', 'quit'])) {
-      // Enhanced logout with immediate cleanup
+    // Logout command - immediate execution with cleanup
+    else if (matchCommand(normalizedCommand, ['log out', 'logout', 'sign out', 'exit app', 'quit'])) {
       if (recognition.current) {
         try {
           recognition.current.stop();
@@ -305,39 +304,38 @@ const VoiceCommandManager: React.FC = () => {
         }
       }
       
-      toast({
-        title: "🚪 Logging Out",
-        description: "Stopping all tasks and signing out..."
-      });
+      toast({ title: "Logging Out", description: "Signing out..." });
       
       // Immediate logout
-      setTimeout(() => {
-        logout();
-      }, 100);
-      
+      logout();
       commandProcessed = true;
     }
     
     if (!commandProcessed) {
       toast({
-        title: "🤔 Command Not Recognized",
-        description: `Try saying "help" for available commands`,
+        title: "Command Not Recognized",
+        description: "Try saying 'help' for available commands",
         variant: "default"
       });
     }
-  };
+    
+    // Reset processing flag after short delay
+    setTimeout(() => {
+      processingCommand.current = false;
+    }, 100);
+  }, [matchCommand, playerState.isPlaying, togglePlayPause, nextSong, prevSong, setVoiceCommand, logout]);
 
   const toggleListening = () => {
     toggleVoiceListening();
     
     if (!isVoiceListening) {
       toast({
-        title: "🎤 Voice Commands Active",
+        title: "Voice Commands Active",
         description: "Listening for your voice commands..."
       });
     } else {
       toast({
-        title: "🔇 Voice Commands Inactive",
+        title: "Voice Commands Inactive",
         description: "Voice recognition stopped"
       });
     }
@@ -359,10 +357,10 @@ const VoiceCommandManager: React.FC = () => {
           variant="ghost"
           size="icon"
           onClick={toggleListening}
-          className={`text-futuristic-muted transition-all duration-300 ${
+          className={`text-futuristic-muted transition-all duration-200 ${
             isVoiceListening 
-              ? 'text-futuristic-accent1 animate-pulse bg-futuristic-accent1/10' 
-              : 'hover:text-futuristic-accent1'
+              ? 'text-futuristic-accent1 bg-futuristic-accent1/10' 
+              : 'hover:text-futuristic-accent1 hover:scale-105'
           }`}
           title={isVoiceListening ? "Voice commands active - click to disable" : "Enable voice commands"}
         >
@@ -373,7 +371,7 @@ const VoiceCommandManager: React.FC = () => {
           )}
         </Button>
         {isVoiceListening && (
-          <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-red-500 animate-pulse border-2 border-futuristic-bg"></span>
+          <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-red-500 border-2 border-futuristic-bg"></span>
         )}
       </div>
 
