@@ -954,8 +954,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           toast({
             title: "Playback Error",
             description: "Could not load this song. It may have been from a previous session.",
-            variant: "destructive",
-            id: "song-load-error" // Prevent duplicate toasts
+            variant: "destructive"
           });
           return;
         }
@@ -997,8 +996,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                   toast({
                     title: "Playback Error",
                     description: "There was an error playing this song. Please try again.",
-                    variant: "destructive",
-                    id: "audio-play-error"
+                    variant: "destructive"
                   });
                 }
               });

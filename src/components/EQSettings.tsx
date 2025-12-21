@@ -62,6 +62,7 @@ const EQSettings: React.FC = () => {
     soundEffects.playTouchFeedback();
     
     setEQSettings({
+      ...eqSettings,
       bass: 70,
       mid: 70,
       treble: 70,

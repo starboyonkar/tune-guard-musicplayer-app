@@ -31,6 +31,15 @@ export interface EQSettings {
   preAmp: number;
   enabled: boolean;
   preset: string;
+  presence?: number;
+  warmth?: number;
+}
+
+export interface SirenDetectionSettings {
+  enabled: boolean;
+  sensitivity: number;
+  autoResume: boolean;
+  pauseDuration: number;
 }
 
 export interface Song {
