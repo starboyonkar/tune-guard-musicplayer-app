@@ -18,7 +18,13 @@ const VoiceCommandManager: React.FC = () => {
     nextSong,
     prevSong,
     playerState,
-    logout
+    logout,
+    setVolume,
+    toggleMute,
+    toggleShuffle,
+    toggleRepeat,
+    seekTo,
+    currentSong
   } = useAudio();
   
   const recognition = useRef<SpeechRecognition | null>(null);
@@ -252,47 +258,123 @@ const VoiceCommandManager: React.FC = () => {
     let commandProcessed = false;
 
     // Play command - immediate execution
-    if (matchCommand(normalizedCommand, ['play', 'start', 'resume', 'begin'])) {
+    if (matchCommand(normalizedCommand, ['play', 'start', 'resume', 'begin', 'play music'])) {
       if (!playerState.isPlaying) {
         togglePlayPause();
       }
-      toast({ title: "Playing", description: "Music resumed" });
+      toast({ title: "▶️ Playing", description: "Music resumed" });
       commandProcessed = true;
     } 
-    // Pause/Stop command - immediate execution
-    else if (matchCommand(normalizedCommand, ['stop', 'pause', 'halt'])) {
+    // Pause command - immediate execution
+    else if (matchCommand(normalizedCommand, ['pause', 'hold'])) {
       if (playerState.isPlaying) {
         togglePlayPause();
       }
-      toast({ title: "Paused", description: "Music paused" });
+      toast({ title: "⏸️ Paused", description: "Music paused" });
+      commandProcessed = true;
+    }
+    // Stop command - stops and resets to beginning
+    else if (matchCommand(normalizedCommand, ['stop', 'halt', 'end'])) {
+      if (playerState.isPlaying) {
+        togglePlayPause();
+      }
+      seekTo(0);
+      toast({ title: "⏹️ Stopped", description: "Playback stopped" });
       commandProcessed = true;
     }
     // Next command - immediate execution
-    else if (matchCommand(normalizedCommand, ['next', 'skip', 'forward', 'next song'])) {
+    else if (matchCommand(normalizedCommand, ['next', 'skip', 'forward', 'next song', 'next track', 'skip song'])) {
       nextSong();
-      toast({ title: "Next Song", description: "Skipped to next track" });
+      toast({ title: "⏭️ Next Song", description: "Skipped to next track" });
       commandProcessed = true;
     }
     // Previous command - immediate execution
-    else if (matchCommand(normalizedCommand, ['previous', 'prev', 'back', 'last song', 'go back'])) {
+    else if (matchCommand(normalizedCommand, ['previous', 'prev', 'back', 'last song', 'go back', 'previous song', 'previous track'])) {
       prevSong();
-      toast({ title: "Previous Song", description: "Returned to previous track" });
+      toast({ title: "⏮️ Previous Song", description: "Returned to previous track" });
+      commandProcessed = true;
+    }
+    // Volume up command
+    else if (matchCommand(normalizedCommand, ['volume up', 'louder', 'increase volume', 'turn up', 'turn it up'])) {
+      const newVolume = Math.min(100, playerState.volume + 10);
+      setVolume(newVolume);
+      toast({ title: "🔊 Volume Up", description: `Volume: ${newVolume}%` });
+      commandProcessed = true;
+    }
+    // Volume down command
+    else if (matchCommand(normalizedCommand, ['volume down', 'quieter', 'decrease volume', 'turn down', 'lower volume', 'turn it down'])) {
+      const newVolume = Math.max(0, playerState.volume - 10);
+      setVolume(newVolume);
+      toast({ title: "🔉 Volume Down", description: `Volume: ${newVolume}%` });
+      commandProcessed = true;
+    }
+    // Mute command
+    else if (matchCommand(normalizedCommand, ['mute', 'silence', 'quiet', 'mute audio'])) {
+      if (!playerState.muted) {
+        toggleMute();
+      }
+      toast({ title: "🔇 Muted", description: "Audio muted" });
+      commandProcessed = true;
+    }
+    // Unmute command
+    else if (matchCommand(normalizedCommand, ['unmute', 'unmute audio', 'sound on', 'enable sound'])) {
+      if (playerState.muted) {
+        toggleMute();
+      }
+      toast({ title: "🔊 Unmuted", description: "Audio restored" });
+      commandProcessed = true;
+    }
+    // Shuffle toggle command
+    else if (matchCommand(normalizedCommand, ['shuffle', 'shuffle on', 'shuffle off', 'toggle shuffle', 'random'])) {
+      toggleShuffle();
+      const newState = !playerState.shuffleEnabled;
+      toast({ title: "🔀 Shuffle", description: newState ? "Shuffle enabled" : "Shuffle disabled" });
+      commandProcessed = true;
+    }
+    // Repeat toggle command
+    else if (matchCommand(normalizedCommand, ['repeat', 'repeat on', 'repeat off', 'toggle repeat', 'loop', 'repeat song', 'repeat all'])) {
+      toggleRepeat();
+      const modes = ['off', 'all', 'one'];
+      const currentIndex = modes.indexOf(playerState.repeatMode);
+      const nextMode = modes[(currentIndex + 1) % modes.length];
+      toast({ title: "🔁 Repeat", description: `Repeat mode: ${nextMode}` });
+      commandProcessed = true;
+    }
+    // Restart/replay current song
+    else if (matchCommand(normalizedCommand, ['restart', 'replay', 'start over', 'from the beginning', 'play again'])) {
+      seekTo(0);
+      if (!playerState.isPlaying) {
+        togglePlayPause();
+      }
+      toast({ title: "🔄 Restarting", description: "Playing from the beginning" });
+      commandProcessed = true;
+    }
+    // What's playing command
+    else if (matchCommand(normalizedCommand, ["what's playing", 'now playing', 'current song', 'what song is this', 'song name'])) {
+      if (currentSong) {
+        toast({ 
+          title: "🎵 Now Playing", 
+          description: `${currentSong.title} by ${currentSong.artist}` 
+        });
+      } else {
+        toast({ title: "No song playing", description: "Select a song to play" });
+      }
       commandProcessed = true;
     }
     // Help command
-    else if (matchCommand(normalizedCommand, ['help', 'commands', 'what can i say'])) {
+    else if (matchCommand(normalizedCommand, ['help', 'commands', 'what can i say', 'voice commands', 'show commands'])) {
       setPanelState(prev => ({ ...prev, isOpen: true, mode: 'help' }));
-      toast({ title: "Help Panel", description: "Voice command help opened" });
+      toast({ title: "❓ Help Panel", description: "Voice command help opened" });
       commandProcessed = true;
     }
     // Close command
-    else if (matchCommand(normalizedCommand, ['close', 'dismiss', 'exit panel', 'hide'])) {
+    else if (matchCommand(normalizedCommand, ['close', 'dismiss', 'exit panel', 'hide', 'close panel'])) {
       setPanelState(prev => ({ ...prev, isOpen: false, mode: 'listening' }));
-      toast({ title: "Closed", description: "Panel closed" });
+      toast({ title: "✅ Closed", description: "Panel closed" });
       commandProcessed = true;
     }
     // Logout command - immediate execution with cleanup
-    else if (matchCommand(normalizedCommand, ['log out', 'logout', 'sign out', 'exit app', 'quit'])) {
+    else if (matchCommand(normalizedCommand, ['log out', 'logout', 'sign out', 'exit app', 'quit', 'sign off'])) {
       if (recognition.current) {
         try {
           recognition.current.stop();
@@ -304,7 +386,7 @@ const VoiceCommandManager: React.FC = () => {
         }
       }
       
-      toast({ title: "Logging Out", description: "Signing out..." });
+      toast({ title: "🚪 Logging Out", description: "Signing out..." });
       
       // Immediate logout
       logout();
@@ -323,7 +405,7 @@ const VoiceCommandManager: React.FC = () => {
     setTimeout(() => {
       processingCommand.current = false;
     }, 100);
-  }, [matchCommand, playerState.isPlaying, togglePlayPause, nextSong, prevSong, setVoiceCommand, logout]);
+  }, [matchCommand, playerState, togglePlayPause, nextSong, prevSong, setVoiceCommand, logout, setVolume, toggleMute, toggleShuffle, toggleRepeat, seekTo, currentSong]);
 
   const toggleListening = () => {
     toggleVoiceListening();
@@ -399,22 +481,65 @@ const VoiceCommandManager: React.FC = () => {
                   Media Control Commands
                 </CardTitle>
               </CardHeader>
-              <CardContent className="text-sm space-y-3">
+              <CardContent className="text-sm space-y-2">
                 <div className="flex justify-between items-center py-1">
-                  <span className="font-semibold text-futuristic-accent1">"Play" / "Start"</span>
-                  <span className="text-futuristic-muted">▶️ Starts/resumes music</span>
+                  <span className="font-semibold text-futuristic-accent1">"Play" / "Resume"</span>
+                  <span className="text-futuristic-muted text-xs">▶️ Start/resume music</span>
                 </div>
                 <div className="flex justify-between items-center py-1">
-                  <span className="font-semibold text-futuristic-accent1">"Pause" / "Stop"</span>
-                  <span className="text-futuristic-muted">⏸️ Pauses current track</span>
+                  <span className="font-semibold text-futuristic-accent1">"Pause"</span>
+                  <span className="text-futuristic-muted text-xs">⏸️ Pause music</span>
+                </div>
+                <div className="flex justify-between items-center py-1">
+                  <span className="font-semibold text-futuristic-accent1">"Stop"</span>
+                  <span className="text-futuristic-muted text-xs">⏹️ Stop and reset</span>
                 </div>
                 <div className="flex justify-between items-center py-1">
                   <span className="font-semibold text-futuristic-accent1">"Next" / "Skip"</span>
-                  <span className="text-futuristic-muted">⏭️ Skips to next song</span>
+                  <span className="text-futuristic-muted text-xs">⏭️ Next song</span>
                 </div>
                 <div className="flex justify-between items-center py-1">
                   <span className="font-semibold text-futuristic-accent1">"Previous" / "Back"</span>
-                  <span className="text-futuristic-muted">⏮️ Goes to previous song</span>
+                  <span className="text-futuristic-muted text-xs">⏮️ Previous song</span>
+                </div>
+                <div className="flex justify-between items-center py-1">
+                  <span className="font-semibold text-futuristic-accent1">"Restart" / "Replay"</span>
+                  <span className="text-futuristic-muted text-xs">🔄 Play from start</span>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="border-futuristic-border bg-black/40 backdrop-blur-sm">
+              <CardHeader>
+                <CardTitle className="text-sm flex items-center">
+                  <Badge className="mr-2 bg-green-500">Volume</Badge>
+                  Audio Control Commands
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm space-y-2">
+                <div className="flex justify-between items-center py-1">
+                  <span className="font-semibold text-green-400">"Volume Up" / "Louder"</span>
+                  <span className="text-futuristic-muted text-xs">🔊 Increase volume</span>
+                </div>
+                <div className="flex justify-between items-center py-1">
+                  <span className="font-semibold text-green-400">"Volume Down" / "Quieter"</span>
+                  <span className="text-futuristic-muted text-xs">🔉 Decrease volume</span>
+                </div>
+                <div className="flex justify-between items-center py-1">
+                  <span className="font-semibold text-green-400">"Mute"</span>
+                  <span className="text-futuristic-muted text-xs">🔇 Mute audio</span>
+                </div>
+                <div className="flex justify-between items-center py-1">
+                  <span className="font-semibold text-green-400">"Unmute"</span>
+                  <span className="text-futuristic-muted text-xs">🔊 Restore audio</span>
+                </div>
+                <div className="flex justify-between items-center py-1">
+                  <span className="font-semibold text-green-400">"Shuffle"</span>
+                  <span className="text-futuristic-muted text-xs">🔀 Toggle shuffle</span>
+                </div>
+                <div className="flex justify-between items-center py-1">
+                  <span className="font-semibold text-green-400">"Repeat" / "Loop"</span>
+                  <span className="text-futuristic-muted text-xs">🔁 Toggle repeat</span>
                 </div>
               </CardContent>
             </Card>
@@ -426,18 +551,22 @@ const VoiceCommandManager: React.FC = () => {
                   Application Commands
                 </CardTitle>
               </CardHeader>
-              <CardContent className="text-sm space-y-3">
+              <CardContent className="text-sm space-y-2">
+                <div className="flex justify-between items-center py-1">
+                  <span className="font-semibold text-futuristic-accent2">"What's Playing"</span>
+                  <span className="text-futuristic-muted text-xs">🎵 Show current song</span>
+                </div>
                 <div className="flex justify-between items-center py-1">
                   <span className="font-semibold text-futuristic-accent2">"Help"</span>
-                  <span className="text-futuristic-muted">❓ Opens this help panel</span>
+                  <span className="text-futuristic-muted text-xs">❓ Open this panel</span>
                 </div>
                 <div className="flex justify-between items-center py-1">
                   <span className="font-semibold text-futuristic-accent2">"Close"</span>
-                  <span className="text-futuristic-muted">✅ Closes open panels</span>
+                  <span className="text-futuristic-muted text-xs">✅ Close panels</span>
                 </div>
                 <div className="flex justify-between items-center py-1">
                   <span className="font-semibold text-red-400">"Log Out"</span>
-                  <span className="text-futuristic-muted">🚪 Signs out immediately</span>
+                  <span className="text-futuristic-muted text-xs">🚪 Sign out</span>
                 </div>
               </CardContent>
             </Card>
